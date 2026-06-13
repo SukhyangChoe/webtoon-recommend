@@ -1,65 +1,71 @@
-import Image from "next/image";
-
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="min-h-screen bg-[#101014] text-white">
+      <section className="mx-auto flex min-h-screen max-w-5xl flex-col items-center justify-center px-6 py-16 text-center">
+        <div className="mb-6 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm text-white/70">
+          웹툰 추천 서비스 MVP
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
+
+        <h1 className="max-w-3xl text-4xl font-bold leading-tight tracking-tight sm:text-6xl">
+          지금 내 취향에 맞는
+          <br />
+          웹툰 세계를 찾아볼까요?
+        </h1>
+
+        <p className="mt-6 max-w-2xl text-base leading-8 text-white/65 sm:text-lg">
+          장르를 직접 고르지 않아도 괜찮아요.  
+          몇 가지 장면을 고르면, 당신이 먼저 끌리는 웹툰 세계와
+          지금 보기 좋은 작품 방향을 찾아볼게요.
+        </p>
+
+        <div className="mt-10 flex w-full max-w-xl flex-col gap-4 sm:flex-row sm:justify-center">
           <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/tests/genre"
+            className="rounded-2xl bg-white px-6 py-4 text-base font-semibold text-[#101014] transition hover:bg-white/90"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
+            웹툰 장르 취향 테스트
           </a>
+
           <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/now"
+            className="rounded-2xl border border-white/20 bg-white/5 px-6 py-4 text-base font-semibold text-white transition hover:bg-white/10"
           >
-            Documentation
+            지금 볼 웹툰 찾기
           </a>
         </div>
-      </main>
-    </div>
+
+        <div className="mt-14 grid w-full gap-4 text-left sm:grid-cols-3">
+          <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
+            <p className="text-sm font-semibold text-white">1단계</p>
+            <h2 className="mt-2 text-lg font-bold">장면을 고르기</h2>
+            <p className="mt-3 text-sm leading-6 text-white/60">
+              직접 장르를 묻지 않고, 웹툰 첫 화처럼 장면을 고릅니다.
+            </p>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
+            <p className="text-sm font-semibold text-white">2단계</p>
+            <h2 className="mt-2 text-lg font-bold">취향 지도 만들기</h2>
+            <p className="mt-3 text-sm leading-6 text-white/60">
+              선택한 장면을 바탕으로 판타지, 무협, 로맨스/로판 등
+              장르 취향을 계산합니다.
+            </p>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
+            <p className="text-sm font-semibold text-white">3단계</p>
+            <h2 className="mt-2 text-lg font-bold">추천으로 연결</h2>
+            <p className="mt-3 text-sm leading-6 text-white/60">
+              취향 결과를 바탕으로 나중에 지금 볼 웹툰 추천까지
+              이어집니다.
+            </p>
+          </div>
+        </div>
+
+        <p className="mt-10 text-xs text-white/35">
+          현재 화면은 개발용 첫 랜딩 페이지입니다.
+        </p>
+      </section>
+    </main>
   );
 }
