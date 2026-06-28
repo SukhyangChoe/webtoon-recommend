@@ -2,7 +2,11 @@ export type ScoreMap = Record<string, number>;
 
 export type TestChoice = {
   choiceId: string;
+  choiceOrder?: number;
+  label?: string;
   text: string;
+  shortDescription?: string;
+  imageKey?: string;
   branchScores?: ScoreMap;
   tagScores?: ScoreMap;
   avoidanceTagScores?: ScoreMap;
@@ -13,6 +17,7 @@ export type TestQuestion = {
   order: number;
   questionTitle: string;
   questionText: string;
+  legacyQuestionText?: string;
   choices: TestChoice[];
 };
 
@@ -31,15 +36,18 @@ export type TestAnswers = TestAnswer[];
 
 export type TestData = {
   testId?: string;
-  testKey?: string;
+  testKey: string;
   testName: string;
   genreKey: string;
   route: string;
   questionCount: number;
   choiceCountPerQuestion?: number;
+  choiceCount?: number;
   resultCount?: number;
   version: string;
   scoreMode: string;
+  selectMode?: "ranked_multi_select";
+  maxSelect?: number;
   intro: {
     title: string;
     description: string;

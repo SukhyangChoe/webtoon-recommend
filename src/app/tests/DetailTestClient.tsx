@@ -2,12 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { fantasyResults } from "@/data/tests/fantasyResults";
 import {
-  clearFantasyDetailResult,
-  loadFantasyDetailResult,
-  saveFantasyDetailResult,
-  type FantasyDetailStoredResult,
+  clearDetailTestResult,
+  loadDetailTestResult,
+  saveDetailTestResult,
+  type StoredDetailTestResult,
 } from "@/lib/storage/testResultStorage";
 import { calculateScores } from "@/lib/testEngine/calculateScores";
 import { getTopBranchResult } from "@/lib/testEngine/getResult";
@@ -17,6 +16,7 @@ import type {
   SelectedOptionAnswer,
   TestAnswers,
   TestData,
+  TestResult,
 } from "@/lib/testEngine/types";
 
 function getKstIsoString() {
@@ -44,12 +44,13 @@ function buildSelectedOptions(optionKeys: string[]): SelectedOptionAnswer[] {
   }));
 }
 
-function buildFantasyDetailStoredResult(params: {
+function buildStoredDetailResult(params: {
+  test: TestData;
   answers: TestAnswers;
   calculatedScores: CalculatedScores;
   resolvedResult: ResolvedTestResult;
-}): FantasyDetailStoredResult | null {
-  const { answers, calculatedScores, resolvedResult } = params;
+}): StoredDetailTestResult | null {
+  const { test, answers, calculatedScores, resolvedResult } = params;
   const result = resolvedResult.result;
 
   if (!result) {
@@ -58,7 +59,7 @@ function buildFantasyDetailStoredResult(params: {
 
   return {
     schemaVersion: "0.2",
-    testKey: "fantasy_detail",
+    testKey: test.testKey,
     testVersion: "v0.2_ranked_multi_select",
     completedAt: getKstIsoString(),
 
@@ -80,7 +81,15 @@ function buildFantasyDetailStoredResult(params: {
   };
 }
 
-export function FantasyTestClient({ test }: { test: TestData }) {
+export function DetailTestClient({
+  test,
+  results,
+  storageKey,
+}: {
+  test: TestData;
+  results: TestResult[];
+  storageKey: string;
+}) {
   const [started, setStarted] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedOptionKeys, setSelectedOptionKeys] = useState<string[]>([]);
@@ -88,17 +97,17 @@ export function FantasyTestClient({ test }: { test: TestData }) {
   const [completed, setCompleted] = useState(false);
 
   const [savedResult, setSavedResult] =
-    useState<FantasyDetailStoredResult | null>(null);
+    useState<StoredDetailTestResult | null>(null);
 
   const [resultToView, setResultToView] =
-    useState<FantasyDetailStoredResult | null>(null);
+    useState<StoredDetailTestResult | null>(null);
 
   const currentQuestion = test.questions[currentQuestionIndex];
 
   useEffect(() => {
-    const loadedResult = loadFantasyDetailResult();
+    const loadedResult = loadDetailTestResult(storageKey);
     setSavedResult(loadedResult);
-  }, []);
+  }, [storageKey]);
 
   const calculatedScores = useMemo(() => {
     return calculateScores(test, answers);
@@ -109,9 +118,9 @@ export function FantasyTestClient({ test }: { test: TestData }) {
       test,
       answers,
       branchScores: calculatedScores.branchScores,
-      results: fantasyResults,
+      results,
     });
-  }, [test, answers, calculatedScores.branchScores]);
+  }, [test, answers, calculatedScores.branchScores, results]);
 
   const resetTestState = () => {
     setAnswers([]);
@@ -122,7 +131,7 @@ export function FantasyTestClient({ test }: { test: TestData }) {
   };
 
   const handleRestartTest = () => {
-    clearFantasyDetailResult();
+    clearDetailTestResult(storageKey);
     setSavedResult(null);
     resetTestState();
     setStarted(true);
@@ -168,17 +177,18 @@ export function FantasyTestClient({ test }: { test: TestData }) {
         test,
         answers: nextAnswers,
         branchScores: nextCalculatedScores.branchScores,
-        results: fantasyResults,
+        results,
       });
 
-      const storedResult = buildFantasyDetailStoredResult({
+      const storedResult = buildStoredDetailResult({
+        test,
         answers: nextAnswers,
         calculatedScores: nextCalculatedScores,
         resolvedResult: nextResolvedResult,
       });
 
       if (storedResult) {
-        saveFantasyDetailResult(storedResult);
+        saveDetailTestResult(storageKey, storedResult);
         setSavedResult(storedResult);
         setResultToView(storedResult);
       }
@@ -194,15 +204,15 @@ export function FantasyTestClient({ test }: { test: TestData }) {
   if (!started && !completed && savedResult) {
     return (
       <main style={{ padding: 24 }}>
-        <h1>저장된 판타지 취향 결과가 있습니다.</h1>
-        <p>이전에 완료한 판타지 웹툰 취향 테스트 결과를 다시 볼 수 있어요.</p>
+        <h1>저장된 {test.testName} 결과가 있습니다.</h1>
+        <p>이전에 완료한 테스트 결과를 다시 볼 수 있어요.</p>
 
         <div style={{ display: "flex", gap: 8, marginTop: 24 }}>
           <button
             type="button"
             onClick={() => {
               setResultToView(savedResult);
-              //setStarted(true);
+              setStarted(true);
               setCompleted(true);
             }}
           >
@@ -244,7 +254,7 @@ export function FantasyTestClient({ test }: { test: TestData }) {
           <button
             type="button"
             onClick={() => {
-              clearFantasyDetailResult();
+              clearDetailTestResult(storageKey);
               setSavedResult(null);
               resetTestState();
               setStarted(false);
@@ -258,7 +268,7 @@ export function FantasyTestClient({ test }: { test: TestData }) {
 
     return (
       <main style={{ padding: 24 }}>
-        <p>판타지 웹툰 취향 테스트 결과</p>
+        <p>{test.testName} 결과</p>
 
         <section
           style={{
@@ -324,6 +334,19 @@ export function FantasyTestClient({ test }: { test: TestData }) {
 
         <section style={{ marginTop: 32 }}>
           <h2>개발 확인용</h2>
+
+          <h3>storageKey</h3>
+          <pre
+            style={{
+              padding: 16,
+              background: "#f3f4f6",
+              color: "#111827",
+              overflowX: "auto",
+              borderRadius: 8,
+            }}
+          >
+            {storageKey}
+          </pre>
 
           <h3>savedResult</h3>
           <pre
@@ -432,7 +455,6 @@ export function FantasyTestClient({ test }: { test: TestData }) {
       </main>
     );
   }
-  
 
   return (
     <main style={{ padding: 24 }}>
@@ -454,6 +476,7 @@ export function FantasyTestClient({ test }: { test: TestData }) {
           const isSelected = selectedIndex >= 0;
           const rankLabel =
             selectedIndex === 0 ? "①" : selectedIndex === 1 ? "②" : "";
+          const isImageCardQuestion = currentQuestion.order === 1;
 
           return (
             <button
@@ -472,8 +495,27 @@ export function FantasyTestClient({ test }: { test: TestData }) {
                 cursor: "pointer",
               }}
             >
-              <strong style={{ marginRight: 8 }}>{rankLabel}</strong>
-              {choice.text}
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <strong>{rankLabel}</strong>
+                {choice.label ? <strong>{choice.label}</strong> : null}
+              </div>
+
+              {isImageCardQuestion && choice.imageKey ? (
+                <p
+                  style={{
+                    marginTop: 8,
+                    marginBottom: 8,
+                    fontSize: 13,
+                    color: "#6b7280",
+                  }}
+                >
+                  imageKey: {choice.imageKey}
+                </p>
+              ) : null}
+
+              <p style={{ margin: 0, marginTop: 8 }}>
+                {choice.shortDescription ?? choice.text}
+              </p>
             </button>
           );
         })}
