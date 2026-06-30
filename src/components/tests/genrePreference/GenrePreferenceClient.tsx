@@ -8,9 +8,9 @@ import {
   type PairChoiceSide,
 } from "@/data/tests/genrePreference";
 import {
-  calculateGenrePreference,
+  calculateGenrePreferenceResult,
   type PairChoiceAnswer,
-} from "@/lib/testEngine/calculateGenrePreference";
+} from "@/lib/testEngine/calculateGenrePreferenceResult";
 import GenrePairQuestionView from "./GenrePairQuestionView";
 
 function upsertAnswer(
@@ -37,6 +37,12 @@ function findAnswerByQuestionKey(
   return answers.find((answer) => answer.questionKey === questionKey) ?? null;
 }
 
+function getResultTypeLabel(resultType: string) {
+  if (resultType === "balanced") return "균형형";
+  if (resultType === "linked") return "연결형";
+  return "단일형";
+}
+
 export default function GenrePreferenceClient() {
   const [hasStarted, setHasStarted] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -50,8 +56,8 @@ export default function GenrePreferenceClient() {
         ?.selectedSide ?? null
     : null;
 
-  const calculationResult = useMemo(() => {
-    return calculateGenrePreference({
+  const result = useMemo(() => {
+    return calculateGenrePreferenceResult({
       answers,
       questions: genrePreferenceQuestions,
     });
@@ -113,9 +119,9 @@ export default function GenrePreferenceClient() {
       >
         <section
           style={{
-            maxWidth: 860,
+            maxWidth: 900,
             margin: "0 auto",
-            paddingTop: 56,
+            paddingTop: 44,
             paddingBottom: 48,
           }}
         >
@@ -127,17 +133,17 @@ export default function GenrePreferenceClient() {
               fontSize: 14,
             }}
           >
-            D+10 임시 완료 화면
+            D+11 계산 QA 화면
           </p>
 
           <h1
             style={{
-              margin: "0 0 16px",
+              margin: "0 0 10px",
               fontSize: 32,
               lineHeight: 1.3,
             }}
           >
-            Q1~Q10 선택 흐름 완료
+            {genrePreferenceTest.resultName} 계산 결과
           </h1>
 
           <p
@@ -148,12 +154,108 @@ export default function GenrePreferenceClient() {
               lineHeight: 1.7,
             }}
           >
-            오늘은 세계관 지도 결과 화면을 완성하지 않고, 10문항 선택 흐름과
-            pair_choice_with_draw 점수 계산만 확인합니다.
+            아직 세계관 지도 UI를 완성하지 않고, answers → finalGenreScores
+            → finalGenrePercentages → resultType 산출만 확인합니다.
           </p>
 
           <section
             style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: 12,
+              marginBottom: 18,
+            }}
+          >
+            <div
+              style={{
+                borderRadius: 18,
+                border: "1px solid #334155",
+                background: "#0f172a",
+                padding: 16,
+              }}
+            >
+              <p
+                style={{
+                  margin: "0 0 8px",
+                  color: "#94a3b8",
+                  fontSize: 13,
+                  fontWeight: 900,
+                }}
+              >
+                resultType
+              </p>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 22,
+                  fontWeight: 900,
+                }}
+              >
+                {getResultTypeLabel(result.resultType)} / {result.resultType}
+              </p>
+            </div>
+
+            <div
+              style={{
+                borderRadius: 18,
+                border: "1px solid #334155",
+                background: "#0f172a",
+                padding: 16,
+              }}
+            >
+              <p
+                style={{
+                  margin: "0 0 8px",
+                  color: "#94a3b8",
+                  fontSize: 13,
+                  fontWeight: 900,
+                }}
+              >
+                primaryGenreKey
+              </p>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 22,
+                  fontWeight: 900,
+                }}
+              >
+                {result.primaryGenreKey ?? "-"}
+              </p>
+            </div>
+
+            <div
+              style={{
+                borderRadius: 18,
+                border: "1px solid #334155",
+                background: "#0f172a",
+                padding: 16,
+              }}
+            >
+              <p
+                style={{
+                  margin: "0 0 8px",
+                  color: "#94a3b8",
+                  fontSize: 13,
+                  fontWeight: 900,
+                }}
+              >
+                secondaryGenreKey
+              </p>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 22,
+                  fontWeight: 900,
+                }}
+              >
+                {result.secondaryGenreKey ?? "-"}
+              </p>
+            </div>
+          </section>
+
+          <section
+            style={{
               borderRadius: 20,
               border: "1px solid #334155",
               background: "#0f172a",
@@ -167,7 +269,73 @@ export default function GenrePreferenceClient() {
                 fontSize: 18,
               }}
             >
-              userGenreScores
+              finalGenrePercentages
+            </h2>
+
+            <div
+              style={{
+                display: "grid",
+                gap: 10,
+              }}
+            >
+              {result.finalGenrePercentages.map((genre) => (
+                <div
+                  key={genre.genreKey}
+                  style={{
+                    borderRadius: 14,
+                    background: "#020617",
+                    padding: 14,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: 12,
+                      marginBottom: 8,
+                    }}
+                  >
+                    <strong>
+                      {genre.rank}위 {genre.genreName}
+                    </strong>
+                    <strong>{genre.roundedPercentage}%</strong>
+                  </div>
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gap: 4,
+                      color: "#94a3b8",
+                      fontSize: 13,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    <span>genreKey: {genre.genreKey}</span>
+                    <span>score: {genre.score}</span>
+                    <span>percentage: {genre.percentage}</span>
+                    <span>visualState: {genre.visualState}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section
+            style={{
+              borderRadius: 20,
+              border: "1px solid #334155",
+              background: "#0f172a",
+              padding: 18,
+              marginBottom: 16,
+            }}
+          >
+            <h2
+              style={{
+                margin: "0 0 12px",
+                fontSize: 18,
+              }}
+            >
+              finalGenreScores
             </h2>
 
             <pre
@@ -182,7 +350,7 @@ export default function GenrePreferenceClient() {
                 lineHeight: 1.6,
               }}
             >
-              {JSON.stringify(calculationResult.userGenreScores, null, 2)}
+              {JSON.stringify(result.finalGenreScores, null, 2)}
             </pre>
           </section>
 
@@ -201,7 +369,7 @@ export default function GenrePreferenceClient() {
                 fontSize: 18,
               }}
             >
-              genrePercentages
+              topGenreKeys
             </h2>
 
             <pre
@@ -216,7 +384,7 @@ export default function GenrePreferenceClient() {
                 lineHeight: 1.6,
               }}
             >
-              {JSON.stringify(calculationResult.genrePercentages, null, 2)}
+              {JSON.stringify(result.topGenreKeys, null, 2)}
             </pre>
           </section>
 
@@ -226,7 +394,7 @@ export default function GenrePreferenceClient() {
               border: "1px solid #334155",
               background: "#0f172a",
               padding: 18,
-              marginBottom: 24,
+              marginBottom: 16,
             }}
           >
             <h2
@@ -250,7 +418,41 @@ export default function GenrePreferenceClient() {
                 lineHeight: 1.6,
               }}
             >
-              {JSON.stringify(answers, null, 2)}
+              {JSON.stringify(result.answers, null, 2)}
+            </pre>
+          </section>
+
+          <section
+            style={{
+              borderRadius: 20,
+              border: "1px solid #334155",
+              background: "#0f172a",
+              padding: 18,
+              marginBottom: 24,
+            }}
+          >
+            <h2
+              style={{
+                margin: "0 0 12px",
+                fontSize: 18,
+              }}
+            >
+              full result object
+            </h2>
+
+            <pre
+              style={{
+                margin: 0,
+                padding: 16,
+                borderRadius: 16,
+                background: "#020617",
+                color: "#e2e8f0",
+                overflowX: "auto",
+                fontSize: 13,
+                lineHeight: 1.6,
+              }}
+            >
+              {JSON.stringify(result, null, 2)}
             </pre>
           </section>
 
@@ -446,8 +648,8 @@ export default function GenrePreferenceClient() {
             lineHeight: 1.6,
           }}
         >
-          D+10에서는 Q1~Q10 이미지 카드 선택 흐름과 임시 점수 확인
-          화면까지만 구현합니다.
+          D+11에서는 Q1~Q10 답변 후 finalGenrePercentages와 resultType을
+          확인합니다.
         </p>
       </section>
     </main>
