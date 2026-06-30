@@ -57,6 +57,7 @@ import {
   
     params.answers.forEach((answer) => {
       const question = findQuestionByKey(questions, answer.questionKey);
+  
       if (!question) return;
   
       if (answer.selectedSide === "left") {

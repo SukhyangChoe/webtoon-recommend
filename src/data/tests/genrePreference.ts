@@ -38,7 +38,7 @@ export type GenrePreferenceCard = {
 
 export type GenrePreferenceQuestion = {
   questionKey: string;
-  questionOrder: number;
+  order: number;
   questionText: string;
   left: GenrePreferenceCard;
   right: GenrePreferenceCard;
@@ -108,8 +108,8 @@ export const genrePreferenceGenres: GenreDefinition[] = [
 export const genrePreferenceQuestions: GenrePreferenceQuestion[] = [
   {
     questionKey: "genre_q1",
-    questionOrder: 1,
-    questionText: "둘 중 지금 더 보고 싶은 쪽은 어느 쪽인가요?",
+    order: 1,
+    questionText: "지금 더 보고 싶은 장면은?",
     left: {
       genreKey: "fantasy",
       genreName: "판타지",
@@ -129,8 +129,8 @@ export const genrePreferenceQuestions: GenrePreferenceQuestion[] = [
   },
   {
     questionKey: "genre_q2",
-    questionOrder: 2,
-    questionText: "둘 중 지금 더 보고 싶은 쪽은 어느 쪽인가요?",
+    order: 2,
+    questionText: "지금 더 보고 싶은 장면은?",
     left: {
       genreKey: "romance_ropan",
       genreName: "로맨스·로판",
@@ -150,8 +150,8 @@ export const genrePreferenceQuestions: GenrePreferenceQuestion[] = [
   },
   {
     questionKey: "genre_q3",
-    questionOrder: 3,
-    questionText: "둘 중 지금 더 보고 싶은 쪽은 어느 쪽인가요?",
+    order: 3,
+    questionText: "지금 더 보고 싶은 장면은?",
     left: {
       genreKey: "fantasy",
       genreName: "판타지",
@@ -171,8 +171,8 @@ export const genrePreferenceQuestions: GenrePreferenceQuestion[] = [
   },
   {
     questionKey: "genre_q4",
-    questionOrder: 4,
-    questionText: "둘 중 지금 더 보고 싶은 쪽은 어느 쪽인가요?",
+    order: 4,
+    questionText: "지금 더 보고 싶은 장면은?",
     left: {
       genreKey: "drama_daily",
       genreName: "드라마·일상",
@@ -192,8 +192,8 @@ export const genrePreferenceQuestions: GenrePreferenceQuestion[] = [
   },
   {
     questionKey: "genre_q5",
-    questionOrder: 5,
-    questionText: "둘 중 지금 더 보고 싶은 쪽은 어느 쪽인가요?",
+    order: 5,
+    questionText: "지금 더 보고 싶은 장면은?",
     left: {
       genreKey: "murim",
       genreName: "무협",
@@ -213,8 +213,8 @@ export const genrePreferenceQuestions: GenrePreferenceQuestion[] = [
   },
   {
     questionKey: "genre_q6",
-    questionOrder: 6,
-    questionText: "둘 중 지금 더 보고 싶은 쪽은 어느 쪽인가요?",
+    order: 6,
+    questionText: "지금 더 보고 싶은 장면은?",
     left: {
       genreKey: "thriller_horror",
       genreName: "스릴러·공포",
@@ -234,8 +234,8 @@ export const genrePreferenceQuestions: GenrePreferenceQuestion[] = [
   },
   {
     questionKey: "genre_q7",
-    questionOrder: 7,
-    questionText: "둘 중 지금 더 보고 싶은 쪽은 어느 쪽인가요?",
+    order: 7,
+    questionText: "지금 더 보고 싶은 장면은?",
     left: {
       genreKey: "murim",
       genreName: "무협",
@@ -255,8 +255,8 @@ export const genrePreferenceQuestions: GenrePreferenceQuestion[] = [
   },
   {
     questionKey: "genre_q8",
-    questionOrder: 8,
-    questionText: "둘 중 지금 더 보고 싶은 쪽은 어느 쪽인가요?",
+    order: 8,
+    questionText: "지금 더 보고 싶은 장면은?",
     left: {
       genreKey: "romance_ropan",
       genreName: "로맨스·로판",
@@ -276,8 +276,8 @@ export const genrePreferenceQuestions: GenrePreferenceQuestion[] = [
   },
   {
     questionKey: "genre_q9",
-    questionOrder: 9,
-    questionText: "둘 중 지금 더 보고 싶은 쪽은 어느 쪽인가요?",
+    order: 9,
+    questionText: "지금 더 보고 싶은 장면은?",
     left: {
       genreKey: "drama_daily",
       genreName: "드라마·일상",
@@ -297,8 +297,8 @@ export const genrePreferenceQuestions: GenrePreferenceQuestion[] = [
   },
   {
     questionKey: "genre_q10",
-    questionOrder: 10,
-    questionText: "둘 중 지금 더 보고 싶은 쪽은 어느 쪽인가요?",
+    order: 10,
+    questionText: "지금 더 보고 싶은 장면은?",
     left: {
       genreKey: "thriller_horror",
       genreName: "스릴러·공포",
