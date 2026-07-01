@@ -47,13 +47,6 @@ import {
     topGenreKeys: GenreKey[];
     tagScores: Record<string, never>;
     avoidanceTagScores: Record<string, never>;
-    mapState: {
-      resultType: GenrePreferenceResultType;
-      primaryGenreKey: GenreKey | null;
-      secondaryGenreKey: GenreKey | null;
-      topGenreKeys: GenreKey[];
-      finalGenrePercentages: FinalGenrePercentage[];
-    };
   };
   
   function createEmptyGenreScoreMap(): GenreScoreMap {
@@ -269,12 +262,5 @@ import {
       topGenreKeys,
       tagScores: {},
       avoidanceTagScores: {},
-      mapState: {
-        resultType,
-        primaryGenreKey,
-        secondaryGenreKey,
-        topGenreKeys,
-        finalGenrePercentages: sortedFinalGenrePercentages,
-      },
     };
   }
