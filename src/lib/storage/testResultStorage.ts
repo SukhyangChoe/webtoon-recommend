@@ -1,80 +1,54 @@
-import type { ScoreMap, TestAnswers } from "@/lib/testEngine/types";
+import type { DetailTestKey, StoredDetailTestResult } from "@/types/testResults";
+import {
+  clearTestResult,
+  loadTestResult,
+  saveTestResult,
+} from "./resultRepository";
 
 export const FANTASY_DETAIL_RESULT_KEY = "webtoon_fantasy_detail_result";
 export const MURIM_DETAIL_RESULT_KEY = "webtoon_murim_detail_result";
 export const USER_TASTE_PROFILE_KEY = "webtoon_user_taste_profile";
 
-export type StoredDetailTestResult = {
-  schemaVersion: "0.2";
-  testKey: string;
-  testVersion: "v0.2_ranked_multi_select";
-  completedAt: string;
-
-  answers: TestAnswers;
-
-  branchScores: ScoreMap;
-  tagScores: ScoreMap;
-  avoidanceTagScores: ScoreMap;
-
-  mainBranchKey: string | null;
-  subBranchKey: string | null;
-
-  resultKey: string;
-  resultName: string;
-  oneLineDescription: string;
-  displayTags: string[];
-  imageKey: string;
-  shareText: string;
-};
-
+export type StoredDetailTestResultLegacy = StoredDetailTestResult;
 export type FantasyDetailStoredResult = StoredDetailTestResult;
 
-function isBrowser() {
-  return typeof window !== "undefined";
-}
-
 export function saveDetailTestResult(
-  storageKey: string,
+  testKey: DetailTestKey,
   result: StoredDetailTestResult
 ) {
-  if (!isBrowser()) return;
-
-  window.localStorage.setItem(storageKey, JSON.stringify(result));
+  saveTestResult(testKey, result);
 }
 
 export function loadDetailTestResult(
-  storageKey: string
+  testKey: DetailTestKey
 ): StoredDetailTestResult | null {
-  if (!isBrowser()) return null;
-
-  const raw = window.localStorage.getItem(storageKey);
-  if (!raw) return null;
-
-  try {
-    return JSON.parse(raw) as StoredDetailTestResult;
-  } catch {
-    return null;
-  }
+  return loadTestResult(testKey);
 }
 
-export function clearDetailTestResult(storageKey: string) {
-  if (!isBrowser()) return;
-
-  window.localStorage.removeItem(storageKey);
+export function clearDetailTestResult(testKey: DetailTestKey) {
+  clearTestResult(testKey);
 }
 
-/**
- * D+5 FantasyTestClient 호환용.
- * D+6 이후 route에서는 DetailTestClient가 generic 함수를 사용한다.
- */
 export function saveFantasyDetailResult(result: FantasyDetailStoredResult) {
-  saveDetailTestResult(FANTASY_DETAIL_RESULT_KEY, result);
+  saveTestResult("fantasy_detail", result);
 }
 
 export function loadFantasyDetailResult(): FantasyDetailStoredResult | null {
-  return loadDetailTestResult(FANTASY_DETAIL_RESULT_KEY);
+  return loadTestResult("fantasy_detail");
 }
 
 export function clearFantasyDetailResult() {
-  clearDetailTestResult(FANTASY_DETAIL_RESULT_KEY);
+  clearTestResult("fantasy_detail");
+}
+
+export function saveMurimDetailResult(result: StoredDetailTestResult) {
+  saveTestResult("murim_detail", result);
+}
+
+export function loadMurimDetailResult(): StoredDetailTestResult | null {
+  return loadTestResult("murim_detail");
+}
+
+export function clearMurimDetailResult() {
+  clearTestResult("murim_detail");
 }

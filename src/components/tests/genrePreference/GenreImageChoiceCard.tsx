@@ -97,7 +97,9 @@ export default function GenreImageChoiceCard({
             }}
           >
             <div style={{ fontWeight: 900 }}>이미지 준비 중</div>
-            <div style={{ marginTop: 6, fontSize: 12 }}>{card.imageKey}</div>
+            <div style={{ marginTop: 6, fontSize: 13 }}>
+              장면 이미지를 불러오고 있어요.
+            </div>
           </div>
         ) : (
           <img
@@ -129,12 +131,11 @@ export default function GenreImageChoiceCard({
         style={{
           margin: 0,
           color: "#94a3b8",
-          fontSize: 12,
+          fontSize: 13,
           lineHeight: 1.5,
-          wordBreak: "break-all",
         }}
       >
-        {card.imageKey}
+        {card.genreName} 장면
       </p>
     </button>
   );

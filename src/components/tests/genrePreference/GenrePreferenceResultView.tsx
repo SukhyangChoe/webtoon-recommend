@@ -71,50 +71,52 @@ export default function GenrePreferenceResultView({
 
         <GenrePreferenceActions onRetake={onRetake} />
 
-        <details
-          style={{
-            marginTop: 24,
-            borderRadius: 18,
-            border: "1px solid #334155",
-            background: "#0f172a",
-            padding: 16,
-          }}
-        >
-          <summary
+        {process.env.NODE_ENV === "development" ? (
+          <details
             style={{
-              cursor: "pointer",
-              color: "#cbd5e1",
-              fontWeight: 900,
-            }}
-          >
-            개발 확인용 결과 데이터 보기
-          </summary>
-
-          <pre
-            style={{
-              margin: "14px 0 0",
+              marginTop: 24,
+              borderRadius: 18,
+              border: "1px solid #334155",
+              background: "#0f172a",
               padding: 16,
-              borderRadius: 16,
-              background: "#020617",
-              color: "#e2e8f0",
-              overflowX: "auto",
-              fontSize: 13,
-              lineHeight: 1.6,
             }}
           >
-            {JSON.stringify(
-              {
-                answers: result.answers,
-                finalGenreScores: result.finalGenreScores,
-                finalGenrePercentages: result.finalGenrePercentages,
-                resultType: result.resultType,
-                mapState,
-              },
-              null,
-              2
-            )}
-          </pre>
-        </details>
+            <summary
+              style={{
+                cursor: "pointer",
+                color: "#cbd5e1",
+                fontWeight: 900,
+              }}
+            >
+              개발 확인용 결과 데이터 보기
+            </summary>
+
+            <pre
+              style={{
+                margin: "14px 0 0",
+                padding: 16,
+                borderRadius: 16,
+                background: "#020617",
+                color: "#e2e8f0",
+                overflowX: "auto",
+                fontSize: 13,
+                lineHeight: 1.6,
+              }}
+            >
+              {JSON.stringify(
+                {
+                  answers: result.answers,
+                  finalGenreScores: result.finalGenreScores,
+                  finalGenrePercentages: result.finalGenrePercentages,
+                  resultType: result.resultType,
+                  mapState,
+                },
+                null,
+                2
+              )}
+            </pre>
+          </details>
+        ) : null}
 
         <p
           style={{

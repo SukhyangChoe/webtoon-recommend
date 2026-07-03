@@ -14,6 +14,7 @@ import {
 } from "@/lib/testEngine/calculateGenrePreferenceResult";
 import {
   clearGenrePreferenceResult,
+  getStoredGenreMapState,
   loadGenrePreferenceResult,
   saveGenrePreferenceResult,
   toGenrePreferenceResult,
@@ -44,6 +45,46 @@ function findAnswerByQuestionKey(
   questionKey: string
 ) {
   return answers.find((answer) => answer.questionKey === questionKey) ?? null;
+}
+
+function formatCompletedAt(completedAt: string) {
+  const date = new Date(completedAt);
+
+  if (Number.isNaN(date.getTime())) {
+    return completedAt;
+  }
+
+  return date.toLocaleString("ko-KR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function getSavedResultSummary(storedResult: GenrePreferenceStoredResult) {
+  const mapState = getStoredGenreMapState(storedResult);
+  const centerGenreNames = mapState.centerGenreKeys
+    .map((genreKey) => {
+      return (
+        mapState.nodes.find((node) => node.genreKey === genreKey)?.genreName ??
+        ""
+      );
+    })
+    .filter(Boolean);
+
+  if (mapState.resultType === "balanced") {
+    return "여러 장르의 세계가 고르게 열려 있어요.";
+  }
+
+  if (mapState.resultType === "linked") {
+    return `${centerGenreNames.join(" · ")} 세계가 함께 열렸어요.`;
+  }
+
+  return centerGenreNames[0]
+    ? `${centerGenreNames[0]} 세계가 가장 선명하게 열렸어요.`
+    : "저장된 결과를 다시 볼 수 있어요.";
 }
 
 function SavedGenrePreferenceNotice({
@@ -134,19 +175,16 @@ function SavedGenrePreferenceNotice({
               lineHeight: 1.6,
             }}
           >
-            <dt style={{ color: "#94a3b8" }}>resultName</dt>
+            <dt style={{ color: "#94a3b8" }}>결과</dt>
             <dd style={{ margin: 0 }}>{storedResult.resultName}</dd>
 
-            <dt style={{ color: "#94a3b8" }}>resultType</dt>
-            <dd style={{ margin: 0 }}>{storedResult.resultType}</dd>
+            <dt style={{ color: "#94a3b8" }}>요약</dt>
+            <dd style={{ margin: 0 }}>{getSavedResultSummary(storedResult)}</dd>
 
-            <dt style={{ color: "#94a3b8" }}>primaryGenreKey</dt>
+            <dt style={{ color: "#94a3b8" }}>완료 시각</dt>
             <dd style={{ margin: 0 }}>
-              {storedResult.primaryGenreKey ?? "-"}
+              {formatCompletedAt(storedResult.completedAt)}
             </dd>
-
-            <dt style={{ color: "#94a3b8" }}>completedAt</dt>
-            <dd style={{ margin: 0 }}>{storedResult.completedAt}</dd>
           </dl>
         </section>
 
@@ -415,26 +453,17 @@ export default function GenrePreferenceClient() {
             marginBottom: 22,
           }}
         >
-          <dl
+          <p
             style={{
-              display: "grid",
-              gridTemplateColumns: "140px 1fr",
-              gap: "6px 10px",
               margin: 0,
-              color: "#e2e8f0",
-              fontSize: 14,
-              lineHeight: 1.6,
+              color: "#cbd5e1",
+              fontSize: 15,
+              lineHeight: 1.7,
             }}
           >
-            <dt style={{ color: "#94a3b8" }}>testVersion</dt>
-            <dd style={{ margin: 0 }}>{genrePreferenceTest.testVersion}</dd>
-
-            <dt style={{ color: "#94a3b8" }}>selectMode</dt>
-            <dd style={{ margin: 0 }}>{genrePreferenceTest.selectMode}</dd>
-
-            <dt style={{ color: "#94a3b8" }}>questionCount</dt>
-            <dd style={{ margin: 0 }}>{genrePreferenceTest.questionCount}</dd>
-          </dl>
+            총 {genrePreferenceTest.questionCount}문항 · 최대{" "}
+            {genrePreferenceTest.maxSelect}개 선택
+          </p>
         </section>
 
         <button
@@ -454,18 +483,6 @@ export default function GenrePreferenceClient() {
         >
           {genrePreferenceStartCopy.buttonText}
         </button>
-
-        <p
-          style={{
-            margin: "18px 0 0",
-            color: "#94a3b8",
-            fontSize: 14,
-            lineHeight: 1.6,
-          }}
-        >
-          D+13에서는 Q10 완료 후 결과를 localStorage에 저장하고, 새로고침
-          후 결과 다시 보기를 지원합니다.
-        </p>
       </section>
     </main>
   );

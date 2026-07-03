@@ -1,21 +1,22 @@
 import { GENRE_PREFERENCE_STORAGE_KEY } from "@/data/tests/genrePreference";
-import type {
-  GenrePreferenceResult,
-  PairChoiceAnswer,
+import {
+  calculateGenrePreferenceResult,
+  type GenrePreferenceResult,
 } from "@/lib/testEngine/calculateGenrePreferenceResult";
 import {
   getGenreMapState,
   type GenreMapState,
 } from "@/lib/testEngine/getGenreMapState";
+import type { StoredGenrePreferenceResult } from "@/types/testResults";
+import {
+  clearTestResult,
+  loadTestResult,
+  saveTestResult,
+} from "./resultRepository";
 
 export const GENRE_PREFERENCE_RESULT_KEY = GENRE_PREFERENCE_STORAGE_KEY;
 
-export type GenrePreferenceStoredResult = GenrePreferenceResult & {
-  schemaVersion: "0.1";
-  completedAt: string;
-  answers: PairChoiceAnswer[];
-  mapState: GenreMapState;
-};
+export type GenrePreferenceStoredResult = StoredGenrePreferenceResult;
 
 function getKstIsoString() {
   const now = new Date();
@@ -26,56 +27,55 @@ function getKstIsoString() {
 
 export function createGenrePreferenceStoredResult(
   result: GenrePreferenceResult
-): GenrePreferenceStoredResult {
+): StoredGenrePreferenceResult {
   return {
-    ...result,
     schemaVersion: "0.1",
+    testKey: "genre_preference",
+    testVersion: result.testVersion,
+    resultName: result.resultName,
     completedAt: getKstIsoString(),
+    answers: result.answers,
+    positiveGenreScores: result.positiveGenreScores,
+    genreAvoidanceScores: result.genreAvoidanceScores,
+    finalGenreScores: result.finalGenreScores,
+    finalGenrePercentages: result.finalGenrePercentages.map(
+      ({ displayOrder: _displayOrder, ...percentage }) => percentage
+    ),
+    resultType: result.resultType,
+    primaryGenreKey: result.primaryGenreKey ?? "",
+    secondaryGenreKey: result.secondaryGenreKey,
+    topGenreKeys: result.topGenreKeys,
     mapState: getGenreMapState(result),
+    totalFinalGenreScore: result.totalFinalGenreScore,
   };
 }
 
 export function saveGenrePreferenceResult(result: GenrePreferenceResult) {
-  if (typeof window === "undefined") return null;
-
   const storedResult = createGenrePreferenceStoredResult(result);
 
-  window.localStorage.setItem(
-    GENRE_PREFERENCE_RESULT_KEY,
-    JSON.stringify(storedResult)
-  );
+  saveTestResult("genre_preference", storedResult);
 
   return storedResult;
 }
 
-export function loadGenrePreferenceResult(): GenrePreferenceStoredResult | null {
-  if (typeof window === "undefined") return null;
-
-  const raw = window.localStorage.getItem(GENRE_PREFERENCE_RESULT_KEY);
-  if (!raw) return null;
-
-  try {
-    return JSON.parse(raw) as GenrePreferenceStoredResult;
-  } catch {
-    return null;
-  }
+export function loadGenrePreferenceResult(): StoredGenrePreferenceResult | null {
+  return loadTestResult("genre_preference");
 }
 
 export function clearGenrePreferenceResult() {
-  if (typeof window === "undefined") return;
-
-  window.localStorage.removeItem(GENRE_PREFERENCE_RESULT_KEY);
+  clearTestResult("genre_preference");
 }
 
 export function toGenrePreferenceResult(
-  storedResult: GenrePreferenceStoredResult
+  storedResult: StoredGenrePreferenceResult
 ): GenrePreferenceResult {
-  const {
-    schemaVersion,
-    completedAt,
-    mapState,
-    ...genrePreferenceResult
-  } = storedResult;
+  return calculateGenrePreferenceResult({
+    answers: storedResult.answers,
+  });
+}
 
-  return genrePreferenceResult;
+export function getStoredGenreMapState(
+  storedResult: StoredGenrePreferenceResult
+): GenreMapState {
+  return getGenreMapState(toGenrePreferenceResult(storedResult));
 }

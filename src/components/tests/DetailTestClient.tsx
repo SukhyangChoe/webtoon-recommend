@@ -2,19 +2,26 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { getDetailChoiceImageSrc } from "@/data/tests/detailChoiceImages";
+import {
+  clearTestResult,
+  loadTestResult,
+  saveTestResult,
+} from "@/lib/storage/resultRepository";
+import type {
+  DetailTestKey,
+  StoredDetailAnswer,
+  StoredDetailTestResult,
+} from "@/types/testResults";
 
 type ScoreMap = Record<string, number>;
 
 type RankedSelectedOption = {
   optionKey: string;
-  rank: number;
+  rank: 1 | 2;
   weight: number;
 };
 
-type StoredAnswer = {
-  questionKey: string;
-  selectedOptions: RankedSelectedOption[];
-};
+type StoredAnswer = StoredDetailAnswer;
 
 type AnswersByQuestion = Record<string, StoredAnswer>;
 
@@ -74,7 +81,6 @@ type DetailTestData = {
 
 type DetailTestConfig = {
   route?: string;
-  storageKey?: string;
   testData?: DetailTestData;
   test?: DetailTestData;
   results?: DetailTestResult[];
@@ -99,24 +105,44 @@ type NormalizedResult = {
   sceneText?: string;
 };
 
-type StoredDetailResult = {
-  schemaVersion: "0.2";
-  testKey: string;
+function createStoredResult(params: {
+  testKey: DetailTestKey;
   testVersion: string;
-  completedAt: string;
-  answers: StoredAnswer[];
-  branchScores: ScoreMap;
-  tagScores: ScoreMap;
-  avoidanceTagScores: ScoreMap;
-  mainBranchKey: string;
-  subBranchKey: string;
-  resultKey: string;
-  resultName: string;
-  oneLineDescription: string;
-  displayTags: string[];
-  imageKey: string;
-  shareText: string;
-};
+  answers: AnswersByQuestion;
+  scores: CalculatedScores;
+  result: NormalizedResult;
+}): StoredDetailTestResult {
+  const { testKey, testVersion, answers, scores, result } = params;
+
+  return {
+    schemaVersion: "0.2",
+    testKey,
+    testVersion,
+    completedAt: new Date().toISOString(),
+    answers: Object.values(answers),
+    branchScores: scores.branchScores,
+    tagScores: scores.tagScores,
+    avoidanceTagScores: scores.avoidanceTagScores,
+    mainBranchKey: scores.mainBranchKey,
+    subBranchKey: scores.subBranchKey || null,
+    resultKey: result.resultKey,
+    resultName: result.name,
+    oneLineDescription: result.summary,
+    displayTags: result.displayTags,
+    imageKey: result.imageKey,
+    shareText: result.shareText,
+  };
+}
+
+function isDetailTestKey(testKey: string): testKey is DetailTestKey {
+  return (
+    testKey === "fantasy_detail" ||
+    testKey === "murim_detail" ||
+    testKey === "romance_ropan_detail" ||
+    testKey === "thriller_horror_detail" ||
+    testKey === "drama_daily_detail"
+  );
+}
 
 const RESULT_OBJECT_IMAGE_MAP: Record<string, string> = {
   fantasy_system_successor:
@@ -208,24 +234,6 @@ function getGenreLabel(testKey: string) {
   return "장르별";
 }
 
-function getStorageKey(config: DetailTestConfig, testKey: string) {
-  if (config.storageKey) return config.storageKey;
-
-  if (testKey === "fantasy_detail") return "webtoon_fantasy_detail_result";
-  if (testKey === "murim_detail") return "webtoon_murim_detail_result";
-  if (testKey === "romance_ropan_detail") {
-    return "webtoon_romance_ropan_detail_result";
-  }
-  if (testKey === "thriller_horror_detail") {
-    return "webtoon_thriller_horror_detail_result";
-  }
-  if (testKey === "drama_daily_detail") {
-    return "webtoon_drama_daily_detail_result";
-  }
-
-  return `webtoon_${testKey}_result`;
-}
-
 function getRankedSelectedOptions(optionKeys: string[]): RankedSelectedOption[] {
   if (optionKeys.length === 1) {
     return [
@@ -239,7 +247,7 @@ function getRankedSelectedOptions(optionKeys: string[]): RankedSelectedOption[] 
 
   return optionKeys.slice(0, 2).map((optionKey, index) => ({
     optionKey,
-    rank: index + 1,
+    rank: (index === 0 ? 1 : 2) as 1 | 2,
     weight: index === 0 ? 0.7 : 0.3,
   }));
 }
@@ -409,7 +417,7 @@ function getResultByBranch(
 }
 
 function normalizeStoredResult(
-  storedResult: StoredDetailResult
+  storedResult: StoredDetailTestResult
 ): NormalizedResult {
   return {
     resultKey: storedResult.resultKey,
@@ -423,58 +431,6 @@ function normalizeStoredResult(
       storedResult.resultKey,
     shareText: storedResult.shareText ?? "",
   };
-}
-
-function createStoredResult(params: {
-  testKey: string;
-  testVersion: string;
-  answers: AnswersByQuestion;
-  scores: CalculatedScores;
-  result: NormalizedResult;
-}): StoredDetailResult {
-  const { testKey, testVersion, answers, scores, result } = params;
-
-  return {
-    schemaVersion: "0.2",
-    testKey,
-    testVersion,
-    completedAt: new Date().toISOString(),
-    answers: Object.values(answers),
-    branchScores: scores.branchScores,
-    tagScores: scores.tagScores,
-    avoidanceTagScores: scores.avoidanceTagScores,
-    mainBranchKey: scores.mainBranchKey,
-    subBranchKey: scores.subBranchKey,
-    resultKey: result.resultKey,
-    resultName: result.name,
-    oneLineDescription: result.summary,
-    displayTags: result.displayTags,
-    imageKey: result.imageKey,
-    shareText: result.shareText,
-  };
-}
-
-function readStoredResult(storageKey: string): StoredDetailResult | null {
-  if (typeof window === "undefined") return null;
-
-  const raw = window.localStorage.getItem(storageKey);
-  if (!raw) return null;
-
-  try {
-    return JSON.parse(raw) as StoredDetailResult;
-  } catch {
-    return null;
-  }
-}
-
-function saveStoredResult(storageKey: string, result: StoredDetailResult) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(storageKey, JSON.stringify(result));
-}
-
-function clearStoredResult(storageKey: string) {
-  if (typeof window === "undefined") return;
-  window.localStorage.removeItem(storageKey);
 }
 
 function PreviousSelectionSummary({
@@ -602,9 +558,6 @@ function ResultObjectImage({
           textAlign: "center",
         }}
       >
-        <p style={{ margin: "0 0 8px", fontSize: 14, color: "#64748b" }}>
-          대표 오브젝트 이미지
-        </p>
         <p
           style={{
             margin: "0 0 8px",
@@ -614,9 +567,6 @@ function ResultObjectImage({
           }}
         >
           이미지 준비 중
-        </p>
-        <p style={{ margin: 0, fontSize: 13, color: "#64748b" }}>
-          imageKey: {imageKey}
         </p>
       </section>
     );
@@ -791,7 +741,7 @@ function DetailResultView({
           <button
             type="button"
             onClick={() =>
-              alert("지금 볼 웹툰 찾기는 이후 단계에서 연결됩니다.")
+              alert("이 취향으로 웹툰 추천받기는 이후 /find와 연결됩니다.")
             }
             style={{
               width: "100%",
@@ -893,7 +843,6 @@ function ChoiceImagePreview({
       >
         <div style={{ textAlign: "center" }}>
           <div>이미지 준비 중</div>
-          <div style={{ marginTop: 4, fontSize: 12 }}>{imageKey}</div>
         </div>
       </div>
     );
@@ -1014,9 +963,9 @@ function DetailTestClient({ config }: { config: DetailTestConfig }) {
   }
 
   const testKey = testData.testKey;
+  const detailTestKey = isDetailTestKey(testKey) ? testKey : null;
   const testVersion =
     testData.testVersion ?? testData.version ?? "v0.2_ranked_multi_select";
-  const storageKey = getStorageKey(config, testKey);
   const genreLabel = getGenreLabel(testKey);
   const questions = testData.questions ?? [];
 
@@ -1024,7 +973,7 @@ function DetailTestClient({ config }: { config: DetailTestConfig }) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedOptionKeys, setSelectedOptionKeys] = useState<string[]>([]);
   const [answers, setAnswers] = useState<AnswersByQuestion>({});
-  const [storedResult, setStoredResult] = useState<StoredDetailResult | null>(
+  const [storedResult, setStoredResult] = useState<StoredDetailTestResult | null>(
     null
   );
   const [currentResult, setCurrentResult] = useState<NormalizedResult | null>(
@@ -1052,9 +1001,19 @@ function DetailTestClient({ config }: { config: DetailTestConfig }) {
   }, [answers, questions]);
 
   useEffect(() => {
-    const loadedResult = readStoredResult(storageKey);
+    if (!detailTestKey) return;
+
+    const loadedResult = loadTestResult(detailTestKey);
     setStoredResult(loadedResult);
-  }, [storageKey]);
+  }, [detailTestKey]);
+
+  if (!detailTestKey) {
+    return (
+      <main style={{ padding: 24 }}>
+        <h1>지원하지 않는 테스트입니다.</h1>
+      </main>
+    );
+  }
 
   function handleStart() {
     setHasStarted(true);
@@ -1079,7 +1038,9 @@ function DetailTestClient({ config }: { config: DetailTestConfig }) {
   }
 
   function handleRetake() {
-    clearStoredResult(storageKey);
+    if (!detailTestKey) return;
+
+    clearTestResult(detailTestKey);
     setStoredResult(null);
     setAnswers({});
     setCurrentResult(null);
@@ -1118,6 +1079,8 @@ function DetailTestClient({ config }: { config: DetailTestConfig }) {
   }
 
   function completeTest(nextAnswers: AnswersByQuestion) {
+    if (!detailTestKey) return;
+
     const rawScores = calculateScores(nextAnswers, questions);
 
     const resolvedMainBranchKey = resolveMainBranchWithTieBreak({
@@ -1142,14 +1105,14 @@ function DetailTestClient({ config }: { config: DetailTestConfig }) {
     const result = getResultByBranch(results, scores.mainBranchKey);
 
     const nextStoredResult = createStoredResult({
-      testKey,
+      testKey: detailTestKey,
       testVersion,
       answers: nextAnswers,
       scores,
       result,
     });
 
-    saveStoredResult(storageKey, nextStoredResult);
+    saveTestResult(detailTestKey, nextStoredResult);
 
     setStoredResult(nextStoredResult);
     setCurrentResult(result);
@@ -1192,7 +1155,7 @@ function DetailTestClient({ config }: { config: DetailTestConfig }) {
 
   if (completed && currentResult) {
     const debugData = {
-      storageKey,
+      testKey: detailTestKey,
       storedResult,
       answers,
       calculatedScores,
@@ -1463,7 +1426,7 @@ function DetailTestClient({ config }: { config: DetailTestConfig }) {
             >
               {JSON.stringify(
                 {
-                  storageKey,
+                  testKey: detailTestKey,
                   currentQuestionKey,
                   selectedOptionKeys,
                   answers,
