@@ -17,23 +17,23 @@ function getResultTitle(result: GenrePreferenceResult) {
   const secondaryName = getGenreName(result, result.secondaryGenreKey);
 
   if (result.resultType === "balanced") {
-    return "여러 세계가 고르게 열려 있어요.";
+    return "여러 장르의 세계가 고르게 열려 있어요.";
   }
 
   if (result.resultType === "linked") {
-    return `${primaryName}와 ${secondaryName} 세계가 함께 열렸어요.`;
+    return `${primaryName} · ${secondaryName} 세계가 함께 열렸어요.`;
   }
 
-  return `가장 강하게 열린 세계는 ${primaryName}예요.`;
+  return `${primaryName} 세계가 가장 선명하게 열렸어요.`;
 }
 
 function getResultDescription(result: GenrePreferenceResult) {
   if (result.resultType === "balanced") {
-    return "한 장르에만 강하게 쏠리기보다, 여러 장르의 장면을 고르게 즐길 가능성이 높아요.";
+    return "한 장르에만 쏠리기보다 여러 장르의 장면에 고르게 반응했어요. 다양한 분위기의 웹툰을 넘나들며 즐길 가능성이 높아요.";
   }
 
   if (result.resultType === "linked") {
-    return "두 장르의 끌림이 함께 강하게 나타났어요. 한쪽의 설정과 다른 한쪽의 분위기가 같이 맞을 수 있어요.";
+    return "두 장르의 끌림이 함께 강하게 나타났어요. 한쪽의 분위기와 다른 한쪽의 이야기 결이 같이 맞을 수 있어요.";
   }
 
   return "가장 높은 장르 취향이 비교적 선명하게 드러났어요. 이 장르를 중심으로 다음 추천 흐름을 이어갈 수 있어요.";

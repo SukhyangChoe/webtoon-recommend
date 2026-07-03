@@ -15,7 +15,19 @@ function getResultTypeCenterText(mapState: GenreMapState) {
   return "가장 강한 세계가 열림";
 }
 
+function getCenterGenreDisplayNames(mapState: GenreMapState) {
+  return mapState.centerGenreKeys.map((genreKey) => {
+    const matchedNode = mapState.nodes.find(
+      (node) => node.genreKey === genreKey
+    );
+
+    return matchedNode?.genreName ?? genreKey;
+  });
+}
+
 export default function WorldMapPanel({ mapState }: { mapState: GenreMapState }) {
+  const centerGenreDisplayNames = getCenterGenreDisplayNames(mapState);
+
   return (
     <section
       style={{
@@ -96,7 +108,7 @@ export default function WorldMapPanel({ mapState }: { mapState: GenreMapState })
               lineHeight: 1.6,
             }}
           >
-            {mapState.centerGenreKeys.join(" · ")}
+            {centerGenreDisplayNames.join(" · ")}
           </p>
         </div>
 
