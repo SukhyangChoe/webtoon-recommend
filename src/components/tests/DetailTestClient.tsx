@@ -49,8 +49,8 @@ type DetailTestQuestion = {
   questionText?: string;
   text?: string;
   legacyQuestionText?: string;
-  options?: DetailTestOption[];
-  choices?: DetailTestOption[];
+  options?: ReadonlyArray<DetailTestOption>;
+  choices?: ReadonlyArray<DetailTestOption>;
 };
 
 type DetailTestResult = {
@@ -60,8 +60,9 @@ type DetailTestResult = {
   resultName?: string;
   summary?: string;
   oneLineDescription?: string;
-  displayTags?: string[];
-  tagKeys?: string[];
+  displayTags?: ReadonlyArray<string>;
+  tagKeys?: ReadonlyArray<string>;
+  tagScoreKeys?: ReadonlyArray<string>;
   imageKey?: string;
   shareText?: string;
   sceneText?: string;
@@ -76,14 +77,15 @@ type DetailTestData = {
   startTitle?: string;
   startDescription?: string;
   startButtonText?: string;
-  questions: DetailTestQuestion[];
+  questions: ReadonlyArray<DetailTestQuestion>;
 };
 
 type DetailTestConfig = {
   route?: string;
-  testData?: DetailTestData;
+  testKey?: string;
+  testData?: any;
   test?: DetailTestData;
-  results?: DetailTestResult[];
+  results?: ReadonlyArray<DetailTestResult>;
 };
 
 type CalculatedScores = {
@@ -160,6 +162,17 @@ const RESULT_OBJECT_IMAGE_MAP: Record<string, string> = {
   murim_revenge_recovery: "/images/detail-results/murim_revenge_recovery.png",
   murim_sect_politics: "/images/detail-results/murim_sect_politics.png",
   murim_wanderer_justice: "/images/detail-results/murim_wanderer_justice.png",
+
+  romance_contract_document:
+    "/images/detail-results/romance_contract_document.png",
+  romance_reversal_chess:
+    "/images/detail-results/romance_reversal_chess.png",
+  romance_emotional_garden:
+    "/images/detail-results/romance_emotional_garden.png",
+  romance_court_invitation:
+    "/images/detail-results/romance_court_invitation.png",
+  romance_direct_heart: "/images/detail-results/romance_direct_heart.png",
+  romance_warm_teacup: "/images/detail-results/romance_warm_teacup.png",
 };
 
 const TIE_BREAK_ORDER = ["_q4", "_q5", "_q2", "_q3", "_q1"];
@@ -276,7 +289,7 @@ function findOptionByKey(question: DetailTestQuestion, optionKey: string) {
 
 function calculateScores(
   answers: AnswersByQuestion,
-  questions: DetailTestQuestion[]
+  questions: ReadonlyArray<DetailTestQuestion>
 ): CalculatedScores {
   const branchScores: ScoreMap = {};
   const tagScores: ScoreMap = {};
@@ -327,7 +340,7 @@ function calculateScores(
 function resolveMainBranchWithTieBreak(params: {
   branchScores: ScoreMap;
   answers: AnswersByQuestion;
-  questions: DetailTestQuestion[];
+  questions: ReadonlyArray<DetailTestQuestion>;
 }) {
   const { branchScores, answers, questions } = params;
   const entries = Object.entries(branchScores);
@@ -398,7 +411,7 @@ function normalizeResult(
     branchKey,
     name,
     summary,
-    displayTags: rawResult?.displayTags ?? [],
+    displayTags: [...(rawResult?.displayTags ?? [])],
     imageKey: rawResult?.imageKey ?? branchKey,
     shareText: rawResult?.shareText ?? "",
     sceneText: rawResult?.sceneText,
@@ -406,7 +419,7 @@ function normalizeResult(
 }
 
 function getResultByBranch(
-  results: DetailTestResult[],
+  results: ReadonlyArray<DetailTestResult>,
   branchKey: string
 ): NormalizedResult {
   const matchedResult = results.find((result) => {
@@ -439,7 +452,7 @@ function PreviousSelectionSummary({
   answers,
 }: {
   currentQuestionIndex: number;
-  questions: DetailTestQuestion[];
+  questions: ReadonlyArray<DetailTestQuestion>;
   answers: AnswersByQuestion;
 }) {
   if (currentQuestionIndex === 0) return null;
@@ -950,24 +963,16 @@ function QuestionOptionCard({
   );
 }
 
-function DetailTestClient({ config }: { config: DetailTestConfig }) {
+export function DetailTestClient({ config }: { config: DetailTestConfig }) {
   const testData = config.testData ?? config.test;
   const results = config.results ?? [];
 
-  if (!testData) {
-    return (
-      <main style={{ padding: 24 }}>
-        <h1>테스트 데이터를 찾을 수 없습니다.</h1>
-      </main>
-    );
-  }
-
-  const testKey = testData.testKey;
+  const testKey = testData?.testKey ?? "";
   const detailTestKey = isDetailTestKey(testKey) ? testKey : null;
   const testVersion =
-    testData.testVersion ?? testData.version ?? "v0.2_ranked_multi_select";
+    testData?.testVersion ?? testData?.version ?? "v0.2_ranked_multi_select";
   const genreLabel = getGenreLabel(testKey);
-  const questions = testData.questions ?? [];
+  const questions = testData?.questions ?? [];
 
   const [hasStarted, setHasStarted] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -1006,14 +1011,6 @@ function DetailTestClient({ config }: { config: DetailTestConfig }) {
     const loadedResult = loadTestResult(detailTestKey);
     setStoredResult(loadedResult);
   }, [detailTestKey]);
-
-  if (!detailTestKey) {
-    return (
-      <main style={{ padding: 24 }}>
-        <h1>지원하지 않는 테스트입니다.</h1>
-      </main>
-    );
-  }
 
   function handleStart() {
     setHasStarted(true);
@@ -1150,6 +1147,22 @@ function DetailTestClient({ config }: { config: DetailTestConfig }) {
     setCurrentQuestionIndex(nextQuestionIndex);
     setSelectedOptionKeys(
       savedNextAnswer?.selectedOptions.map((option) => option.optionKey) ?? []
+    );
+  }
+
+  if (!testData) {
+    return (
+      <main style={{ padding: 24 }}>
+        <h1>테스트 데이터를 찾을 수 없습니다.</h1>
+      </main>
+    );
+  }
+
+  if (!detailTestKey) {
+    return (
+      <main style={{ padding: 24 }}>
+        <h1>지원하지 않는 테스트입니다.</h1>
+      </main>
     );
   }
 
@@ -1443,5 +1456,4 @@ function DetailTestClient({ config }: { config: DetailTestConfig }) {
   );
 }
 
-export { DetailTestClient };
 export default DetailTestClient;
