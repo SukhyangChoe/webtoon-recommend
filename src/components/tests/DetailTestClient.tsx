@@ -64,6 +64,22 @@ const RESULT_OBJECT_IMAGE_MAP: Record<string, string> = {
     "/images/detail-results/romance_court_invitation.png",
   romance_direct_heart: "/images/detail-results/romance_direct_heart.png",
   romance_warm_teacup: "/images/detail-results/romance_warm_teacup.png",
+
+  thriller_mystery_chaser: "/images/detail-results/thriller_mystery_clue.png",
+  thriller_mystery_clue: "/images/detail-results/thriller_mystery_clue.png",
+  thriller_survival_escape: "/images/detail-results/thriller_locked_exit.png",
+  thriller_locked_exit: "/images/detail-results/thriller_locked_exit.png",
+  thriller_occult_uncanny: "/images/detail-results/thriller_old_photo.png",
+  thriller_old_photo: "/images/detail-results/thriller_old_photo.png",
+  thriller_crime_revenge: "/images/detail-results/thriller_crime_trace.png",
+  thriller_crime_trace: "/images/detail-results/thriller_crime_trace.png",
+  thriller_psychological_tension:
+    "/images/detail-results/thriller_silent_room.png",
+  thriller_silent_room: "/images/detail-results/thriller_silent_room.png",
+  thriller_conspiracy_twist:
+    "/images/detail-results/thriller_conspiracy_file.png",
+  thriller_conspiracy_file:
+    "/images/detail-results/thriller_conspiracy_file.png",
 };
 
 const TIE_BREAK_ORDER = ["_q4", "_q5", "_q2", "_q3", "_q1"];

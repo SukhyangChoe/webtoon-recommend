@@ -4,6 +4,8 @@ import { murimTest } from "./murim";
 import { murimResults } from "./murimResults";
 import { romanceRopanTest } from "./romanceRopan";
 import { romanceRopanResults } from "./romanceRopanResults";
+import { thrillerHorrorTest } from "./thrillerHorror";
+import { thrillerHorrorResults } from "./thrillerHorrorResults";
 
 import type {
   DetailTestConfig as CommonDetailTestConfig,
@@ -15,7 +17,10 @@ import type {
 
 type ActiveDetailTestKey = Extract<
   CommonDetailTestKey,
-  "fantasy_detail" | "murim_detail" | "romance_ropan_detail"
+  | "fantasy_detail"
+  | "murim_detail"
+  | "romance_ropan_detail"
+  | "thriller_horror_detail"
 >;
 
 type DetailTestConfigMap = Record<ActiveDetailTestKey, CommonDetailTestConfig>;
@@ -41,6 +46,13 @@ export const detailTestConfigs: DetailTestConfigMap = {
     testData: romanceRopanTest as unknown as DetailTestData,
     results: romanceRopanResults as unknown as DetailTestResult[],
   },
+
+  thriller_horror_detail: {
+    testKey: "thriller_horror_detail",
+    route: "/tests/thriller-horror",
+    testData: thrillerHorrorTest as unknown as DetailTestData,
+    results: thrillerHorrorResults as unknown as DetailTestResult[],
+  },
 };
 
 export type DetailTestKey = keyof typeof detailTestConfigs;
@@ -55,6 +67,7 @@ export const detailTestRoutes: Record<DetailTestKey, DetailTestRoute> = {
   fantasy_detail: "/tests/fantasy",
   murim_detail: "/tests/murim",
   romance_ropan_detail: "/tests/romance-ropan",
+  thriller_horror_detail: "/tests/thriller-horror",
 };
 
 export const detailTestKeys = Object.keys(
