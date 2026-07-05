@@ -1,5 +1,3 @@
-// src/types/detailTest.ts
-
 export type ScoreMap = Record<string, number>;
 
 export type DetailTestKey =
@@ -35,12 +33,20 @@ export type DetailTestBranch = {
   branchKey: string;
   branchName: string;
 
+  // 기존 fantasy/murim seed에서 사용하는 필드 허용
+  genreKey?: string;
+  coreTaste?: string;
+  defaultTagKeys?: string[];
+
   // 기존 seed/결과 파일에서 다른 이름을 쓰는 경우를 안전하게 허용
   name?: string;
   displayName?: string;
   description?: string;
   order?: number;
   displayOrder?: number;
+
+  // 장르별 seed가 추가 메타 필드를 가져도 막지 않기 위한 확장 허용
+  [key: string]: unknown;
 };
 
 export type DetailTestOption = {
@@ -104,6 +110,9 @@ export type DetailTestQuestion = {
 
   // Q1 이미지 카드 / Q2~Q6 텍스트 카드 구분용 선택 필드
   cardType?: "image" | "text";
+
+  // Q6 회피 문항 표시용
+  isAvoidanceQuestion?: boolean;
 
   [key: string]: unknown;
 };

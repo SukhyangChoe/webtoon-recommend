@@ -1,4 +1,4 @@
-import type { TestData } from "@/lib/testEngine/types";
+import type { DetailTestBranch, DetailTestData } from "@/types/detailTest";
 
 export const fantasyBranches = [
   {
@@ -83,38 +83,79 @@ export const fantasyBranches = [
     ],
     order: 6,
   },
-];
+] satisfies DetailTestBranch[];
 
-export const fantasyTest: TestData = {
+export const fantasyTest = {
   testId: "fantasy_detail",
   testKey: "fantasy_detail",
   testName: "판타지 웹툰 취향 테스트",
+  displayName: "판타지 웹툰 취향 테스트",
   genreKey: "fantasy",
+  typeScoreKey: "fantasyTypeScores",
+
   route: "/tests/fantasy",
+
   questionCount: 6,
   choiceCountPerQuestion: 5,
   choiceCount: 30,
   resultCount: 6,
+
   version: "v0.5",
+  testVersion: "v0.5",
+
   scoreMode: "branch_tag_avoidance",
   selectMode: "ranked_multi_select",
   maxSelect: 2,
+
+  startTitle: "제목 없는 판타지 웹툰 원고가 도착했습니다.",
+  startDescription:
+    "당신이 고르는 장면들이 모여\n오래 머물 판타지의 방향을 만들어갑니다.",
+  startButtonText: "첫 페이지 넘기기",
+
   intro: {
     title: "제목 없는 판타지 웹툰 원고가 도착했습니다.",
     description:
       "당신이 고르는 장면들이 모여\n오래 머물 판타지의 방향을 만들어갑니다.",
     startButtonText: "첫 페이지 넘기기",
   },
+
+  rankWeights: {
+    single: [{ rank: 1, weight: 1.0 }],
+    double: [
+      { rank: 1, weight: 0.7 },
+      { rank: 2, weight: 0.3 },
+    ],
+  },
+
+  tieBreakQuestionOrder: [
+    "fantasy_q4",
+    "fantasy_q5",
+    "fantasy_q2",
+    "fantasy_q3",
+    "fantasy_q1",
+  ],
+
+  excludeFromBranchResult: ["fantasy_q6"],
+
+  branches: fantasyBranches,
+
   questions: [
     {
+      questionKey: "fantasy_q1",
       questionId: "fantasy_q1",
       order: 1,
+      questionOrder: 1,
       questionTitle: "시작 장면",
+      title: "시작 장면",
       questionText: "첫 화에서 더 끌리는 시작 장면을 골라주세요.",
       legacyQuestionText:
         "첫 페이지가 열립니다. 아직 아무 설명도 없지만, 이상하게 다음 컷이 궁금해지는 장면이 있습니다. 첫 페이지에 그려진 장면은 무엇인가요?",
+      selectMode: "ranked_multi_select",
+      maxSelect: 2,
+      cardType: "image",
       choices: [
         {
+          optionKey: "fantasy_q1_a1",
           choiceId: "fantasy_q1_a1",
           choiceOrder: 1,
           label: "진실 추적자",
@@ -133,6 +174,7 @@ export const fantasyTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "fantasy_q1_a2",
           choiceId: "fantasy_q1_a2",
           choiceOrder: 2,
           label: "시스템 계승자",
@@ -151,6 +193,7 @@ export const fantasyTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "fantasy_q1_a3",
           choiceId: "fantasy_q1_a3",
           choiceOrder: 3,
           label: "생존 지휘관",
@@ -169,6 +212,7 @@ export const fantasyTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "fantasy_q1_a4",
           choiceId: "fantasy_q1_a4",
           choiceOrder: 4,
           label: "힘숨찐",
@@ -187,6 +231,7 @@ export const fantasyTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "fantasy_q1_a5",
           choiceId: "fantasy_q1_a5",
           choiceOrder: 5,
           label: "왕국 전략가",
@@ -207,14 +252,21 @@ export const fantasyTest: TestData = {
       ],
     },
     {
+      questionKey: "fantasy_q2",
       questionId: "fantasy_q2",
       order: 2,
+      questionOrder: 2,
       questionTitle: "인물",
+      title: "인물",
       questionText: "더 따라가고 싶은 인물을 골라주세요.",
       legacyQuestionText:
         "몇 컷 뒤, 카메라는 한 인물을 따라가기 시작합니다. 그는 어떤 인물인가요?",
+      selectMode: "ranked_multi_select",
+      maxSelect: 2,
+      cardType: "text",
       choices: [
         {
+          optionKey: "fantasy_q2_a1",
           choiceId: "fantasy_q2_a1",
           choiceOrder: 1,
           label: "숨은 강자",
@@ -232,6 +284,7 @@ export const fantasyTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "fantasy_q2_a2",
           choiceId: "fantasy_q2_a2",
           choiceOrder: 2,
           label: "지키는 리더",
@@ -249,6 +302,7 @@ export const fantasyTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "fantasy_q2_a3",
           choiceId: "fantasy_q2_a3",
           choiceOrder: 3,
           label: "규칙 해석자",
@@ -266,6 +320,7 @@ export const fantasyTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "fantasy_q2_a4",
           choiceId: "fantasy_q2_a4",
           choiceOrder: 4,
           label: "판세를 읽는 사람",
@@ -282,6 +337,7 @@ export const fantasyTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "fantasy_q2_a5",
           choiceId: "fantasy_q2_a5",
           choiceOrder: 5,
           label: "다시 시작하는 사람",
@@ -301,14 +357,21 @@ export const fantasyTest: TestData = {
       ],
     },
     {
+      questionKey: "fantasy_q3",
       questionId: "fantasy_q3",
       order: 3,
+      questionOrder: 3,
       questionTitle: "사건 전개",
+      title: "사건 전개",
       questionText: "더 보고 싶은 사건 전개를 골라주세요.",
       legacyQuestionText:
         "첫 화의 중반, 평온하던 분위기가 갑자기 바뀝니다. 어떤 사건이 다가오고 있나요?",
+      selectMode: "ranked_multi_select",
+      maxSelect: 2,
+      cardType: "text",
       choices: [
         {
+          optionKey: "fantasy_q3_a1",
           choiceId: "fantasy_q3_a1",
           choiceOrder: 1,
           label: "전장으로 바뀐 장소",
@@ -326,6 +389,7 @@ export const fantasyTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "fantasy_q3_a2",
           choiceId: "fantasy_q3_a2",
           choiceOrder: 2,
           label: "맞아떨어진 계획",
@@ -342,6 +406,7 @@ export const fantasyTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "fantasy_q3_a3",
           choiceId: "fantasy_q3_a3",
           choiceOrder: 3,
           label: "세계의 비밀",
@@ -358,6 +423,7 @@ export const fantasyTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "fantasy_q3_a4",
           choiceId: "fantasy_q3_a4",
           choiceOrder: 4,
           label: "새로운 선택지",
@@ -375,6 +441,7 @@ export const fantasyTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "fantasy_q3_a5",
           choiceId: "fantasy_q3_a5",
           choiceOrder: 5,
           label: "잃어버린 이름의 퀘스트",
@@ -394,14 +461,21 @@ export const fantasyTest: TestData = {
       ],
     },
     {
+      questionKey: "fantasy_q4",
       questionId: "fantasy_q4",
       order: 4,
+      questionOrder: 4,
       questionTitle: "연출",
+      title: "연출",
       questionText: "볼 때 더 중요하게 느끼는 연출을 골라주세요.",
       legacyQuestionText:
         "이야기를 넘기던 중, 한 컷이 오래 눈에 남습니다. 어떤 컷이면 가장 오래 기억에 남을까요?",
+      selectMode: "ranked_multi_select",
+      maxSelect: 2,
+      cardType: "text",
       choices: [
         {
+          optionKey: "fantasy_q4_a1",
           choiceId: "fantasy_q4_a1",
           choiceOrder: 1,
           label: "세계의 크기",
@@ -417,6 +491,7 @@ export const fantasyTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "fantasy_q4_a2",
           choiceId: "fantasy_q4_a2",
           choiceOrder: 2,
           label: "숨겨진 힘의 공개",
@@ -434,6 +509,7 @@ export const fantasyTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "fantasy_q4_a3",
           choiceId: "fantasy_q4_a3",
           choiceOrder: 3,
           label: "동맹과 배신의 역전",
@@ -450,6 +526,7 @@ export const fantasyTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "fantasy_q4_a4",
           choiceId: "fantasy_q4_a4",
           choiceOrder: 4,
           label: "한계 돌파",
@@ -467,6 +544,7 @@ export const fantasyTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "fantasy_q4_a5",
           choiceId: "fantasy_q4_a5",
           choiceOrder: 5,
           label: "단서의 결합",
@@ -486,14 +564,21 @@ export const fantasyTest: TestData = {
       ],
     },
     {
+      questionKey: "fantasy_q5",
       questionId: "fantasy_q5",
       order: 5,
+      questionOrder: 5,
       questionTitle: "다음 화 흐름",
+      title: "다음 화 흐름",
       questionText: "다음 화까지 보고 싶게 만드는 흐름을 골라주세요.",
       legacyQuestionText:
         "분명 한 화만 더 보려 했습니다. 그런데 어느새 계속 넘기고 있습니다. 어떤 흐름이었을까요?",
+      selectMode: "ranked_multi_select",
+      maxSelect: 2,
+      cardType: "text",
       choices: [
         {
+          optionKey: "fantasy_q5_a1",
           choiceId: "fantasy_q5_a1",
           choiceOrder: 1,
           label: "실패와 재도전",
@@ -511,6 +596,7 @@ export const fantasyTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "fantasy_q5_a2",
           choiceId: "fantasy_q5_a2",
           choiceOrder: 2,
           label: "버티는 생존전",
@@ -528,6 +614,7 @@ export const fantasyTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "fantasy_q5_a3",
           choiceId: "fantasy_q5_a3",
           choiceOrder: 3,
           label: "퀘스트와 보상",
@@ -545,6 +632,7 @@ export const fantasyTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "fantasy_q5_a4",
           choiceId: "fantasy_q5_a4",
           choiceOrder: 4,
           label: "시선이 바뀌는 힘",
@@ -562,6 +650,7 @@ export const fantasyTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "fantasy_q5_a5",
           choiceId: "fantasy_q5_a5",
           choiceOrder: 5,
           label: "깊어지는 세계",
@@ -581,14 +670,22 @@ export const fantasyTest: TestData = {
       ],
     },
     {
+      questionKey: "fantasy_q6",
       questionId: "fantasy_q6",
       order: 6,
+      questionOrder: 6,
       questionTitle: "부담 요소",
+      title: "부담 요소",
       questionText: "덜 보고 싶은 부담 요소를 골라주세요.",
       legacyQuestionText:
         "처음엔 더 볼 생각이 있었습니다. 그런데 어느 순간 손이 멈추고, 뒤로가기를 눌렀습니다. 어떤 이유였을까요?",
+      selectMode: "ranked_multi_select",
+      maxSelect: 2,
+      cardType: "text",
+      isAvoidanceQuestion: true,
       choices: [
         {
+          optionKey: "fantasy_q6_a1",
           choiceId: "fantasy_q6_a1",
           choiceOrder: 1,
           label: "감정 연결 부족",
@@ -602,6 +699,7 @@ export const fantasyTest: TestData = {
           },
         },
         {
+          optionKey: "fantasy_q6_a2",
           choiceId: "fantasy_q6_a2",
           choiceOrder: 2,
           label: "초반 진입장벽",
@@ -616,6 +714,7 @@ export const fantasyTest: TestData = {
           },
         },
         {
+          optionKey: "fantasy_q6_a3",
           choiceId: "fantasy_q6_a3",
           choiceOrder: 3,
           label: "작화·연출 흔들림",
@@ -630,6 +729,7 @@ export const fantasyTest: TestData = {
           },
         },
         {
+          optionKey: "fantasy_q6_a4",
           choiceId: "fantasy_q6_a4",
           choiceOrder: 4,
           label: "답답한 반복 선택",
@@ -644,6 +744,7 @@ export const fantasyTest: TestData = {
           },
         },
         {
+          optionKey: "fantasy_q6_a5",
           choiceId: "fantasy_q6_a5",
           choiceOrder: 5,
           label: "반복되는 장면",
@@ -659,4 +760,6 @@ export const fantasyTest: TestData = {
       ],
     },
   ],
-};
+} satisfies DetailTestData;
+
+export type FantasyTest = typeof fantasyTest;
