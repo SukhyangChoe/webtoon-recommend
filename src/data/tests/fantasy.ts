@@ -472,7 +472,7 @@ export const fantasyTest = {
         "이야기를 넘기던 중, 한 컷이 오래 눈에 남습니다. 어떤 컷이면 가장 오래 기억에 남을까요?",
       selectMode: "ranked_multi_select",
       maxSelect: 2,
-      cardType: "text",
+      cardType: "image",
       choices: [
         {
           optionKey: "fantasy_q4_a1",
@@ -482,7 +482,7 @@ export const fantasyTest = {
           text: "대사 없이도 구도와 분위기만으로 세계의 크기가 느껴지는 컷.",
           shortDescription:
             "대사 없이도 구도와 분위기만으로 세계의 크기가 느껴지는 컷.",
-          branchScores: {},
+          imageKey: "fantasy_q4_a1_image", branchScores: {},
           tagScores: {
             visual_appeal: 1,
             world_mystery: 1,
@@ -498,7 +498,7 @@ export const fantasyTest = {
           text: "숨겨진 힘이 드러나고, 모두의 표정이 한순간에 바뀌는 컷.",
           shortDescription:
             "숨겨진 힘이 드러나고, 모두의 표정이 한순간에 바뀌는 컷.",
-          branchScores: {
+          imageKey: "fantasy_q4_a2_image", branchScores: {
             fantasy_hidden_power: 1,
           },
           tagScores: {
@@ -516,7 +516,7 @@ export const fantasyTest = {
           text: "짧은 말 한마디로 동맹과 배신의 판도가 뒤집히는 컷.",
           shortDescription:
             "짧은 말 한마디로 동맹과 배신의 판도가 뒤집히는 컷.",
-          branchScores: {
+          imageKey: "fantasy_q4_a3_image", branchScores: {
             fantasy_kingdom_strategist: 1,
           },
           tagScores: {
@@ -533,7 +533,7 @@ export const fantasyTest = {
           text: "무너졌던 주인공이 처음으로 자신의 한계를 넘어서는 컷.",
           shortDescription:
             "무너졌던 주인공이 처음으로 자신의 한계를 넘어서는 컷.",
-          branchScores: {
+          imageKey: "fantasy_q4_a4_image", branchScores: {
             fantasy_limit_breaker: 1,
           },
           tagScores: {
@@ -551,7 +551,7 @@ export const fantasyTest = {
           text: "흩어진 규칙과 단서들이 하나의 진실로 맞물리는 컷.",
           shortDescription:
             "흩어진 규칙과 단서들이 하나의 진실로 맞물리는 컷.",
-          branchScores: {
+          imageKey: "fantasy_q4_a5_image", branchScores: {
             fantasy_truth_chaser: 1,
           },
           tagScores: {

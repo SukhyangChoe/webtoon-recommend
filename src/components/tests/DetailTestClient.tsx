@@ -26,27 +26,27 @@ import type {
 
 const RESULT_OBJECT_IMAGE_MAP: Record<string, string> = {
   fantasy_system_successor:
-    "/images/detail-results/fantasy_system_successor.png",
-  fantasy_system_window: "/images/detail-results/fantasy_system_successor.png",
+    "/images/detail-results/fantasy_system_window.png",
+  fantasy_system_window: "/images/detail-results/fantasy_system_window.png",
 
-  fantasy_hidden_power: "/images/detail-results/fantasy_hidden_power.png",
-  fantasy_hidden_aura: "/images/detail-results/fantasy_hidden_power.png",
+  fantasy_hidden_power: "/images/detail-results/fantasy_hidden_aura.png",
+  fantasy_hidden_aura: "/images/detail-results/fantasy_hidden_aura.png",
 
-  fantasy_limit_breaker: "/images/detail-results/fantasy_limit_breaker.png",
-  fantasy_limit_break: "/images/detail-results/fantasy_limit_breaker.png",
+  fantasy_limit_breaker: "/images/detail-results/fantasy_limit_break.png",
+  fantasy_limit_break: "/images/detail-results/fantasy_limit_break.png",
 
-  fantasy_truth_chaser: "/images/detail-results/fantasy_truth_chaser.png",
-  fantasy_truth_map: "/images/detail-results/fantasy_truth_chaser.png",
+  fantasy_truth_chaser: "/images/detail-results/fantasy_truth_map.png",
+  fantasy_truth_map: "/images/detail-results/fantasy_truth_map.png",
 
   fantasy_survival_commander:
-    "/images/detail-results/fantasy_survival_commander.png",
+    "/images/detail-results/fantasy_battle_fortress.png",
   fantasy_battle_fortress:
-    "/images/detail-results/fantasy_survival_commander.png",
+    "/images/detail-results/fantasy_battle_fortress.png",
 
   fantasy_kingdom_strategist:
-    "/images/detail-results/fantasy_kingdom_strategist.png",
+    "/images/detail-results/fantasy_strategy_board.png",
   fantasy_strategy_board:
-    "/images/detail-results/fantasy_kingdom_strategist.png",
+    "/images/detail-results/fantasy_strategy_board.png",
 
   murim_growth_training: "/images/detail-results/murim_growth_training.png",
   murim_absolute_power: "/images/detail-results/murim_absolute_power.png",
@@ -1085,6 +1085,8 @@ export function DetailTestClient({ config }: { config: DetailTestConfig }) {
     if (!detailTestKey) return;
 
     const loadedResult = loadTestResult(detailTestKey);
+    // 저장된 테스트 결과를 최초 진입 시 1회 복원하기 위한 의도적 hydration 처리입니다.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setStoredResult(loadedResult);
   }, [detailTestKey]);
 
@@ -1414,8 +1416,7 @@ export function DetailTestClient({ config }: { config: DetailTestConfig }) {
             const optionKey = getOptionKey(option);
             const rank = currentSelectedRanks[optionKey];
             const isSelected = Boolean(rank);
-            const isImageCard =
-              currentQuestionIndex === 0 && Boolean(option.imageKey);
+            const isImageCard = currentQuestion.cardType === "image" && Boolean(option.imageKey);
 
             return (
               <QuestionOptionCard

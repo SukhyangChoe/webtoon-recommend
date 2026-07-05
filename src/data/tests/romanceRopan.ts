@@ -77,6 +77,7 @@ export const romanceRopanTest = {
         "첫 장면이 열립니다. 아직 주인공의 이름도, 이 관계가 시작된 이유도 나오지 않았지만, 이상하게 다음 컷이 궁금해지는 시작이 있습니다. 첫 페이지에 그려진 장면은 무엇인가요?",
       selectMode: "ranked_multi_select",
       maxSelect: 2,
+      cardType: "image",
       options: [
         {
           optionKey: "romance_q1_a1",
@@ -404,7 +405,7 @@ export const romanceRopanTest = {
       legacyQuestionText:
         "이야기를 넘기던 중, 한 장면이 오래 눈에 남습니다. 어떤 장면이면 가장 오래 기억에 남을까요?",
       selectMode: "ranked_multi_select",
-      maxSelect: 2,
+      maxSelect: 2, cardType: "image",
       options: [
         {
           optionKey: "romance_q4_a1",
@@ -414,7 +415,7 @@ export const romanceRopanTest = {
           text: "대사 없이도 눈빛과 구도만으로 두 사람 사이의 감정이 전해지는 장면.",
           shortDescription:
             "대사 없이도 눈빛과 구도만으로 두 사람 사이의 감정이 전해지는 장면.",
-          branchScores: {},
+          imageKey: "romance_q4_a1_image", branchScores: {},
           tagScores: {
             visual_appeal: 1,
             emotional_depth: 1,
@@ -430,7 +431,7 @@ export const romanceRopanTest = {
           text: "지친 하루 끝, 아무 말 없이 옆자리를 비워두고 기다려주는 장면.",
           shortDescription:
             "지친 하루 끝, 아무 말 없이 옆자리를 비워두고 기다려주는 장면.",
-          branchScores: {
+          imageKey: "romance_q4_a2_image", branchScores: {
             romance_healing_companion: 1,
           },
           tagScores: {
@@ -448,7 +449,7 @@ export const romanceRopanTest = {
           text: "짧은 초대장 한 장이 도착하자, 연회장의 미소들이 전부 계산적으로 보이는 장면.",
           shortDescription:
             "짧은 초대장 한 장이 도착하자, 연회장의 미소들이 전부 계산적으로 보이는 장면.",
-          branchScores: {
+          imageKey: "romance_q4_a3_image", branchScores: {
             romance_court_politics: 1,
           },
           tagScores: {
@@ -466,7 +467,7 @@ export const romanceRopanTest = {
           text: "늘 주도권을 쥐던 사람이 처음으로 대답을 기다리고, 주인공이 한 걸음 물러서는 장면.",
           shortDescription:
             "늘 주도권을 쥐던 사람이 처음으로 대답을 기다리고, 주인공이 한 걸음 물러서는 장면.",
-          branchScores: {
+          imageKey: "romance_q4_a4_image", branchScores: {
             romance_power_reversal: 1,
           },
           tagScores: {
@@ -484,7 +485,7 @@ export const romanceRopanTest = {
           text: "참다못한 사람이 손목을 잡는 대신, 눈을 맞추고 솔직하게 마음을 말하는 장면.",
           shortDescription:
             "참다못한 사람이 손목을 잡는 대신, 눈을 맞추고 솔직하게 마음을 말하는 장면.",
-          branchScores: {
+          imageKey: "romance_q4_a5_image", branchScores: {
             romance_direct_chemistry: 1,
           },
           tagScores: {

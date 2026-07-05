@@ -256,7 +256,10 @@ export default function GenrePreferenceClient() {
 
   useEffect(() => {
     const loadedResult = loadGenrePreferenceResult();
+    // 저장된 장르 취향 결과를 최초 진입 시 1회 복원하기 위한 의도적 hydration 처리입니다.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setStoredResult(loadedResult);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setStorageChecked(true);
   }, []);
 

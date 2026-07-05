@@ -408,7 +408,7 @@ export const murimTest = {
         "이야기를 넘기던 중, 한 장면 때문에 스크롤이 잠시 멈춥니다. 어떤 장면이었나요?",
       selectMode: "ranked_multi_select",
       maxSelect: 2,
-      cardType: "text",
+      cardType: "image",
       choices: [
         {
           optionKey: "murim_q4_a1",
@@ -418,7 +418,7 @@ export const murimTest = {
           text: "숨겨왔던 힘이 드러나자, 방금 전까지 비웃던 이들이 침묵하는 장면.",
           shortDescription:
             "숨겨왔던 힘이 드러나자, 방금 전까지 비웃던 이들이 침묵하는 장면.",
-          branchScores: {
+          imageKey: "murim_q4_a1_image", branchScores: {
             murim_absolute_power: 1,
           },
           tagScores: {
@@ -436,7 +436,7 @@ export const murimTest = {
           text: "짧은 말 한마디로 동맹과 배신의 판도가 뒤집히는 장면.",
           shortDescription:
             "짧은 말 한마디로 동맹과 배신의 판도가 뒤집히는 장면.",
-          branchScores: {
+          imageKey: "murim_q4_a2_image", branchScores: {
             murim_sect_politics: 1,
           },
           tagScores: {
@@ -453,7 +453,7 @@ export const murimTest = {
           text: "지겹도록 반복한 초식이 처음으로 강적의 빈틈을 찌르는 장면.",
           shortDescription:
             "지겹도록 반복한 초식이 처음으로 강적의 빈틈을 찌르는 장면.",
-          branchScores: {
+          imageKey: "murim_q4_a3_image", branchScores: {
             murim_growth_training: 1,
           },
           tagScores: {
@@ -471,7 +471,7 @@ export const murimTest = {
           text: "떠나려던 무인이 약자를 지키기 위해 다시 칼집을 여는 장면.",
           shortDescription:
             "떠나려던 무인이 약자를 지키기 위해 다시 칼집을 여는 장면.",
-          branchScores: {
+          imageKey: "murim_q4_a4_image", branchScores: {
             murim_wanderer_justice: 1,
           },
           tagScores: {
@@ -489,7 +489,7 @@ export const murimTest = {
           text: "무너진 문파의 이름을 원수 앞에서 다시 꺼내는 장면.",
           shortDescription:
             "무너진 문파의 이름을 원수 앞에서 다시 꺼내는 장면.",
-          branchScores: {
+          imageKey: "murim_q4_a5_image", branchScores: {
             murim_revenge_recovery: 1,
           },
           tagScores: {
