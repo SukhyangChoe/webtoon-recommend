@@ -1,10 +1,12 @@
-import type { TestResult } from "@/lib/testEngine/types";
+import type { DetailTestResult } from "@/types/detailTest";
 
-export const murimResults: TestResult[] = [
+export const murimResults = [
   {
     testKey: "murim_detail",
     resultKey: "murim_growth_training",
+    branchKey: "murim_growth_training",
     resultName: "초식 수련자",
+    name: "초식 수련자",
     oneLineDescription:
       "반복되는 수련과 작은 깨달음이 쌓여, 한 수씩 강해지는 무협에 끌립니다.",
     displayTags: [
@@ -21,13 +23,15 @@ export const murimResults: TestResult[] = [
       "emotional_depth",
       "story_immersion",
     ],
-    imageKey: "murim_training_sword",
-    shareText: "반복되는 수련과 깨달음이 쌓이는 초식 수련자.",
+    imageKey: "murim_growth_training",
+    shareText: "반복되는 수련과 깨달음이 쌓이는 초식 수련자",
   },
   {
     testKey: "murim_detail",
     resultKey: "murim_absolute_power",
+    branchKey: "murim_absolute_power",
     resultName: "천하 군림자",
+    name: "천하 군림자",
     oneLineDescription:
       "등장만으로 모두의 시선과 강호의 분위기를 바꾸는 압도적 강자 서사에 끌립니다.",
     displayTags: [
@@ -45,13 +49,15 @@ export const murimResults: TestResult[] = [
       "survival_tension",
       "story_immersion",
     ],
-    imageKey: "murim_absolute_aura",
-    shareText: "등장만으로 강호의 분위기를 바꾸는 천하 군림자.",
+    imageKey: "murim_absolute_power",
+    shareText: "등장만으로 강호의 분위기를 바꾸는 천하 군림자",
   },
   {
     testKey: "murim_detail",
     resultKey: "murim_revenge_recovery",
+    branchKey: "murim_revenge_recovery",
     resultName: "몰락한 후계자",
+    name: "몰락한 후계자",
     oneLineDescription:
       "무너진 문파나 가문의 흔적을 붙잡고, 복수와 재기를 향해 다시 일어서는 무협에 끌립니다.",
     displayTags: [
@@ -69,13 +75,15 @@ export const murimResults: TestResult[] = [
       "growth",
       "story_immersion",
     ],
-    imageKey: "murim_broken_sect",
-    shareText: "무너진 문파의 흔적을 붙잡고 다시 일어서는 몰락한 후계자.",
+    imageKey: "murim_revenge_recovery",
+    shareText: "무너진 문파의 흔적을 붙잡고 다시 일어서는 몰락한 후계자",
   },
   {
     testKey: "murim_detail",
     resultKey: "murim_sect_politics",
+    branchKey: "murim_sect_politics",
     resultName: "강호 책략가",
+    name: "강호 책략가",
     oneLineDescription:
       "칼보다 먼저 문파의 판세와 사람의 속내를 읽는 두뇌형 무협에 끌립니다.",
     displayTags: [
@@ -92,13 +100,15 @@ export const murimResults: TestResult[] = [
       "relationship_bond",
       "story_immersion",
     ],
-    imageKey: "murim_strategy_scroll",
-    shareText: "칼보다 먼저 판세와 사람의 속내를 읽는 강호 책략가.",
+    imageKey: "murim_sect_politics",
+    shareText: "칼보다 먼저 판세와 사람의 속내를 읽는 강호 책략가",
   },
   {
     testKey: "murim_detail",
     resultKey: "murim_wanderer_justice",
+    branchKey: "murim_wanderer_justice",
     resultName: "길 위의 협객",
+    name: "길 위의 협객",
     oneLineDescription:
       "강해지는 것보다, 길 위에서 만난 사람과 약속을 외면하지 못하는 무협에 끌립니다.",
     displayTags: [
@@ -116,7 +126,9 @@ export const murimResults: TestResult[] = [
       "action_catharsis",
       "story_immersion",
     ],
-    imageKey: "murim_wanderer_road",
-    shareText: "길 위에서 만난 사람과 약속을 외면하지 못하는 길 위의 협객.",
+    imageKey: "murim_wanderer_justice",
+    shareText: "길 위에서 만난 사람과 약속을 외면하지 못하는 길 위의 협객",
   },
-];
+] satisfies DetailTestResult[];
+
+export type MurimResult = (typeof murimResults)[number];

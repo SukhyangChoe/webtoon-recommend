@@ -1,4 +1,4 @@
-import type { TestData } from "@/lib/testEngine/types";
+import type { DetailTestBranch, DetailTestData } from "@/types/detailTest";
 
 export const murimBranches = [
   {
@@ -21,38 +21,79 @@ export const murimBranches = [
     branchKey: "murim_wanderer_justice",
     branchName: "길 위의 협객",
   },
-];
+] satisfies DetailTestBranch[];
 
-export const murimTest: TestData = {
+export const murimTest = {
   testId: "murim_detail",
   testKey: "murim_detail",
   testName: "무협 웹툰 취향 테스트",
+  displayName: "무협 웹툰 취향 테스트",
   genreKey: "murim",
+  typeScoreKey: "murimTypeScores",
+
   route: "/tests/murim",
+
   questionCount: 6,
   choiceCountPerQuestion: 5,
   choiceCount: 30,
   resultCount: 5,
+
   version: "v0.5",
+  testVersion: "v0.5",
+
   scoreMode: "branch_tag_avoidance",
   selectMode: "ranked_multi_select",
   maxSelect: 2,
+
+  startTitle: "낡은 강호의 기록 한 권이 펼쳐졌습니다.",
+  startDescription:
+    "당신이 고르는 장면들이 모여\n이 강호에서 오래 머물 이야기를 만들어갑니다.",
+  startButtonText: "강호의 첫 장 넘기기",
+
   intro: {
     title: "낡은 강호의 기록 한 권이 펼쳐졌습니다.",
     description:
       "당신이 고르는 장면들이 모여\n이 강호에서 오래 머물 이야기를 만들어갑니다.",
     startButtonText: "강호의 첫 장 넘기기",
   },
+
+  rankWeights: {
+    single: [{ rank: 1, weight: 1.0 }],
+    double: [
+      { rank: 1, weight: 0.7 },
+      { rank: 2, weight: 0.3 },
+    ],
+  },
+
+  tieBreakQuestionOrder: [
+    "murim_q4",
+    "murim_q5",
+    "murim_q2",
+    "murim_q3",
+    "murim_q1",
+  ],
+
+  excludeFromBranchResult: ["murim_q6"],
+
+  branches: murimBranches,
+
   questions: [
     {
+      questionKey: "murim_q1",
       questionId: "murim_q1",
       order: 1,
+      questionOrder: 1,
       questionTitle: "시작 장면",
+      title: "시작 장면",
       questionText: "첫 화에서 더 끌리는 시작 장면을 골라주세요.",
       legacyQuestionText:
         "첫 장이 열립니다. 아직 이름 붙지 않은 강호의 풍경 속, 가장 먼저 보이는 장면은 무엇인가요?",
+      selectMode: "ranked_multi_select",
+      maxSelect: 2,
+      cardType: "image",
       choices: [
         {
+          optionKey: "murim_q1_a1",
           choiceId: "murim_q1_a1",
           choiceOrder: 1,
           label: "몰락한 후계자",
@@ -71,6 +112,7 @@ export const murimTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "murim_q1_a2",
           choiceId: "murim_q1_a2",
           choiceOrder: 2,
           label: "초식 수련자",
@@ -89,6 +131,7 @@ export const murimTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "murim_q1_a3",
           choiceId: "murim_q1_a3",
           choiceOrder: 3,
           label: "강호 책략가",
@@ -107,6 +150,7 @@ export const murimTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "murim_q1_a4",
           choiceId: "murim_q1_a4",
           choiceOrder: 4,
           label: "길 위의 협객",
@@ -125,6 +169,7 @@ export const murimTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "murim_q1_a5",
           choiceId: "murim_q1_a5",
           choiceOrder: 5,
           label: "천하 군림자",
@@ -145,14 +190,21 @@ export const murimTest: TestData = {
       ],
     },
     {
+      questionKey: "murim_q2",
       questionId: "murim_q2",
       order: 2,
+      questionOrder: 2,
       questionTitle: "인물",
+      title: "인물",
       questionText: "더 따라가고 싶은 인물을 골라주세요.",
       legacyQuestionText:
         "몇 장을 넘기자, 강호의 한 인물이 또렷하게 모습을 드러냅니다. 그는 어떤 인물인가요?",
+      selectMode: "ranked_multi_select",
+      maxSelect: 2,
+      cardType: "text",
       choices: [
         {
+          optionKey: "murim_q2_a1",
           choiceId: "murim_q2_a1",
           choiceOrder: 1,
           label: "판세를 읽는 사람",
@@ -169,6 +221,7 @@ export const murimTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "murim_q2_a2",
           choiceId: "murim_q2_a2",
           choiceOrder: 2,
           label: "정체를 숨긴 강자",
@@ -186,6 +239,7 @@ export const murimTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "murim_q2_a3",
           choiceId: "murim_q2_a3",
           choiceOrder: 3,
           label: "약자를 지나치지 않는 사람",
@@ -202,6 +256,7 @@ export const murimTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "murim_q2_a4",
           choiceId: "murim_q2_a4",
           choiceOrder: 4,
           label: "반복하는 수련자",
@@ -218,6 +273,7 @@ export const murimTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "murim_q2_a5",
           choiceId: "murim_q2_a5",
           choiceOrder: 5,
           label: "잊지 않는 후계자",
@@ -236,14 +292,21 @@ export const murimTest: TestData = {
       ],
     },
     {
+      questionKey: "murim_q3",
       questionId: "murim_q3",
       order: 3,
+      questionOrder: 3,
       questionTitle: "사건 전개",
+      title: "사건 전개",
       questionText: "더 보고 싶은 사건 전개를 골라주세요.",
       legacyQuestionText:
         "강호는 오래 조용하지 않습니다. 이제 첫 번째 사건이 다가옵니다. 어떤 사건이 다가오고 있나요?",
+      selectMode: "ranked_multi_select",
+      maxSelect: 2,
+      cardType: "text",
       choices: [
         {
+          optionKey: "murim_q3_a1",
           choiceId: "murim_q3_a1",
           choiceOrder: 1,
           label: "길을 되돌리는 의리",
@@ -261,6 +324,7 @@ export const murimTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "murim_q3_a2",
           choiceId: "murim_q3_a2",
           choiceOrder: 2,
           label: "패배 뒤 수련",
@@ -278,6 +342,7 @@ export const murimTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "murim_q3_a3",
           choiceId: "murim_q3_a3",
           choiceOrder: 3,
           label: "원수의 흔적",
@@ -295,6 +360,7 @@ export const murimTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "murim_q3_a4",
           choiceId: "murim_q3_a4",
           choiceOrder: 4,
           label: "단 한 수의 압도감",
@@ -312,6 +378,7 @@ export const murimTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "murim_q3_a5",
           choiceId: "murim_q3_a5",
           choiceOrder: 5,
           label: "문파의 배신",
@@ -330,14 +397,21 @@ export const murimTest: TestData = {
       ],
     },
     {
+      questionKey: "murim_q4",
       questionId: "murim_q4",
       order: 4,
+      questionOrder: 4,
       questionTitle: "연출",
+      title: "연출",
       questionText: "볼 때 더 중요하게 느끼는 연출을 골라주세요.",
       legacyQuestionText:
         "이야기를 넘기던 중, 한 장면 때문에 스크롤이 잠시 멈춥니다. 어떤 장면이었나요?",
+      selectMode: "ranked_multi_select",
+      maxSelect: 2,
+      cardType: "text",
       choices: [
         {
+          optionKey: "murim_q4_a1",
           choiceId: "murim_q4_a1",
           choiceOrder: 1,
           label: "숨겨온 힘의 공개",
@@ -355,6 +429,7 @@ export const murimTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "murim_q4_a2",
           choiceId: "murim_q4_a2",
           choiceOrder: 2,
           label: "동맹과 배신의 역전",
@@ -371,6 +446,7 @@ export const murimTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "murim_q4_a3",
           choiceId: "murim_q4_a3",
           choiceOrder: 3,
           label: "초식의 깨달음",
@@ -388,6 +464,7 @@ export const murimTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "murim_q4_a4",
           choiceId: "murim_q4_a4",
           choiceOrder: 4,
           label: "다시 여는 칼집",
@@ -405,6 +482,7 @@ export const murimTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "murim_q4_a5",
           choiceId: "murim_q4_a5",
           choiceOrder: 5,
           label: "문파 이름의 복원",
@@ -424,14 +502,21 @@ export const murimTest: TestData = {
       ],
     },
     {
+      questionKey: "murim_q5",
       questionId: "murim_q5",
       order: 5,
+      questionOrder: 5,
       questionTitle: "다음 화 흐름",
+      title: "다음 화 흐름",
       questionText: "다음 화까지 보고 싶게 만드는 흐름을 골라주세요.",
       legacyQuestionText:
         "분명 한 화만 더 보려 했습니다. 그런데 어느새 계속 넘기고 있습니다. 어떤 흐름이었을까요?",
+      selectMode: "ranked_multi_select",
+      maxSelect: 2,
+      cardType: "text",
       choices: [
         {
+          optionKey: "murim_q5_a1",
           choiceId: "murim_q5_a1",
           choiceOrder: 1,
           label: "패배마다 쌓이는 수련",
@@ -448,6 +533,7 @@ export const murimTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "murim_q5_a2",
           choiceId: "murim_q5_a2",
           choiceOrder: 2,
           label: "문파 간 선택과 거래",
@@ -464,6 +550,7 @@ export const murimTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "murim_q5_a3",
           choiceId: "murim_q5_a3",
           choiceOrder: 3,
           label: "두려움으로 바뀌는 시선",
@@ -481,6 +568,7 @@ export const murimTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "murim_q5_a4",
           choiceId: "murim_q5_a4",
           choiceOrder: 4,
           label: "진실과 복수의 접근",
@@ -499,6 +587,7 @@ export const murimTest: TestData = {
           avoidanceTagScores: {},
         },
         {
+          optionKey: "murim_q5_a5",
           choiceId: "murim_q5_a5",
           choiceOrder: 5,
           label: "길 위의 만남과 의리",
@@ -519,14 +608,22 @@ export const murimTest: TestData = {
       ],
     },
     {
+      questionKey: "murim_q6",
       questionId: "murim_q6",
       order: 6,
+      questionOrder: 6,
       questionTitle: "부담 요소",
+      title: "부담 요소",
       questionText: "덜 보고 싶은 부담 요소를 골라주세요.",
       legacyQuestionText:
         "처음엔 더 볼 생각이 있었습니다. 그런데 어느 순간 손이 멈추고, 뒤로가기를 눌렀습니다. 어떤 이유였을까요?",
+      selectMode: "ranked_multi_select",
+      maxSelect: 2,
+      cardType: "text",
+      isAvoidanceQuestion: true,
       choices: [
         {
+          optionKey: "murim_q6_a1",
           choiceId: "murim_q6_a1",
           choiceOrder: 1,
           label: "관계·문파 진입장벽",
@@ -541,6 +638,7 @@ export const murimTest: TestData = {
           },
         },
         {
+          optionKey: "murim_q6_a2",
           choiceId: "murim_q6_a2",
           choiceOrder: 2,
           label: "납득 안 되는 급성장",
@@ -555,6 +653,7 @@ export const murimTest: TestData = {
           },
         },
         {
+          optionKey: "murim_q6_a3",
           choiceId: "murim_q6_a3",
           choiceOrder: 3,
           label: "흐릿한 동기",
@@ -569,6 +668,7 @@ export const murimTest: TestData = {
           },
         },
         {
+          optionKey: "murim_q6_a4",
           choiceId: "murim_q6_a4",
           choiceOrder: 4,
           label: "사라진 위기감",
@@ -583,6 +683,7 @@ export const murimTest: TestData = {
           },
         },
         {
+          optionKey: "murim_q6_a5",
           choiceId: "murim_q6_a5",
           choiceOrder: 5,
           label: "쌓이지 않은 복수 감정",
@@ -599,4 +700,6 @@ export const murimTest: TestData = {
       ],
     },
   ],
-};
+} satisfies DetailTestData;
+
+export type MurimTest = typeof murimTest;
