@@ -6,9 +6,8 @@ export default function GenrePreferenceActions({
   onRetake: () => void;
 }) {
   return (
-    <section
+    <div
       style={{
-        marginTop: 20,
         display: "grid",
         gap: 10,
       }}
@@ -33,9 +32,9 @@ export default function GenrePreferenceActions({
 
       <button
         type="button"
-        onClick={() =>
-          alert("이 취향으로 웹툰 추천받기는 이후 /find와 연결됩니다.")
-        }
+        onClick={() => {
+          window.location.href = "/find";
+        }}
         style={{
           width: "100%",
           borderRadius: 16,
@@ -60,14 +59,14 @@ export default function GenrePreferenceActions({
           border: "1px solid #e5e7eb",
           background: "#f8fafc",
           color: "#334155",
-          padding: "13px 16px",
-          fontSize: 14,
+          padding: "14px 16px",
+          fontSize: 15,
           fontWeight: 900,
           cursor: "pointer",
         }}
       >
         다시 테스트하기
       </button>
-    </section>
+    </div>
   );
 }

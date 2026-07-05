@@ -876,9 +876,9 @@ function DetailResultView({
 
           <button
             type="button"
-            onClick={() =>
-              alert("이 취향으로 웹툰 추천받기는 이후 /find와 연결됩니다.")
-            }
+            onClick={() => {
+              window.location.href = "/find";
+            }}
             style={{
               width: "100%",
               marginTop: 10,

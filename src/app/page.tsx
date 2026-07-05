@@ -5,24 +5,28 @@ export default function HomePage() {
     <main
       style={{
         minHeight: "100vh",
+        background: "#020617",
+        color: "#0f172a",
         padding: "48px 20px",
-        background:
-          "linear-gradient(180deg, #f8fafc 0%, #eef2ff 45%, #ffffff 100%)",
-        color: "#111827",
       }}
     >
       <section
         style={{
-          maxWidth: 720,
+          width: "100%",
+          maxWidth: 960,
           margin: "0 auto",
+          borderRadius: 32,
+          background: "#ffffff",
+          padding: "clamp(28px, 6vw, 60px)",
+          boxShadow: "0 24px 80px rgba(15, 23, 42, 0.28)",
         }}
       >
         <p
           style={{
-            marginBottom: 12,
-            fontSize: 14,
-            fontWeight: 700,
-            color: "#6366f1",
+            margin: "0 0 12px",
+            color: "#4f46e5",
+            fontSize: 15,
+            fontWeight: 900,
           }}
         >
           웹툰 추천 서비스 MVP
@@ -31,10 +35,9 @@ export default function HomePage() {
         <h1
           style={{
             margin: 0,
-            fontSize: 36,
-            lineHeight: 1.2,
-            fontWeight: 800,
-            letterSpacing: "-0.04em",
+            fontSize: "clamp(38px, 7vw, 68px)",
+            lineHeight: 1.05,
+            letterSpacing: "-0.05em",
           }}
         >
           지금 내 취향에 맞는
@@ -44,164 +47,120 @@ export default function HomePage() {
 
         <p
           style={{
-            marginTop: 18,
-            marginBottom: 32,
-            fontSize: 17,
-            lineHeight: 1.7,
-            color: "#4b5563",
+            maxWidth: 720,
+            margin: "22px 0 0",
+            color: "#334155",
+            fontSize: 18,
+            lineHeight: 1.75,
           }}
         >
-          아직은 판타지 웹툰 취향 테스트부터 내부 MVP로 연결합니다.
-          질문을 고르면 나중에 결과 화면과 추천 로직으로 이어질 예정입니다.
+          먼저 전체 장르 취향을 확인하거나, 이미 끌리는 장르가 있다면
+          장르별 세부 취향 테스트로 바로 들어갈 수 있어요.
         </p>
 
         <div
           style={{
+            marginTop: 34,
             display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
             gap: 16,
           }}
         >
-          <Link
-            href="/tests/fantasy"
-            style={{
-              display: "block",
-              padding: 24,
-              borderRadius: 20,
-              background: "#111827",
-              color: "#ffffff",
-              textDecoration: "none",
-              boxShadow: "0 18px 40px rgba(15, 23, 42, 0.18)",
-            }}
-          >
-            <div
-              style={{
-                fontSize: 13,
-                fontWeight: 700,
-                color: "#c7d2fe",
-                marginBottom: 8,
-              }}
-            >
-              D+2 작업 대상
-            </div>
+          <HomeCtaCard
+            title="내 웹툰 장르 취향 알아보기"
+            description="짧은 장면 선택으로 내 웹툰 세계관 지도를 확인합니다."
+            href="/genre-preference"
+            buttonText="장르 취향 테스트 시작"
+            primary
+          />
 
-            <h2
-              style={{
-                margin: 0,
-                fontSize: 22,
-                fontWeight: 800,
-              }}
-            >
-              판타지 웹툰 취향 테스트
-            </h2>
-
-            <p
-              style={{
-                marginTop: 10,
-                marginBottom: 18,
-                fontSize: 15,
-                lineHeight: 1.6,
-                color: "#e5e7eb",
-              }}
-            >
-              제목 없는 판타지 웹툰 원고가 도착했습니다.
-              <br />
-              당신이 고르는 장면들이 모여 오래 머물 판타지의 방향을
-              만들어갑니다.
-            </p>
-
-            <span
-              style={{
-                display: "inline-block",
-                padding: "10px 14px",
-                borderRadius: 999,
-                background: "#ffffff",
-                color: "#111827",
-                fontSize: 14,
-                fontWeight: 700,
-              }}
-            >
-              첫 페이지 넘기기 →
-            </span>
-          </Link>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-              gap: 12,
-            }}
-          >
-            <ComingSoonCard
-              title="무협 웹툰 취향 테스트"
-              description="D+2 이후 공통 엔진에 연결 예정"
-            />
-
-            <ComingSoonCard
-              title="웹툰 장르 취향 테스트"
-              description="내 웹툰 세계관 지도 결과로 연결 예정"
-            />
-
-            <ComingSoonCard
-              title="지금 볼 웹툰 찾기"
-              description="작품 추천 기능은 이 플로우에서만 제공 예정"
-            />
-          </div>
+          <HomeCtaCard
+            title="장르별 세부 취향 테스트 보기"
+            description="판타지, 무협, 로맨스·로판, 스릴러·공포, 드라마·일상 테스트를 모아봅니다."
+            href="/tests"
+            buttonText="테스트 목록 보기"
+          />
         </div>
+
+        <p
+          style={{
+            margin: "28px 0 0",
+            color: "#64748b",
+            fontSize: 14,
+            lineHeight: 1.7,
+          }}
+        >
+          작품 추천은 이후 “지금 볼 웹툰 찾기”에서 제공됩니다. 테스트 결과
+          화면에는 작품 추천 리스트를 직접 노출하지 않습니다.
+        </p>
       </section>
     </main>
   );
 }
 
-function ComingSoonCard({
+function HomeCtaCard({
   title,
   description,
+  href,
+  buttonText,
+  primary = false,
 }: {
   title: string;
   description: string;
+  href: string;
+  buttonText: string;
+  primary?: boolean;
 }) {
   return (
-    <div
+    <article
       style={{
-        padding: 18,
-        borderRadius: 18,
-        background: "rgba(255, 255, 255, 0.85)",
+        borderRadius: 24,
         border: "1px solid #e5e7eb",
+        background: primary ? "#eef2ff" : "#f8fafc",
+        padding: 24,
       }}
     >
-      <p
+      <h2
         style={{
           margin: 0,
-          marginBottom: 8,
-          fontSize: 12,
-          fontWeight: 700,
-          color: "#9ca3af",
-        }}
-      >
-        준비 중
-      </p>
-
-      <h3
-        style={{
-          margin: 0,
-          fontSize: 16,
-          fontWeight: 800,
-          color: "#111827",
+          fontSize: 24,
+          letterSpacing: "-0.03em",
         }}
       >
         {title}
-      </h3>
+      </h2>
 
       <p
         style={{
-          marginTop: 8,
-          marginBottom: 0,
-          fontSize: 14,
-          lineHeight: 1.5,
-          color: "#6b7280",
+          margin: "10px 0 22px",
+          color: "#475569",
+          fontSize: 15,
+          lineHeight: 1.7,
         }}
       >
         {description}
       </p>
-    </div>
+
+      <Link
+        href={href}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: "100%",
+          minHeight: 48,
+          borderRadius: 14,
+          background: primary ? "#4f46e5" : "#ffffff",
+          border: primary ? "none" : "1px solid #c7d2fe",
+          color: primary ? "#ffffff" : "#4338ca",
+          padding: "12px 16px",
+          fontSize: 15,
+          fontWeight: 900,
+          textDecoration: "none",
+        }}
+      >
+        {buttonText}
+      </Link>
+    </article>
   );
 }
