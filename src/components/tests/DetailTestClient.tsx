@@ -80,6 +80,19 @@ const RESULT_OBJECT_IMAGE_MAP: Record<string, string> = {
     "/images/detail-results/thriller_conspiracy_file.png",
   thriller_conspiracy_file:
     "/images/detail-results/thriller_conspiracy_file.png",
+
+  drama_life_realism: "/images/detail-results/drama_commute_window.png",
+  drama_commute_window: "/images/detail-results/drama_commute_window.png",
+  drama_youth_growth: "/images/detail-results/drama_worn_sneakers.png",
+  drama_worn_sneakers: "/images/detail-results/drama_worn_sneakers.png",
+  drama_healing_daily: "/images/detail-results/drama_warm_cafe.png",
+  drama_warm_cafe: "/images/detail-results/drama_warm_cafe.png",
+  drama_family_relationship: "/images/detail-results/drama_family_note.png",
+  drama_family_note: "/images/detail-results/drama_family_note.png",
+  drama_emotional_afterglow: "/images/detail-results/drama_old_letter.png",
+  drama_old_letter: "/images/detail-results/drama_old_letter.png",
+  drama_comedy_life: "/images/detail-results/drama_daily_laugh.png",
+  drama_daily_laugh: "/images/detail-results/drama_daily_laugh.png",
 };
 
 const TIE_BREAK_ORDER = ["_q4", "_q5", "_q2", "_q3", "_q1"];

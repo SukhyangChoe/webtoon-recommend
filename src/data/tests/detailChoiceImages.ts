@@ -28,6 +28,12 @@ export const detailChoiceImageMap: Record<string, string> = {
   thriller_q1_a5_hidden_symbol_photos:
     "/images/detail-q1/thriller_q1_a5_hidden_symbol_photos.png",
 
+  drama_q1_a1_image: "/images/detail-q1/drama_q1_a1_image.png",
+  drama_q1_a2_image: "/images/detail-q1/drama_q1_a2_image.png",
+  drama_q1_a3_image: "/images/detail-q1/drama_q1_a3_image.png",
+  drama_q1_a4_image: "/images/detail-q1/drama_q1_a4_image.png",
+  drama_q1_a5_image: "/images/detail-q1/drama_q1_a5_image.png",
+
   fantasy_q4_a1_image: "/images/detail-q4/fantasy_q4_a1_image.png",
   fantasy_q4_a2_image: "/images/detail-q4/fantasy_q4_a2_image.png",
   fantasy_q4_a3_image: "/images/detail-q4/fantasy_q4_a3_image.png",
@@ -51,6 +57,12 @@ export const detailChoiceImageMap: Record<string, string> = {
   thriller_q4_a3_image: "/images/detail-q4/thriller_q4_a3_image.png",
   thriller_q4_a4_image: "/images/detail-q4/thriller_q4_a4_image.png",
   thriller_q4_a5_image: "/images/detail-q4/thriller_q4_a5_image.png",
+
+  drama_q4_a1_image: "/images/detail-q4/drama_q4_a1_image.png",
+  drama_q4_a2_image: "/images/detail-q4/drama_q4_a2_image.png",
+  drama_q4_a3_image: "/images/detail-q4/drama_q4_a3_image.png",
+  drama_q4_a4_image: "/images/detail-q4/drama_q4_a4_image.png",
+  drama_q4_a5_image: "/images/detail-q4/drama_q4_a5_image.png",
 };
 
 export function getDetailChoiceImageSrc(imageKey?: string | null) {
