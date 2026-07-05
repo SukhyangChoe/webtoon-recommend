@@ -1,3 +1,5 @@
+import type { DetailTestData } from "@/types/detailTest";
+
 export const romanceRopanTest = {
   testKey: "romance_ropan_detail",
   testName: "로맨스·로판 웹툰 취향 테스트",
@@ -692,6 +694,6 @@ export const romanceRopanTest = {
       ],
     },
   ],
-};
+} satisfies DetailTestData;
 
 export type RomanceRopanTest = typeof romanceRopanTest;

@@ -8,153 +8,44 @@ import {
   saveTestResult,
 } from "@/lib/storage/resultRepository";
 import type {
+  DetailTestAnswer,
+  DetailTestCalculatedScores,
+  DetailTestConfig,
+  DetailTestData,
   DetailTestKey,
+  DetailTestOption,
+  DetailTestQuestion,
+  DetailTestResult,
+  RankedSelectedOption,
+  ScoreMap,
+} from "@/types/detailTest";
+import type {
   StoredDetailAnswer,
   StoredDetailTestResult,
 } from "@/types/testResults";
 
-type ScoreMap = Record<string, number>;
-
-type RankedSelectedOption = {
-  optionKey: string;
-  rank: 1 | 2;
-  weight: number;
-};
-
-type StoredAnswer = StoredDetailAnswer;
-
-type AnswersByQuestion = Record<string, StoredAnswer>;
-
-type DetailTestOption = {
-  optionKey?: string;
-  choiceId?: string;
-  choiceKey?: string;
-  key?: string;
-  label?: string;
-  text?: string;
-  shortDescription?: string;
-  imageKey?: string;
-  branchScores?: ScoreMap;
-  tagScores?: ScoreMap;
-  avoidanceTagScores?: ScoreMap;
-};
-
-type DetailTestQuestion = {
-  questionKey?: string;
-  questionId?: string;
-  key?: string;
-  questionOrder?: number;
-  title?: string;
-  questionTitle?: string;
-  questionText?: string;
-  text?: string;
-  legacyQuestionText?: string;
-  options?: ReadonlyArray<DetailTestOption>;
-  choices?: ReadonlyArray<DetailTestOption>;
-};
-
-type DetailTestResult = {
-  resultKey?: string;
-  branchKey?: string;
-  name?: string;
-  resultName?: string;
-  summary?: string;
-  oneLineDescription?: string;
-  displayTags?: ReadonlyArray<string>;
-  tagKeys?: ReadonlyArray<string>;
-  tagScoreKeys?: ReadonlyArray<string>;
-  imageKey?: string;
-  shareText?: string;
-  sceneText?: string;
-};
-
-type DetailTestData = {
-  testKey: string;
-  testName?: string;
-  displayName?: string;
-  testVersion?: string;
-  version?: string;
-  startTitle?: string;
-  startDescription?: string;
-  startButtonText?: string;
-  questions: ReadonlyArray<DetailTestQuestion>;
-};
-
-type DetailTestConfig = {
-  route?: string;
-  testKey?: string;
-  testData?: any;
-  test?: DetailTestData;
-  results?: ReadonlyArray<DetailTestResult>;
-};
-
-type CalculatedScores = {
-  branchScores: ScoreMap;
-  tagScores: ScoreMap;
-  avoidanceTagScores: ScoreMap;
-  mainBranchKey: string;
-  subBranchKey: string;
-};
-
-type NormalizedResult = {
-  resultKey: string;
-  branchKey: string;
-  name: string;
-  summary: string;
-  displayTags: string[];
-  imageKey: string;
-  shareText: string;
-  sceneText?: string;
-};
-
-function createStoredResult(params: {
-  testKey: DetailTestKey;
-  testVersion: string;
-  answers: AnswersByQuestion;
-  scores: CalculatedScores;
-  result: NormalizedResult;
-}): StoredDetailTestResult {
-  const { testKey, testVersion, answers, scores, result } = params;
-
-  return {
-    schemaVersion: "0.2",
-    testKey,
-    testVersion,
-    completedAt: new Date().toISOString(),
-    answers: Object.values(answers),
-    branchScores: scores.branchScores,
-    tagScores: scores.tagScores,
-    avoidanceTagScores: scores.avoidanceTagScores,
-    mainBranchKey: scores.mainBranchKey,
-    subBranchKey: scores.subBranchKey || null,
-    resultKey: result.resultKey,
-    resultName: result.name,
-    oneLineDescription: result.summary,
-    displayTags: result.displayTags,
-    imageKey: result.imageKey,
-    shareText: result.shareText,
-  };
-}
-
-function isDetailTestKey(testKey: string): testKey is DetailTestKey {
-  return (
-    testKey === "fantasy_detail" ||
-    testKey === "murim_detail" ||
-    testKey === "romance_ropan_detail" ||
-    testKey === "thriller_horror_detail" ||
-    testKey === "drama_daily_detail"
-  );
-}
-
 const RESULT_OBJECT_IMAGE_MAP: Record<string, string> = {
   fantasy_system_successor:
     "/images/detail-results/fantasy_system_successor.png",
+  fantasy_system_window: "/images/detail-results/fantasy_system_successor.png",
+
   fantasy_hidden_power: "/images/detail-results/fantasy_hidden_power.png",
+  fantasy_hidden_aura: "/images/detail-results/fantasy_hidden_power.png",
+
   fantasy_limit_breaker: "/images/detail-results/fantasy_limit_breaker.png",
+  fantasy_limit_break: "/images/detail-results/fantasy_limit_breaker.png",
+
   fantasy_truth_chaser: "/images/detail-results/fantasy_truth_chaser.png",
+  fantasy_truth_map: "/images/detail-results/fantasy_truth_chaser.png",
+
   fantasy_survival_commander:
     "/images/detail-results/fantasy_survival_commander.png",
+  fantasy_battle_fortress:
+    "/images/detail-results/fantasy_survival_commander.png",
+
   fantasy_kingdom_strategist:
+    "/images/detail-results/fantasy_kingdom_strategist.png",
+  fantasy_strategy_board:
     "/images/detail-results/fantasy_kingdom_strategist.png",
 
   murim_growth_training: "/images/detail-results/murim_growth_training.png",
@@ -177,44 +68,129 @@ const RESULT_OBJECT_IMAGE_MAP: Record<string, string> = {
 
 const TIE_BREAK_ORDER = ["_q4", "_q5", "_q2", "_q3", "_q1"];
 
-function getOptionKey(option: DetailTestOption) {
+function getStringValue(
+  source: Record<string, unknown>,
+  key: string
+): string | undefined {
+  const value = source[key];
+  return typeof value === "string" ? value : undefined;
+}
+
+function getNumberValue(
+  source: Record<string, unknown>,
+  key: string
+): number | undefined {
+  const value = source[key];
+  return typeof value === "number" ? value : undefined;
+}
+
+function getStringArrayValue(
+  source: Record<string, unknown>,
+  key: string
+): string[] | undefined {
+  const value = source[key];
+
+  if (!Array.isArray(value)) return undefined;
+
+  const onlyStrings = value.filter(
+    (item): item is string => typeof item === "string"
+  );
+
+  return onlyStrings.length === value.length ? onlyStrings : undefined;
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  if (value && typeof value === "object") {
+    return value as Record<string, unknown>;
+  }
+
+  return {};
+}
+
+function createStoredResult(params: {
+  testKey: DetailTestKey;
+  testVersion: string;
+  answers: Record<string, DetailTestAnswer>;
+  scores: DetailTestCalculatedScores;
+  result: DetailTestResult;
+}): StoredDetailTestResult {
+  const { testKey, testVersion, answers, scores, result } = params;
+
+  return {
+    schemaVersion: "0.2",
+    testKey,
+    testVersion,
+    completedAt: new Date().toISOString(),
+    answers: Object.values(answers) as StoredDetailAnswer[],
+    branchScores: scores.branchScores,
+    tagScores: scores.tagScores,
+    avoidanceTagScores: scores.avoidanceTagScores,
+    mainBranchKey: scores.mainBranchKey ?? "",
+    subBranchKey: scores.subBranchKey ?? null,
+    resultKey: getResultKey(result),
+    resultName: getResultName(result),
+    oneLineDescription: getResultSummary(result),
+    displayTags: getResultDisplayTags(result),
+    imageKey: getResultImageKey(result),
+    shareText: getResultShareText(result),
+  };
+}
+
+function isDetailTestKey(testKey: string): testKey is DetailTestKey {
   return (
-    option.optionKey ??
-    option.choiceId ??
-    option.choiceKey ??
-    option.key ??
+    testKey === "fantasy_detail" ||
+    testKey === "murim_detail" ||
+    testKey === "romance_ropan_detail" ||
+    testKey === "thriller_horror_detail" ||
+    testKey === "drama_daily_detail"
+  );
+}
+
+function getOptionKey(option: DetailTestOption): string {
+  const optionRecord = asRecord(option);
+
+  return (
+    option.optionKey ||
+    option.choiceId ||
+    option.id ||
+    getStringValue(optionRecord, "choiceKey") ||
+    getStringValue(optionRecord, "key") ||
     ""
   );
 }
 
-function getQuestionKey(question: DetailTestQuestion, fallbackIndex: number) {
+function getQuestionKey(
+  question: DetailTestQuestion,
+  fallbackIndex: number
+): string {
+  const questionRecord = asRecord(question);
+
   return (
-    question.questionKey ??
-    question.questionId ??
-    question.key ??
+    question.questionKey ||
+    question.questionId ||
+    question.id ||
+    getStringValue(questionRecord, "key") ||
     `question_${fallbackIndex + 1}`
   );
 }
 
-function getQuestionTitle(question: DetailTestQuestion, index: number) {
-  return (
-    question.title ?? question.questionTitle ?? getDefaultQuestionTitle(index)
-  );
+function getQuestionTitle(question: DetailTestQuestion, index: number): string {
+  return question.title || question.questionTitle || getDefaultQuestionTitle(index);
 }
 
-function getQuestionText(question: DetailTestQuestion) {
-  return question.questionText ?? question.text ?? "";
+function getQuestionText(question: DetailTestQuestion): string {
+  return question.questionText || question.text || "";
 }
 
-function getQuestionOptions(question: DetailTestQuestion) {
-  return question.options ?? question.choices ?? [];
+function getQuestionOptions(question: DetailTestQuestion): DetailTestOption[] {
+  return question.options || question.choices || [];
 }
 
-function getOptionLabel(option: DetailTestOption) {
-  return option.label ?? option.text ?? option.shortDescription ?? "선택지";
+function getOptionLabel(option: DetailTestOption): string {
+  return option.label || option.text || option.shortDescription || "선택지";
 }
 
-function getOptionDescription(option: DetailTestOption) {
+function getOptionDescription(option: DetailTestOption): string {
   if (option.shortDescription) return option.shortDescription;
 
   if (option.label && option.text && option.label !== option.text) {
@@ -224,7 +200,7 @@ function getOptionDescription(option: DetailTestOption) {
   return "";
 }
 
-function getDefaultQuestionTitle(index: number) {
+function getDefaultQuestionTitle(index: number): string {
   const titles = [
     "시작 장면",
     "인물",
@@ -237,7 +213,7 @@ function getDefaultQuestionTitle(index: number) {
   return titles[index] ?? `질문 ${index + 1}`;
 }
 
-function getGenreLabel(testKey: string) {
+function getGenreLabel(testKey: string): string {
   if (testKey === "fantasy_detail") return "판타지";
   if (testKey === "murim_detail") return "무협";
   if (testKey === "romance_ropan_detail") return "로맨스·로판";
@@ -247,7 +223,9 @@ function getGenreLabel(testKey: string) {
   return "장르별";
 }
 
-function getRankedSelectedOptions(optionKeys: string[]): RankedSelectedOption[] {
+function getRankedSelectedOptions(
+  optionKeys: string[]
+): RankedSelectedOption[] {
   if (optionKeys.length === 1) {
     return [
       {
@@ -260,7 +238,7 @@ function getRankedSelectedOptions(optionKeys: string[]): RankedSelectedOption[] 
 
   return optionKeys.slice(0, 2).map((optionKey, index) => ({
     optionKey,
-    rank: (index === 0 ? 1 : 2) as 1 | 2,
+    rank: index === 0 ? 1 : 2,
     weight: index === 0 ? 0.7 : 0.3,
   }));
 }
@@ -269,7 +247,7 @@ function addScores(
   target: ScoreMap,
   source: ScoreMap | undefined,
   weight: number
-) {
+): void {
   if (!source) return;
 
   Object.entries(source).forEach(([key, value]) => {
@@ -277,20 +255,26 @@ function addScores(
   });
 }
 
-function isAvoidanceQuestion(questionKey: string, questionIndex: number) {
+function isAvoidanceQuestion(
+  questionKey: string,
+  questionIndex: number
+): boolean {
   return questionIndex === 5 || questionKey.endsWith("_q6");
 }
 
-function findOptionByKey(question: DetailTestQuestion, optionKey: string) {
+function findOptionByKey(
+  question: DetailTestQuestion,
+  optionKey: string
+): DetailTestOption | undefined {
   return getQuestionOptions(question).find(
     (option) => getOptionKey(option) === optionKey
   );
 }
 
 function calculateScores(
-  answers: AnswersByQuestion,
-  questions: ReadonlyArray<DetailTestQuestion>
-): CalculatedScores {
+  answers: Record<string, DetailTestAnswer>,
+  questions: DetailTestQuestion[]
+): DetailTestCalculatedScores {
   const branchScores: ScoreMap = {};
   const tagScores: ScoreMap = {};
   const avoidanceTagScores: ScoreMap = {};
@@ -325,8 +309,8 @@ function calculateScores(
     return a[0].localeCompare(b[0]);
   });
 
-  const mainBranchKey = sortedBranches[0]?.[0] ?? "";
-  const subBranchKey = sortedBranches[1]?.[0] ?? "";
+  const mainBranchKey = sortedBranches[0]?.[0] ?? null;
+  const subBranchKey = sortedBranches[1]?.[0] ?? null;
 
   return {
     branchScores,
@@ -339,13 +323,13 @@ function calculateScores(
 
 function resolveMainBranchWithTieBreak(params: {
   branchScores: ScoreMap;
-  answers: AnswersByQuestion;
-  questions: ReadonlyArray<DetailTestQuestion>;
-}) {
+  answers: Record<string, DetailTestAnswer>;
+  questions: DetailTestQuestion[];
+}): string | null {
   const { branchScores, answers, questions } = params;
   const entries = Object.entries(branchScores);
 
-  if (entries.length === 0) return "";
+  if (entries.length === 0) return null;
 
   const maxScore = Math.max(...entries.map(([, score]) => score));
   const tiedBranchKeys = entries
@@ -389,54 +373,57 @@ function resolveMainBranchWithTieBreak(params: {
 function normalizeResult(
   rawResult: DetailTestResult | undefined,
   fallbackBranchKey: string
-): NormalizedResult {
+): DetailTestResult {
   const resultKey =
-    rawResult?.resultKey ?? rawResult?.branchKey ?? fallbackBranchKey;
+    rawResult?.resultKey || rawResult?.branchKey || fallbackBranchKey;
 
-  const branchKey = rawResult?.branchKey ?? resultKey ?? fallbackBranchKey;
-
-  const name =
-    rawResult?.name ??
-    rawResult?.resultName ??
-    branchKey ??
-    "결과를 찾을 수 없습니다";
-
-  const summary =
-    rawResult?.summary ??
-    rawResult?.oneLineDescription ??
-    "결과 설명은 이후 문구 정리 단계에서 보강됩니다.";
+  const branchKey = rawResult?.branchKey || resultKey || fallbackBranchKey;
 
   return {
+    ...rawResult,
     resultKey,
     branchKey,
-    name,
-    summary,
-    displayTags: [...(rawResult?.displayTags ?? [])],
-    imageKey: rawResult?.imageKey ?? branchKey,
-    shareText: rawResult?.shareText ?? "",
-    sceneText: rawResult?.sceneText,
+    resultName:
+      rawResult?.resultName ||
+      rawResult?.name ||
+      rawResult?.title ||
+      branchKey ||
+      "결과를 찾을 수 없습니다",
+    oneLineDescription:
+      rawResult?.oneLineDescription ||
+      rawResult?.summary ||
+      rawResult?.description ||
+      "결과 설명은 이후 문구 정리 단계에서 보강됩니다.",
+    displayTags: getResultDisplayTags(rawResult),
+    imageKey: rawResult?.imageKey || branchKey,
+    shareText: rawResult?.shareText || "",
   };
 }
 
 function getResultByBranch(
-  results: ReadonlyArray<DetailTestResult>,
-  branchKey: string
-): NormalizedResult {
+  results: DetailTestResult[],
+  branchKey: string | null
+): DetailTestResult {
+  const fallbackBranchKey = branchKey || "unknown_result";
+
   const matchedResult = results.find((result) => {
-    return result.branchKey === branchKey || result.resultKey === branchKey;
+    return (
+      result.branchKey === fallbackBranchKey ||
+      result.resultKey === fallbackBranchKey
+    );
   });
 
-  return normalizeResult(matchedResult, branchKey);
+  return normalizeResult(matchedResult, fallbackBranchKey);
 }
 
 function normalizeStoredResult(
   storedResult: StoredDetailTestResult
-): NormalizedResult {
+): DetailTestResult {
   return {
     resultKey: storedResult.resultKey,
     branchKey: storedResult.mainBranchKey || storedResult.resultKey,
-    name: storedResult.resultName,
-    summary: storedResult.oneLineDescription,
+    resultName: storedResult.resultName,
+    oneLineDescription: storedResult.oneLineDescription,
     displayTags: storedResult.displayTags ?? [],
     imageKey:
       storedResult.imageKey ||
@@ -446,14 +433,98 @@ function normalizeStoredResult(
   };
 }
 
+function getResultKey(result: DetailTestResult): string {
+  return result.resultKey || result.branchKey;
+}
+
+function getResultName(result: DetailTestResult): string {
+  return (
+    result.resultName ||
+    result.name ||
+    result.title ||
+    result.branchKey ||
+    "결과를 찾을 수 없습니다"
+  );
+}
+
+function getResultSummary(result: DetailTestResult): string {
+  return (
+    result.oneLineDescription ||
+    result.summary ||
+    result.description ||
+    "결과 설명은 이후 문구 정리 단계에서 보강됩니다."
+  );
+}
+
+function getResultDisplayTags(result?: DetailTestResult): string[] {
+  if (!result) return [];
+
+  const resultRecord = asRecord(result);
+
+  return (
+    result.displayTags ||
+    getStringArrayValue(resultRecord, "tagKeys") ||
+    getStringArrayValue(resultRecord, "tagScoreKeys") ||
+    []
+  );
+}
+
+function getResultImageKey(result: DetailTestResult): string {
+  return result.imageKey || result.branchKey || result.resultKey || "";
+}
+
+function getResultShareText(result: DetailTestResult): string {
+  return result.shareText || "";
+}
+
+function getResultSceneText(result: DetailTestResult): string | undefined {
+  const resultRecord = asRecord(result);
+
+  return (
+    getStringValue(resultRecord, "sceneText") ||
+    getStringValue(resultRecord, "staySceneText")
+  );
+}
+
+function getTestVersion(testData: DetailTestData): string {
+  return testData.testVersion || testData.version || "v0.2_ranked_multi_select";
+}
+
+function getStartTitle(testData: DetailTestData, genreLabel: string): string {
+  const testDataRecord = asRecord(testData);
+
+  return (
+    getStringValue(testDataRecord, "startTitle") ||
+    `제목 없는 ${genreLabel} 웹툰 원고가 도착했습니다.`
+  );
+}
+
+function getStartDescription(
+  testData: DetailTestData,
+  genreLabel: string
+): string {
+  const testDataRecord = asRecord(testData);
+
+  return (
+    getStringValue(testDataRecord, "startDescription") ||
+    `당신이 고르는 장면들이 모여 오래 머물 ${genreLabel}의 방향을 만들어갑니다.`
+  );
+}
+
+function getStartButtonText(testData: DetailTestData): string {
+  const testDataRecord = asRecord(testData);
+
+  return getStringValue(testDataRecord, "startButtonText") || "첫 장면 확인하기";
+}
+
 function PreviousSelectionSummary({
   currentQuestionIndex,
   questions,
   answers,
 }: {
   currentQuestionIndex: number;
-  questions: ReadonlyArray<DetailTestQuestion>;
-  answers: AnswersByQuestion;
+  questions: DetailTestQuestion[];
+  answers: Record<string, DetailTestAnswer>;
 }) {
   if (currentQuestionIndex === 0) return null;
 
@@ -643,10 +714,16 @@ function DetailResultView({
   debugData,
 }: {
   genreLabel: string;
-  result: NormalizedResult;
+  result: DetailTestResult;
   onRetake: () => void;
   debugData: unknown;
 }) {
+  const resultName = getResultName(result);
+  const resultSummary = getResultSummary(result);
+  const resultImageKey = getResultImageKey(result);
+  const resultShareText = getResultShareText(result);
+  const resultSceneText = getResultSceneText(result);
+
   return (
     <main
       style={{
@@ -683,17 +760,17 @@ function DetailResultView({
             lineHeight: 1.25,
           }}
         >
-          {result.name}
+          {resultName}
         </h1>
 
-        <ResultObjectImage imageKey={result.imageKey} resultName={result.name} />
+        <ResultObjectImage imageKey={resultImageKey} resultName={resultName} />
 
         <section style={{ marginTop: 24 }}>
           <h2 style={{ margin: "0 0 8px", fontSize: 17, fontWeight: 900 }}>
             한 줄 해석
           </h2>
           <p style={{ margin: 0, fontSize: 17, lineHeight: 1.7 }}>
-            {result.summary}
+            {resultSummary}
           </p>
         </section>
 
@@ -709,12 +786,12 @@ function DetailResultView({
               color: "#334155",
             }}
           >
-            {result.sceneText ??
+            {resultSceneText ??
               "이 결과에 맞는 장면 설명은 이후 결과 문구 정리 단계에서 보강됩니다."}
           </p>
         </section>
 
-        <ResultTagList tags={result.displayTags} />
+        <ResultTagList tags={getResultDisplayTags(result)} />
 
         <section style={{ marginTop: 24 }}>
           <h2 style={{ margin: "0 0 8px", fontSize: 17, fontWeight: 900 }}>
@@ -728,7 +805,7 @@ function DetailResultView({
               color: "#475569",
             }}
           >
-            {result.shareText || "공유 문구는 이후 단계에서 보강됩니다."}
+            {resultShareText || "공유 문구는 이후 단계에서 보강됩니다."}
           </p>
         </section>
 
@@ -964,24 +1041,23 @@ function QuestionOptionCard({
 }
 
 export function DetailTestClient({ config }: { config: DetailTestConfig }) {
-  const testData = config.testData ?? config.test;
+  const testData = config.testData;
   const results = config.results ?? [];
 
-  const testKey = testData?.testKey ?? "";
+  const testKey = testData.testKey;
   const detailTestKey = isDetailTestKey(testKey) ? testKey : null;
-  const testVersion =
-    testData?.testVersion ?? testData?.version ?? "v0.2_ranked_multi_select";
+  const testVersion = getTestVersion(testData);
   const genreLabel = getGenreLabel(testKey);
-  const questions = testData?.questions ?? [];
+  const questions = testData.questions ?? [];
 
   const [hasStarted, setHasStarted] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedOptionKeys, setSelectedOptionKeys] = useState<string[]>([]);
-  const [answers, setAnswers] = useState<AnswersByQuestion>({});
+  const [answers, setAnswers] = useState<Record<string, DetailTestAnswer>>({});
   const [storedResult, setStoredResult] = useState<StoredDetailTestResult | null>(
     null
   );
-  const [currentResult, setCurrentResult] = useState<NormalizedResult | null>(
+  const [currentResult, setCurrentResult] = useState<DetailTestResult | null>(
     null
   );
   const [completed, setCompleted] = useState(false);
@@ -1023,7 +1099,7 @@ export function DetailTestClient({ config }: { config: DetailTestConfig }) {
   function handleShowStoredResult() {
     if (!storedResult) return;
 
-    const restoredAnswers: AnswersByQuestion = {};
+    const restoredAnswers: Record<string, DetailTestAnswer> = {};
     storedResult.answers.forEach((answer) => {
       restoredAnswers[answer.questionKey] = answer;
     });
@@ -1075,7 +1151,7 @@ export function DetailTestClient({ config }: { config: DetailTestConfig }) {
     );
   }
 
-  function completeTest(nextAnswers: AnswersByQuestion) {
+  function completeTest(nextAnswers: Record<string, DetailTestAnswer>) {
     if (!detailTestKey) return;
 
     const rawScores = calculateScores(nextAnswers, questions);
@@ -1093,10 +1169,10 @@ export function DetailTestClient({ config }: { config: DetailTestConfig }) {
         return a[0].localeCompare(b[0]);
       });
 
-    const scores: CalculatedScores = {
+    const scores: DetailTestCalculatedScores = {
       ...rawScores,
       mainBranchKey: resolvedMainBranchKey,
-      subBranchKey: sortedBranches[0]?.[0] ?? "",
+      subBranchKey: sortedBranches[0]?.[0] ?? null,
     };
 
     const result = getResultByBranch(results, scores.mainBranchKey);
@@ -1120,12 +1196,12 @@ export function DetailTestClient({ config }: { config: DetailTestConfig }) {
     if (!currentQuestion) return;
     if (selectedOptionKeys.length === 0) return;
 
-    const nextAnswer: StoredAnswer = {
+    const nextAnswer: DetailTestAnswer = {
       questionKey: currentQuestionKey,
       selectedOptions: getRankedSelectedOptions(selectedOptionKeys),
     };
 
-    const nextAnswers: AnswersByQuestion = {
+    const nextAnswers: Record<string, DetailTestAnswer> = {
       ...answers,
       [currentQuestionKey]: nextAnswer,
     };
@@ -1147,14 +1223,6 @@ export function DetailTestClient({ config }: { config: DetailTestConfig }) {
     setCurrentQuestionIndex(nextQuestionIndex);
     setSelectedOptionKeys(
       savedNextAnswer?.selectedOptions.map((option) => option.optionKey) ?? []
-    );
-  }
-
-  if (!testData) {
-    return (
-      <main style={{ padding: 24 }}>
-        <h1>테스트 데이터를 찾을 수 없습니다.</h1>
-      </main>
     );
   }
 
@@ -1197,8 +1265,7 @@ export function DetailTestClient({ config }: { config: DetailTestConfig }) {
       >
         <section style={{ maxWidth: 760, margin: "0 auto", paddingTop: 64 }}>
           <h1 style={{ fontSize: 32, lineHeight: 1.3, marginBottom: 16 }}>
-            {testData.startTitle ??
-              `제목 없는 ${genreLabel} 웹툰 원고가 도착했습니다.`}
+            {getStartTitle(testData, genreLabel)}
           </h1>
 
           <p
@@ -1209,8 +1276,7 @@ export function DetailTestClient({ config }: { config: DetailTestConfig }) {
               marginBottom: 28,
             }}
           >
-            {testData.startDescription ??
-              `당신이 고르는 장면들이 모여 오래 머물 ${genreLabel}의 방향을 만들어갑니다.`}
+            {getStartDescription(testData, genreLabel)}
           </p>
 
           {storedResult ? (
@@ -1276,7 +1342,7 @@ export function DetailTestClient({ config }: { config: DetailTestConfig }) {
               cursor: "pointer",
             }}
           >
-            {testData.startButtonText ?? "첫 장면 확인하기"}
+            {getStartButtonText(testData)}
           </button>
         </section>
       </main>
