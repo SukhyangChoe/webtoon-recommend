@@ -159,6 +159,7 @@ function createStoredResult(params: {
     resultKey: getResultKey(result),
     resultName: getResultName(result),
     oneLineDescription: getResultSummary(result),
+    staySceneText: getResultSceneText(result) ?? "",
     displayTags: getResultDisplayTags(result),
     imageKey: getResultImageKey(result),
     shareText: getResultShareText(result),
@@ -423,6 +424,10 @@ function normalizeResult(
       rawResult?.summary ||
       rawResult?.description ||
       "결과 설명은 이후 문구 정리 단계에서 보강됩니다.",
+    staySceneText:
+      rawResult?.staySceneText ||
+      getStringValue(asRecord(rawResult), "sceneText") ||
+      "",
     displayTags: getResultDisplayTags(rawResult),
     imageKey: rawResult?.imageKey || branchKey,
     shareText: rawResult?.shareText || "",
@@ -446,18 +451,30 @@ function getResultByBranch(
 }
 
 function normalizeStoredResult(
-  storedResult: StoredDetailTestResult
+  storedResult: StoredDetailTestResult,
+  results: DetailTestResult[] = []
 ): DetailTestResult {
+  const matchedResult = results.find((result) => {
+    return (
+      result.resultKey === storedResult.resultKey ||
+      result.branchKey === storedResult.resultKey ||
+      result.branchKey === storedResult.mainBranchKey
+    );
+  });
+
+  const matchedSceneText = matchedResult
+    ? getResultSceneText(matchedResult)
+    : undefined;
+
   return {
     resultKey: storedResult.resultKey,
     branchKey: storedResult.mainBranchKey || storedResult.resultKey,
     resultName: storedResult.resultName,
     oneLineDescription: storedResult.oneLineDescription,
+    staySceneText: storedResult.staySceneText || matchedSceneText || "",
     displayTags: storedResult.displayTags ?? [],
     imageKey:
-      storedResult.imageKey ||
-      storedResult.mainBranchKey ||
-      storedResult.resultKey,
+      storedResult.imageKey || storedResult.mainBranchKey || storedResult.resultKey,
     shareText: storedResult.shareText ?? "",
   };
 }
@@ -1136,7 +1153,7 @@ export function DetailTestClient({ config }: { config: DetailTestConfig }) {
     });
 
     setAnswers(restoredAnswers);
-    setCurrentResult(normalizeStoredResult(storedResult));
+    setCurrentResult(normalizeStoredResult(storedResult, results));
     setCompleted(true);
     setHasStarted(true);
   }

@@ -9,6 +9,8 @@ export const fantasyResults = [
     name: "시스템 계승자",
     oneLineDescription:
       "주어진 규칙과 보상을 읽고, 가장 유리한 성장 루트를 찾아가는 판타지에 끌립니다.",
+    staySceneText:
+      "남들이 지나친 규칙 한 줄을 해석하고, 숨겨진 보상과 성장 루트를 열어가는 장면에 오래 머뭅니다.",
     displayTags: [
       "#시스템",
       "#퀘스트",
@@ -35,6 +37,8 @@ export const fantasyResults = [
     name: "힘숨찐",
     oneLineDescription:
       "평범해 보이던 주인공이 결정적인 순간 숨겨둔 힘으로 분위기를 뒤집는 전개에 끌립니다.",
+    staySceneText:
+      "평범해 보이던 인물이 결정적인 순간 숨겨온 힘을 드러내고, 판을 뒤집는 장면에 오래 머뭅니다.",
     displayTags: [
       "#힘숨찐",
       "#먼치킨",
@@ -61,6 +65,8 @@ export const fantasyResults = [
     name: "한계 돌파자",
     oneLineDescription:
       "약한 시작과 실패를 지나, 한계를 하나씩 넘으며 강해지는 성장 서사에 끌립니다.",
+    staySceneText:
+      "무너졌던 주인공이 다시 일어나, 실패 끝에 닿지 못하던 한계를 처음 넘어서는 장면에 오래 머뭅니다.",
     displayTags: [
       "#성장형주인공",
       "#재도전",
@@ -87,6 +93,8 @@ export const fantasyResults = [
     name: "진실 추적자",
     oneLineDescription:
       "숨겨진 단서와 진실이 하나씩 연결되며, 세계의 진짜 그림이 드러나는 판타지에 끌립니다.",
+    staySceneText:
+      "금지된 기록과 오래된 단서가 이어지고, 세계의 비밀이 한 겹씩 벗겨지는 장면에 오래 머뭅니다.",
     displayTags: [
       "#떡밥회수",
       "#숨겨진진실",
@@ -112,6 +120,8 @@ export const fantasyResults = [
     name: "생존 지휘관",
     oneLineDescription:
       "무너지는 상황 속에서도 사람들과 거점을 지키며 끝까지 버티는 전개에 끌립니다.",
+    staySceneText:
+      "무너지는 거점 안에서 사람들을 지휘하고, 남은 자원으로 끝까지 버티는 장면에 오래 머뭅니다.",
     displayTags: [
       "#생존",
       "#전쟁",
@@ -138,6 +148,8 @@ export const fantasyResults = [
     name: "왕국 전략가",
     oneLineDescription:
       "전투보다 세력, 동맹, 판세를 읽고 왕국의 흐름을 바꾸는 이야기에 끌립니다.",
+    staySceneText:
+      "작은 선택 하나가 전쟁과 세력의 판도를 바꾸고, 숨은 계산이 드러나는 장면에 오래 머뭅니다.",
     displayTags: [
       "#왕국운영",
       "#세력전",

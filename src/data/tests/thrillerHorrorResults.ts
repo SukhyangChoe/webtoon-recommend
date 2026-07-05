@@ -37,7 +37,7 @@ export const thrillerHorrorResults = [
     oneLineDescription:
       "닫힌 공간과 줄어드는 시간 속에서, 살아남고 빠져나갈 길을 찾는 스릴러·공포에 끌립니다.",
     staySceneText:
-      "비상구 표시등만 깜박이고, 닫힌 문 너머로 남은 시간이 줄어드는 장면에 오래 머뭅니다.",
+      "불 꺼진 지하 주차장과 깜박이는 비상구 앞에서, 남은 시간이 줄어드는 탈출의 순간에 오래 머뭅니다.",
     displayTags: [
       "#폐쇄공간",
       "#제한시간",
@@ -119,7 +119,7 @@ export const thrillerHorrorResults = [
     oneLineDescription:
       "가까운 사람의 말과 표정이 흔들리고, 의심과 불신이 관계를 압박하는 스릴러·공포에 끌립니다.",
     staySceneText:
-      "분명히 본 장면을 가까운 사람들이 없었던 일처럼 말하고, 평범한 침묵이 점점 압박으로 바뀌는 장면에 오래 머뭅니다.",
+      "가족사진에서 내가 지워지고, 모두가 아무렇지 않게 웃는 평범한 집 안의 침묵에 오래 머뭅니다.",
     displayTags: [
       "#심리압박",
       "#불신관계",

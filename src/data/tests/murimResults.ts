@@ -9,6 +9,8 @@ export const murimResults = [
     name: "초식 수련자",
     oneLineDescription:
       "반복되는 수련과 작은 깨달음이 쌓여, 한 수씩 강해지는 무협에 끌립니다.",
+    staySceneText:
+      "같은 동작을 수없이 반복한 끝에, 평범해 보이던 초식 하나가 처음으로 강적의 빈틈을 찌르는 장면에 오래 머뭅니다.",
     displayTags: [
       "#수련",
       "#초식",
@@ -34,6 +36,8 @@ export const murimResults = [
     name: "천하 군림자",
     oneLineDescription:
       "등장만으로 모두의 시선과 강호의 분위기를 바꾸는 압도적 강자 서사에 끌립니다.",
+    staySceneText:
+      "검을 뽑기도 전에 강호의 공기가 바뀌고, 모두가 한 사람의 존재감에 압도되는 장면에 오래 머뭅니다.",
     displayTags: [
       "#절대강자",
       "#천마",
@@ -60,6 +64,8 @@ export const murimResults = [
     name: "몰락한 후계자",
     oneLineDescription:
       "무너진 문파나 가문의 흔적을 붙잡고, 복수와 재기를 향해 다시 일어서는 무협에 끌립니다.",
+    staySceneText:
+      "무너진 문파의 흔적 앞에서 다시 검을 쥐고, 잃어버린 이름을 되찾기 위해 일어서는 장면에 오래 머뭅니다.",
     displayTags: [
       "#복수",
       "#재기",
@@ -86,6 +92,8 @@ export const murimResults = [
     name: "강호 책략가",
     oneLineDescription:
       "칼보다 먼저 문파의 판세와 사람의 속내를 읽는 두뇌형 무협에 끌립니다.",
+    staySceneText:
+      "칼이 부딪히기 전, 문파의 이해관계와 사람의 속내를 읽어 판세를 뒤집는 장면에 오래 머뭅니다.",
     displayTags: [
       "#문파정치",
       "#책략",
@@ -111,6 +119,8 @@ export const murimResults = [
     name: "길 위의 협객",
     oneLineDescription:
       "강해지는 것보다, 길 위에서 만난 사람과 약속을 외면하지 못하는 무협에 끌립니다.",
+    staySceneText:
+      "그냥 지나치려던 길 위에서 약한 사람의 사정을 외면하지 못하고, 다시 칼집을 여는 장면에 오래 머뭅니다.",
     displayTags: [
       "#협객",
       "#강호여정",

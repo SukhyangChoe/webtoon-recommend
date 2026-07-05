@@ -9,6 +9,8 @@ export const romanceRopanResults = [
     name: "계약·빙의 설정형",
     oneLineDescription:
       "정해진 관계와 낯선 조건 속에서, 예상 밖의 진심이 생겨나는 로맨스·로판에 끌립니다.",
+    staySceneText:
+      "정해진 관계와 낯선 역할이 작은 예외와 비밀을 지나, 서로를 진심으로 바라보는 관계로 바뀌는 장면에 오래 머뭅니다.",
     displayTags: [
       "#계약결혼",
       "#빙의로판",
@@ -35,6 +37,8 @@ export const romanceRopanResults = [
     name: "주도권 역전형",
     oneLineDescription:
       "감정과 권력의 균형이 흔들리고, 관계의 주도권이 바뀌는 로맨스·로판에 끌립니다.",
+    staySceneText:
+      "늘 우위에 있던 사람이 처음으로 흔들리고, 밀려나 있던 주인공이 관계의 판을 다시 잡는 장면에 오래 머뭅니다.",
     displayTags: [
       "#관계역전",
       "#주도권싸움",
@@ -61,6 +65,8 @@ export const romanceRopanResults = [
     name: "감정선 성장형",
     oneLineDescription:
       "오해와 상처가 천천히 풀리고, 인물의 마음이 조금씩 깊어지는 로맨스·로판에 끌립니다.",
+    staySceneText:
+      "감정이 급하게 폭발하기보다, 오래 쌓인 오해가 풀리며 두 사람이 서로를 이해하게 되는 장면에 오래 머뭅니다.",
     displayTags: [
       "#감정선",
       "#오해해소",
@@ -87,6 +93,8 @@ export const romanceRopanResults = [
     name: "궁정·가문 권력형",
     oneLineDescription:
       "연회장의 미소와 혼인 관계 뒤에서, 가문과 권력의 판세가 함께 움직이는 로맨스·로판에 끌립니다.",
+    staySceneText:
+      "초대장 하나, 약혼 하나, 짧은 대화 하나가 왕궁과 가문의 균형을 바꾸는 장면에 오래 머뭅니다.",
     displayTags: [
       "#궁정로판",
       "#가문정치",
@@ -113,6 +121,8 @@ export const romanceRopanResults = [
     name: "직진 케미형",
     oneLineDescription:
       "망설임보다 솔직한 말과 행동, 가벼운 농담 속 설렘이 살아 있는 로맨스·로판에 끌립니다.",
+    staySceneText:
+      "어색한 침묵이 농담으로 풀리고, 한마디 고백과 눈맞춤만으로 두 사람의 거리가 가까워지는 장면에 오래 머뭅니다.",
     displayTags: [
       "#직진로맨스",
       "#설렘케미",
@@ -139,6 +149,8 @@ export const romanceRopanResults = [
     name: "힐링 동행형",
     oneLineDescription:
       "자극적인 사건보다, 서로의 곁을 지키며 마음이 편안해지는 로맨스·로판에 끌립니다.",
+    staySceneText:
+      "말없이 건넨 차 한 잔, 비워둔 옆자리, 작은 일상이 쌓이며 서로의 상처가 천천히 편안해지는 장면에 오래 머뭅니다.",
     displayTags: [
       "#힐링로맨스",
       "#따뜻한동행",

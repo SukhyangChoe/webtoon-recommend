@@ -65,20 +65,15 @@ export type StoredGenrePreferenceResult = {
   testVersion: "v1.4_pair_league_image_card";
   resultName: "내 웹툰 세계관 지도";
   completedAt: string;
-
   answers: StoredGenrePreferenceAnswer[];
-
   positiveGenreScores: ScoreMap;
   genreAvoidanceScores: ScoreMap;
   finalGenreScores: ScoreMap;
-
   finalGenrePercentages: FinalGenrePercentage[];
-
   resultType: GenrePreferenceResultType;
   primaryGenreKey: string;
   secondaryGenreKey: string | null;
   topGenreKeys: string[];
-
   mapState: GenreMapState;
 
   /**
@@ -95,19 +90,16 @@ export type StoredDetailTestResult = {
   testKey: DetailTestKey;
   testVersion: string;
   completedAt: string;
-
   answers: StoredDetailAnswer[];
-
   branchScores: ScoreMap;
   tagScores: ScoreMap;
   avoidanceTagScores: ScoreMap;
-
   mainBranchKey: string;
   subBranchKey: string | null;
-
   resultKey: string;
   resultName: string;
   oneLineDescription: string;
+  staySceneText?: string;
   displayTags: string[];
   imageKey: string;
   shareText: string;
