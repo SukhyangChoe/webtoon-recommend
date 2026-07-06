@@ -18,42 +18,48 @@ const TEST_CARDS: TestHubCard[] = [
   {
     testKey: "genre_preference",
     title: "웹툰 장르 취향 테스트",
-    description: "짧은 장면 선택으로 내 웹툰 세계관 지도를 확인하는 대표 테스트입니다.",
+    description:
+      "짧은 장면 선택으로 내 웹툰 세계관 지도를 확인하는 대표 테스트입니다.",
     route: "/genre-preference",
     badge: "대표 테스트",
   },
   {
     testKey: "fantasy_detail",
     title: "판타지 웹툰 취향 테스트",
-    description: "시스템, 힘숨찐, 성장, 생존, 왕국 전략처럼 오래 머물 판타지 취향을 확인합니다.",
+    description:
+      "시스템, 힘숨찐, 성장, 생존, 왕국 전략처럼 오래 머물 판타지 취향을 확인합니다.",
     route: "/tests/fantasy",
     badge: "세부 테스트",
   },
   {
     testKey: "murim_detail",
     title: "무협 웹툰 취향 테스트",
-    description: "수련, 절대강자, 복수, 문파 정치, 협객형 무협 취향을 확인합니다.",
+    description:
+      "수련, 절대강자, 복수, 문파 정치, 협객형 무협 취향을 확인합니다.",
     route: "/tests/murim",
     badge: "세부 테스트",
   },
   {
     testKey: "romance_ropan_detail",
     title: "로맨스·로판 웹툰 취향 테스트",
-    description: "계약·빙의, 주도권 역전, 감정선, 궁정 권력, 직진 케미, 힐링 동행 취향을 확인합니다.",
+    description:
+      "계약·빙의, 주도권 역전, 감정선, 궁정 권력, 직진 케미, 힐링 동행 취향을 확인합니다.",
     route: "/tests/romance-ropan",
     badge: "세부 테스트",
   },
   {
     testKey: "thriller_horror_detail",
     title: "스릴러·공포 웹툰 취향 테스트",
-    description: "추리, 생존, 오컬트, 범죄 응징, 심리 압박, 음모 반전 취향을 확인합니다.",
+    description:
+      "추리, 생존, 오컬트, 범죄 응징, 심리 압박, 음모 반전 취향을 확인합니다.",
     route: "/tests/thriller-horror",
     badge: "세부 테스트",
   },
   {
     testKey: "drama_daily_detail",
     title: "드라마·일상 웹툰 취향 테스트",
-    description: "현실 공감, 청춘 성장, 힐링 일상, 가족 관계, 감정 여운, 생활 코미디 취향을 확인합니다.",
+    description:
+      "현실 공감, 청춘 성장, 힐링 일상, 가족 관계, 감정 여운, 생활 코미디 취향을 확인합니다.",
     route: "/tests/drama-daily",
     badge: "세부 테스트",
   },
@@ -179,8 +185,14 @@ export default function TestsPage() {
   const [storageChecked, setStorageChecked] = useState(false);
 
   useEffect(() => {
-    setStoredResults(loadAllKnownTestResults());
-    setStorageChecked(true);
+    const timeoutId = window.setTimeout(() => {
+      setStoredResults(loadAllKnownTestResults());
+      setStorageChecked(true);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, []);
 
   return (
@@ -220,8 +232,8 @@ export default function TestsPage() {
               lineHeight: 1.7,
             }}
           >
-            먼저 내 웹툰 세계관 지도를 확인하거나, 이미 끌리는 장르가 있다면
-            장르별 세부 취향 테스트로 바로 들어갈 수 있어요.
+            먼저 내 웹툰 세계관 지도를 확인하거나, 이미 끌리는 장르가
+            있다면 장르별 세부 취향 테스트로 바로 들어갈 수 있어요.
           </p>
         </header>
 

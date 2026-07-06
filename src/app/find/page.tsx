@@ -1,9 +1,54 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type CSSProperties } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
+
+import webtoonSeedData from "@/data/webtoons/webtoons_seed_v0_1.json";
 
 type FindMode = "entry" | "similar_work" | "scene_pick";
+
+type ScoreMap = Record<string, number>;
+
+type WebtoonSeedItem = {
+  canonicalWebtoonId: string;
+  title: string;
+  platform: string;
+  officialUrl: string;
+  mainGenre: string;
+  metadata: {
+    status: string;
+    ageRating?: string;
+    urlStatus?: string;
+    qualityScore?: number;
+  };
+  recommendation: {
+    recommendationReason?: string;
+    genreScores: ScoreMap;
+    typeScores?: Record<string, ScoreMap>;
+    tagScores?: ScoreMap;
+    avoidanceTagScores?: ScoreMap;
+  };
+};
+
+type SimilarWorkSelectedWebtoon = {
+  canonicalWebtoonId: string;
+  title: string;
+  platform: string;
+  mainGenre: string;
+  genreScores: ScoreMap;
+  typeScores?: Record<string, ScoreMap>;
+  tagScores?: ScoreMap;
+  avoidanceTagScores?: ScoreMap;
+};
+
+type SimilarWorkSelection = {
+  mode: "similar_work";
+  selectedWebtoons: SimilarWorkSelectedWebtoon[];
+};
+
+type RawRecord = Record<string, unknown>;
+
+const WEBTOONS = normalizeWebtoonSeedData(webtoonSeedData);
 
 const pageStyle: CSSProperties = {
   minHeight: "100vh",
@@ -115,6 +160,12 @@ const disabledButtonStyle: CSSProperties = {
   cursor: "not-allowed",
 };
 
+const enabledButtonStyle: CSSProperties = {
+  ...disabledButtonStyle,
+  background: "#4f46e5",
+  cursor: "pointer",
+};
+
 const linkButtonStyle: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
@@ -129,6 +180,219 @@ const linkButtonStyle: CSSProperties = {
   fontWeight: 900,
   textDecoration: "none",
 };
+
+const selectedChipStyle: CSSProperties = {
+  display: "grid",
+  gap: 8,
+  borderRadius: 18,
+  border: "1px solid #c7d2fe",
+  background: "#eef2ff",
+  padding: 14,
+};
+
+function isRecord(value: unknown): value is RawRecord {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function getRecordValue(record: RawRecord, key: string) {
+  const value = record[key];
+
+  return isRecord(value) ? value : undefined;
+}
+
+function getStringValue(record: RawRecord | undefined, key: string) {
+  if (!record) return undefined;
+
+  const value = record[key];
+
+  return typeof value === "string" ? value : undefined;
+}
+
+function getNumberValue(record: RawRecord | undefined, key: string) {
+  if (!record) return undefined;
+
+  const value = record[key];
+
+  return typeof value === "number" ? value : undefined;
+}
+
+function toScoreMap(value: unknown): ScoreMap {
+  if (!isRecord(value)) return {};
+
+  return Object.fromEntries(
+    Object.entries(value).filter(([, score]) => typeof score === "number")
+  ) as ScoreMap;
+}
+
+function toNestedScoreMap(value: unknown) {
+  if (!isRecord(value)) return undefined;
+
+  const nestedScores = Object.fromEntries(
+    Object.entries(value)
+      .map(([key, nestedValue]) => [key, toScoreMap(nestedValue)] as const)
+      .filter(([, scoreMap]) => Object.keys(scoreMap).length > 0)
+  ) as Record<string, ScoreMap>;
+
+  return Object.keys(nestedScores).length > 0 ? nestedScores : undefined;
+}
+
+function normalizeWebtoonSeedData(rawData: unknown): WebtoonSeedItem[] {
+  if (!Array.isArray(rawData)) return [];
+
+  return rawData
+    .map((rawItem) => normalizeWebtoonSeedItem(rawItem))
+    .filter((item): item is WebtoonSeedItem => Boolean(item));
+}
+
+function normalizeWebtoonSeedItem(rawItem: unknown): WebtoonSeedItem | null {
+  if (!isRecord(rawItem)) return null;
+
+  const metadata = getRecordValue(rawItem, "metadata");
+  const recommendation = getRecordValue(rawItem, "recommendation");
+
+  const canonicalWebtoonId = getStringValue(rawItem, "canonicalWebtoonId");
+  const title = getStringValue(rawItem, "title");
+  const platform = getStringValue(rawItem, "platform");
+  const officialUrl = getStringValue(rawItem, "officialUrl");
+  const mainGenre = getStringValue(rawItem, "mainGenre");
+
+  if (!canonicalWebtoonId || !title || !platform || !officialUrl || !mainGenre) {
+    return null;
+  }
+
+  const normalizedMetadata: WebtoonSeedItem["metadata"] = {
+    status: getStringValue(metadata, "status") ?? "unknown",
+  };
+
+  const ageRating = getStringValue(metadata, "ageRating");
+  const urlStatus = getStringValue(metadata, "urlStatus");
+  const qualityScore = getNumberValue(metadata, "qualityScore");
+
+  if (ageRating) {
+    normalizedMetadata.ageRating = ageRating;
+  }
+
+  if (urlStatus) {
+    normalizedMetadata.urlStatus = urlStatus;
+  }
+
+  if (typeof qualityScore === "number") {
+    normalizedMetadata.qualityScore = qualityScore;
+  }
+
+  const normalizedRecommendation: WebtoonSeedItem["recommendation"] = {
+    genreScores: toScoreMap(recommendation?.genreScores),
+  };
+
+  const recommendationReason = getStringValue(
+    recommendation,
+    "recommendationReason"
+  );
+  const typeScores = toNestedScoreMap(recommendation?.typeScores);
+  const tagScores = toScoreMap(recommendation?.tagScores);
+  const avoidanceTagScores = toScoreMap(recommendation?.avoidanceTagScores);
+
+  if (recommendationReason) {
+    normalizedRecommendation.recommendationReason = recommendationReason;
+  }
+
+  if (typeScores) {
+    normalizedRecommendation.typeScores = typeScores;
+  }
+
+  if (Object.keys(tagScores).length > 0) {
+    normalizedRecommendation.tagScores = tagScores;
+  }
+
+  if (Object.keys(avoidanceTagScores).length > 0) {
+    normalizedRecommendation.avoidanceTagScores = avoidanceTagScores;
+  }
+
+  return {
+    canonicalWebtoonId,
+    title,
+    platform,
+    officialUrl,
+    mainGenre,
+    metadata: normalizedMetadata,
+    recommendation: normalizedRecommendation,
+  };
+}
+
+function getGenreLabel(genreKey: string) {
+  const labelMap: Record<string, string> = {
+    fantasy: "판타지",
+    murim: "무협",
+    romance_ropan: "로맨스·로판",
+    thriller_horror: "스릴러·공포",
+    drama_daily: "드라마·일상",
+  };
+
+  return labelMap[genreKey] ?? genreKey;
+}
+
+function getStatusLabel(status?: string) {
+  const labelMap: Record<string, string> = {
+    ongoing: "연재중",
+    completed: "완결",
+    hiatus: "휴재",
+    unknown: "상태 미확인",
+  };
+
+  if (!status) return "상태 미확인";
+
+  return labelMap[status] ?? status;
+}
+
+function normalizeSearchText(value: string) {
+  return value
+    .normalize("NFKC")
+    .toLocaleLowerCase("ko-KR")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function createSearchableText(webtoon: WebtoonSeedItem) {
+  return normalizeSearchText(
+    [
+      webtoon.title,
+      webtoon.platform,
+      webtoon.mainGenre,
+      getGenreLabel(webtoon.mainGenre),
+      getStatusLabel(webtoon.metadata.status),
+    ].join(" ")
+  );
+}
+
+function matchesSearchQuery(webtoon: WebtoonSeedItem, query: string) {
+  const normalizedQuery = normalizeSearchText(query);
+
+  if (!normalizedQuery) return false;
+
+  const searchableText = createSearchableText(webtoon);
+  const queryTokens = normalizedQuery.split(" ").filter(Boolean);
+
+  return queryTokens.every((token) => searchableText.includes(token));
+}
+
+function createSimilarWorkSelection(
+  selectedWebtoons: WebtoonSeedItem[]
+): SimilarWorkSelection {
+  return {
+    mode: "similar_work",
+    selectedWebtoons: selectedWebtoons.map((webtoon) => ({
+      canonicalWebtoonId: webtoon.canonicalWebtoonId,
+      title: webtoon.title,
+      platform: webtoon.platform,
+      mainGenre: webtoon.mainGenre,
+      genreScores: webtoon.recommendation.genreScores,
+      typeScores: webtoon.recommendation.typeScores,
+      tagScores: webtoon.recommendation.tagScores,
+      avoidanceTagScores: webtoon.recommendation.avoidanceTagScores,
+    })),
+  };
+}
 
 export default function FindPage() {
   const [mode, setMode] = useState<FindMode>("entry");
@@ -146,7 +410,7 @@ export default function FindPage() {
         ) : null}
 
         {mode === "similar_work" ? (
-          <SimilarWorkReadyScreen onBack={() => setMode("entry")} />
+          <SimilarWorkSearchScreen onBack={() => setMode("entry")} />
         ) : null}
 
         {mode === "scene_pick" ? (
@@ -219,7 +483,7 @@ function FindEntryScreen({
               fontWeight: 900,
             }}
           >
-            작품 1~3개 선택 방식으로 준비 중
+            작품 1~3개 선택
           </p>
         </button>
 
@@ -282,8 +546,9 @@ function FindEntryScreen({
           lineHeight: 1.7,
         }}
       >
-        D+22에서는 추천 리스트를 아직 노출하지 않고, 작품으로 찾기와
-        분위기로 후보 좁히기 진입 화면까지만 정리합니다.
+        D+23에서는 Primary 작품 검색/선택 UI와 seed 연결까지만
+        구현합니다. 실제 추천 리스트와 TOP10 카드는 아직 노출하지
+        않습니다.
       </div>
 
       <div
@@ -306,7 +571,56 @@ function FindEntryScreen({
   );
 }
 
-function SimilarWorkReadyScreen({ onBack }: { onBack: () => void }) {
+function SimilarWorkSearchScreen({ onBack }: { onBack: () => void }) {
+  const [query, setQuery] = useState("");
+  const [selectedWebtoons, setSelectedWebtoons] = useState<WebtoonSeedItem[]>(
+    []
+  );
+  const [selectionResult, setSelectionResult] =
+    useState<SimilarWorkSelection | null>(null);
+
+  const searchResults = useMemo(() => {
+    if (!normalizeSearchText(query)) return [];
+
+    return WEBTOONS.filter((webtoon) => matchesSearchQuery(webtoon, query)).slice(
+      0,
+      10
+    );
+  }, [query]);
+
+  const selectedIdSet = useMemo(() => {
+    return new Set(
+      selectedWebtoons.map((webtoon) => webtoon.canonicalWebtoonId)
+    );
+  }, [selectedWebtoons]);
+
+  const canSubmit = selectedWebtoons.length >= 1 && selectedWebtoons.length <= 3;
+
+  function handleSelectWebtoon(webtoon: WebtoonSeedItem) {
+    setSelectionResult(null);
+
+    if (selectedIdSet.has(webtoon.canonicalWebtoonId)) return;
+    if (selectedWebtoons.length >= 3) return;
+
+    setSelectedWebtoons((current) => [...current, webtoon]);
+  }
+
+  function handleRemoveWebtoon(canonicalWebtoonId: string) {
+    setSelectionResult(null);
+
+    setSelectedWebtoons((current) =>
+      current.filter((webtoon) => {
+        return webtoon.canonicalWebtoonId !== canonicalWebtoonId;
+      })
+    );
+  }
+
+  function handleSubmitSelection() {
+    if (!canSubmit) return;
+
+    setSelectionResult(createSimilarWorkSelection(selectedWebtoons));
+  }
+
   return (
     <>
       <button type="button" onClick={onBack} style={backButtonStyle}>
@@ -323,9 +637,10 @@ function SimilarWorkReadyScreen({ onBack }: { onBack: () => void }) {
         </h1>
 
         <p style={descriptionStyle}>
-          재밌게 본 웹툰을 1~3개 골라주세요.
+          최근 재밌게 본 웹툰을 1~3개 골라주세요.
           <br />
-          2개 이상 고르면 취향을 더 안정적으로 잡을 수 있어요.
+          선택한 작품의 장르, 세부 취향, 태그를 기준으로 비슷한 작품을
+          찾아볼게요.
         </p>
 
         <div
@@ -343,49 +658,405 @@ function SimilarWorkReadyScreen({ onBack }: { onBack: () => void }) {
               fontWeight: 900,
             }}
           >
-            작품 검색
+            작품명 검색
           </label>
 
           <input
             id="liked-work-search"
-            type="text"
-            disabled
-            placeholder="작품 검색은 다음 단계에서 연결됩니다."
+            type="search"
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setSelectionResult(null);
+            }}
+            placeholder="예: 전지적 독자 시점, 나 혼자만 레벨업, 화산귀환"
             style={{
               width: "100%",
               minHeight: 52,
               borderRadius: 14,
               border: "1px solid #cbd5e1",
               background: "#ffffff",
-              color: "#94a3b8",
+              color: "#0f172a",
               padding: "0 16px",
               fontSize: 16,
               boxSizing: "border-box",
             }}
           />
 
-          <div
+          <p
             style={{
-              borderRadius: 18,
-              border: "1px dashed #cbd5e1",
-              background: "#ffffff",
-              padding: 18,
+              margin: 0,
               color: "#64748b",
-              fontSize: 14,
-              lineHeight: 1.7,
+              fontSize: 13,
+              lineHeight: 1.6,
             }}
           >
-            D+23에서 `webtoons_seed_v0_1.json`을 연결해 DB 내 작품
-            검색/자동완성/선택으로 확장합니다. 아직 자유 입력이나 추천
-            결과는 제공하지 않습니다.
-          </div>
+            작품명, 플랫폼, 대표 장르로 검색할 수 있어요. 쉼표나 특수문자가
+            있어도 단어 기준으로 찾아요. 초성 검색은 이후 단계에서
+            연결합니다.
+          </p>
 
-          <button type="button" disabled style={disabledButtonStyle}>
-            추천받기
+          <SearchResultList
+            query={query}
+            searchResults={searchResults}
+            selectedIdSet={selectedIdSet}
+            selectedCount={selectedWebtoons.length}
+            onSelectWebtoon={handleSelectWebtoon}
+          />
+
+          <SelectedWebtoonList
+            selectedWebtoons={selectedWebtoons}
+            onRemoveWebtoon={handleRemoveWebtoon}
+          />
+
+          <button
+            type="button"
+            disabled={!canSubmit}
+            onClick={handleSubmitSelection}
+            style={canSubmit ? enabledButtonStyle : disabledButtonStyle}
+          >
+            이 작품들로 추천받기
           </button>
+
+          {selectionResult ? (
+            <SimilarWorkReadyResult selectionResult={selectionResult} />
+          ) : null}
         </div>
       </section>
     </>
+  );
+}
+
+function SearchResultList({
+  query,
+  searchResults,
+  selectedIdSet,
+  selectedCount,
+  onSelectWebtoon,
+}: {
+  query: string;
+  searchResults: WebtoonSeedItem[];
+  selectedIdSet: Set<string>;
+  selectedCount: number;
+  onSelectWebtoon: (webtoon: WebtoonSeedItem) => void;
+}) {
+  const trimmedQuery = query.trim();
+
+  if (!trimmedQuery) {
+    return (
+      <div
+        style={{
+          borderRadius: 18,
+          border: "1px dashed #cbd5e1",
+          background: "#ffffff",
+          padding: 18,
+          color: "#64748b",
+          fontSize: 14,
+          lineHeight: 1.7,
+        }}
+      >
+        작품명을 1글자 이상 입력하면 DB seed에 있는 작품을 검색합니다.
+      </div>
+    );
+  }
+
+  if (searchResults.length === 0) {
+    return (
+      <div
+        style={{
+          borderRadius: 18,
+          border: "1px dashed #cbd5e1",
+          background: "#ffffff",
+          padding: 18,
+          color: "#64748b",
+          fontSize: 14,
+          lineHeight: 1.7,
+        }}
+      >
+        검색 결과가 없어요. 현재는 DB seed에 있는 작품명 기준으로만
+        검색합니다.
+      </div>
+    );
+  }
+
+  return (
+    <section
+      style={{
+        display: "grid",
+        gap: 10,
+      }}
+      aria-label="작품 검색 결과"
+    >
+      <h2
+        style={{
+          margin: "4px 0 0",
+          fontSize: 18,
+          letterSpacing: "-0.03em",
+        }}
+      >
+        검색 결과
+      </h2>
+
+      {searchResults.map((webtoon) => {
+        const isSelected = selectedIdSet.has(webtoon.canonicalWebtoonId);
+        const isMaxSelected = selectedCount >= 3;
+        const isDisabled = isSelected || isMaxSelected;
+
+        return (
+          <article
+            key={webtoon.canonicalWebtoonId}
+            style={{
+              display: "grid",
+              gap: 12,
+              borderRadius: 18,
+              border: "1px solid #e2e8f0",
+              background: "#ffffff",
+              padding: 16,
+            }}
+          >
+            <div>
+              <h3
+                style={{
+                  margin: 0,
+                  fontSize: 18,
+                  lineHeight: 1.35,
+                  letterSpacing: "-0.03em",
+                }}
+              >
+                {webtoon.title}
+              </h3>
+
+              <p
+                style={{
+                  margin: "6px 0 0",
+                  color: "#64748b",
+                  fontSize: 14,
+                  lineHeight: 1.6,
+                }}
+              >
+                {webtoon.platform} · {getGenreLabel(webtoon.mainGenre)} ·{" "}
+                {getStatusLabel(webtoon.metadata.status)}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              disabled={isDisabled}
+              onClick={() => onSelectWebtoon(webtoon)}
+              style={{
+                minHeight: 42,
+                borderRadius: 12,
+                border: isSelected ? "1px solid #bbf7d0" : "none",
+                background: isSelected
+                  ? "#dcfce7"
+                  : isMaxSelected
+                    ? "#cbd5e1"
+                    : "#4f46e5",
+                color: isSelected ? "#15803d" : "#ffffff",
+                padding: "10px 14px",
+                fontSize: 14,
+                fontWeight: 900,
+                cursor: isDisabled ? "not-allowed" : "pointer",
+              }}
+            >
+              {isSelected
+                ? "선택됨"
+                : isMaxSelected
+                  ? "최대 3개 선택"
+                  : "선택"}
+            </button>
+          </article>
+        );
+      })}
+    </section>
+  );
+}
+
+function SelectedWebtoonList({
+  selectedWebtoons,
+  onRemoveWebtoon,
+}: {
+  selectedWebtoons: WebtoonSeedItem[];
+  onRemoveWebtoon: (canonicalWebtoonId: string) => void;
+}) {
+  return (
+    <section
+      style={{
+        display: "grid",
+        gap: 10,
+      }}
+      aria-label="선택한 작품"
+    >
+      <h2
+        style={{
+          margin: "8px 0 0",
+          fontSize: 18,
+          letterSpacing: "-0.03em",
+        }}
+      >
+        선택한 작품 {selectedWebtoons.length} / 3
+      </h2>
+
+      {selectedWebtoons.length === 0 ? (
+        <div
+          style={{
+            borderRadius: 18,
+            border: "1px dashed #cbd5e1",
+            background: "#ffffff",
+            padding: 18,
+            color: "#64748b",
+            fontSize: 14,
+            lineHeight: 1.7,
+          }}
+        >
+          아직 선택한 작품이 없어요. 최소 1개를 선택하면 추천 준비를 할
+          수 있어요.
+        </div>
+      ) : (
+        <div
+          style={{
+            display: "grid",
+            gap: 10,
+          }}
+        >
+          {selectedWebtoons.map((webtoon) => (
+            <article key={webtoon.canonicalWebtoonId} style={selectedChipStyle}>
+              <div>
+                <strong
+                  style={{
+                    display: "block",
+                    fontSize: 16,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {webtoon.title}
+                </strong>
+
+                <span
+                  style={{
+                    display: "block",
+                    marginTop: 4,
+                    color: "#475569",
+                    fontSize: 14,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {webtoon.platform} · {getGenreLabel(webtoon.mainGenre)} ·{" "}
+                  {getStatusLabel(webtoon.metadata.status)}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => onRemoveWebtoon(webtoon.canonicalWebtoonId)}
+                style={{
+                  width: "fit-content",
+                  minHeight: 36,
+                  borderRadius: 999,
+                  border: "1px solid #c7d2fe",
+                  background: "#ffffff",
+                  color: "#4338ca",
+                  padding: "8px 12px",
+                  fontSize: 13,
+                  fontWeight: 900,
+                  cursor: "pointer",
+                }}
+              >
+                삭제
+              </button>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function SimilarWorkReadyResult({
+  selectionResult,
+}: {
+  selectionResult: SimilarWorkSelection;
+}) {
+  return (
+    <section
+      style={{
+        borderRadius: 20,
+        border: "1px solid #bbf7d0",
+        background: "#f0fdf4",
+        padding: 18,
+        color: "#166534",
+        display: "grid",
+        gap: 12,
+      }}
+    >
+      <div>
+        <h2
+          style={{
+            margin: 0,
+            color: "#14532d",
+            fontSize: 20,
+            letterSpacing: "-0.03em",
+          }}
+        >
+          선택한 작품 기준 추천 준비 완료
+        </h2>
+
+        <p
+          style={{
+            margin: "8px 0 0",
+            fontSize: 14,
+            lineHeight: 1.7,
+          }}
+        >
+          다음 단계에서 선택 작품들의 장르, 세부 취향, 태그를 바탕으로
+          추천 후보를 계산합니다.
+        </p>
+      </div>
+
+      <ul
+        style={{
+          margin: 0,
+          paddingLeft: 20,
+          color: "#166534",
+          lineHeight: 1.7,
+        }}
+      >
+        {selectionResult.selectedWebtoons.map((webtoon) => (
+          <li key={webtoon.canonicalWebtoonId}>
+            {webtoon.title} / {webtoon.platform}
+          </li>
+        ))}
+      </ul>
+
+      {process.env.NODE_ENV === "development" ? (
+        <details>
+          <summary
+            style={{
+              cursor: "pointer",
+              color: "#14532d",
+              fontWeight: 900,
+            }}
+          >
+            개발 확인용 selectedWebtoons JSON
+          </summary>
+
+          <pre
+            style={{
+              marginTop: 12,
+              padding: 14,
+              borderRadius: 14,
+              background: "#052e16",
+              color: "#dcfce7",
+              overflowX: "auto",
+              fontSize: 12,
+              lineHeight: 1.5,
+            }}
+          >
+            {JSON.stringify(selectionResult, null, 2)}
+          </pre>
+        </details>
+      ) : null}
+    </section>
   );
 }
 
@@ -459,10 +1130,10 @@ function ScenePickReadyScreen({ onBack }: { onBack: () => void }) {
               lineHeight: 1.7,
             }}
           >
-            D+22에서는 실제 문항 선택과 추천 결과를 아직 구현하지 않습니다.
-            다음 단계에서 기존 `scene_pick` answers 구조를 유지하면서
-            후보 좁히기 UX를 연결합니다. 실제 후보 수 숫자와 4단계 회피
-            문항은 MVP 즉시 반영이 아니라 후속 검토 항목입니다.
+            D+23에서는 Secondary 문항 선택과 추천 결과를 아직 구현하지
+            않습니다. 다음 단계에서 기존 `scene_pick` answers 구조를
+            유지하면서 후보 좁히기 UX를 연결합니다. 실제 후보 수 숫자와
+            4단계 회피 문항은 MVP 즉시 반영이 아니라 후속 검토 항목입니다.
           </div>
 
           <button type="button" disabled style={disabledButtonStyle}>
