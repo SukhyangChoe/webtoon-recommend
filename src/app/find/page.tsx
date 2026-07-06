@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState, type CSSProperties } from "react";
 
+import { FindRecommendationResult } from "@/components/find/FindRecommendationResult";
 import webtoonSeedData from "@/data/webtoons/webtoons_seed_v0_1.json";
 import {
   createSimilarWorkSelectionResult,
@@ -14,7 +15,6 @@ import {
 } from "@/lib/recommendation/similarWorkRecommendation";
 
 import type {
-  SimilarWorkRecommendation,
   SimilarWorkSelectionResult,
   WebtoonSeedItem,
 } from "@/lib/recommendation/similarWorkRecommendation";
@@ -315,9 +315,9 @@ function FindEntryScreen({
           lineHeight: 1.7,
         }}
       >
-        D+24에서는 Primary 선택 작품 기반 취향 벡터와 임시 TOP10 후보
-        산출까지만 구현합니다. 최종 추천 카드 UI와 보러가기 CTA는 다음
-        단계에서 정리합니다.
+        D+25에서는 Primary 추천 결과를 TOP1~5 기본, TOP6~10 더보기
+        구조로 정리합니다. Secondary는 기존 후보 좁히기 준비 화면을
+        유지합니다.
       </div>
 
       <div
@@ -494,7 +494,7 @@ function SimilarWorkSearchScreen({ onBack }: { onBack: () => void }) {
           </button>
 
           {selectionResult ? (
-            <SimilarWorkRecommendationPreview selectionResult={selectionResult} />
+            <FindRecommendationResult selectionResult={selectionResult} />
           ) : null}
         </div>
       </section>
@@ -747,260 +747,6 @@ function SelectedWebtoonList({
   );
 }
 
-function SimilarWorkRecommendationPreview({
-  selectionResult,
-}: {
-  selectionResult: SimilarWorkSelectionResult;
-}) {
-  return (
-    <section
-      style={{
-        borderRadius: 22,
-        border: "1px solid #bbf7d0",
-        background: "#f0fdf4",
-        padding: 20,
-        color: "#166534",
-        display: "grid",
-        gap: 18,
-      }}
-    >
-      <div>
-        <h2
-          style={{
-            margin: 0,
-            color: "#14532d",
-            fontSize: 22,
-            letterSpacing: "-0.03em",
-          }}
-        >
-          선택한 작품과 비슷한 후보를 골라봤어요.
-        </h2>
-
-        <p
-          style={{
-            margin: "8px 0 0",
-            fontSize: 14,
-            lineHeight: 1.7,
-          }}
-        >
-          D+24에서는 계산 검증용 임시 TOP10만 표시합니다. 최종 추천 카드
-          UI, 보러가기, 저장하기는 다음 단계에서 연결합니다.
-        </p>
-      </div>
-
-      <section>
-        <h3
-          style={{
-            margin: "0 0 8px",
-            color: "#14532d",
-            fontSize: 17,
-          }}
-        >
-          기준 작품
-        </h3>
-
-        <ul
-          style={{
-            margin: 0,
-            paddingLeft: 20,
-            color: "#166534",
-            lineHeight: 1.7,
-          }}
-        >
-          {selectionResult.selectedWebtoons.map((webtoon) => (
-            <li key={webtoon.canonicalWebtoonId}>
-              {webtoon.title} / {webtoon.platform}
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <RecommendationTop10List recommendations={selectionResult.recommendations} />
-
-      {process.env.NODE_ENV === "development" ? (
-        <details>
-          <summary
-            style={{
-              cursor: "pointer",
-              color: "#14532d",
-              fontWeight: 900,
-            }}
-          >
-            개발 확인용 userSimilarWorkProfile / TOP10 계산 상세
-          </summary>
-
-          <pre
-            style={{
-              marginTop: 12,
-              padding: 14,
-              borderRadius: 14,
-              background: "#052e16",
-              color: "#dcfce7",
-              overflowX: "auto",
-              fontSize: 12,
-              lineHeight: 1.5,
-            }}
-          >
-            {JSON.stringify(selectionResult, null, 2)}
-          </pre>
-        </details>
-      ) : null}
-    </section>
-  );
-}
-
-function RecommendationTop10List({
-  recommendations,
-}: {
-  recommendations: SimilarWorkRecommendation[];
-}) {
-  if (recommendations.length === 0) {
-    return (
-      <div
-        style={{
-          borderRadius: 18,
-          border: "1px dashed #86efac",
-          background: "#ffffff",
-          padding: 18,
-          color: "#166534",
-          fontSize: 14,
-          lineHeight: 1.7,
-        }}
-      >
-        추천 후보가 없어요. seed의 officialUrl, urlStatus, inputStatus를 확인해야
-        합니다.
-      </div>
-    );
-  }
-
-  return (
-    <section
-      style={{
-        display: "grid",
-        gap: 10,
-      }}
-      aria-label="임시 추천 후보 TOP10"
-    >
-      <h3
-        style={{
-          margin: 0,
-          color: "#14532d",
-          fontSize: 17,
-        }}
-      >
-        추천 후보 TOP10
-      </h3>
-
-      {recommendations.map((recommendation) => (
-        <article
-          key={recommendation.candidate.canonicalWebtoonId}
-          style={{
-            display: "grid",
-            gap: 8,
-            borderRadius: 18,
-            border: "1px solid #bbf7d0",
-            background: "#ffffff",
-            padding: 16,
-          }}
-        >
-          <div>
-            <strong
-              style={{
-                display: "block",
-                color: "#0f172a",
-                fontSize: 17,
-                lineHeight: 1.4,
-              }}
-            >
-              {recommendation.rank}. {recommendation.candidate.title}
-            </strong>
-
-            <span
-              style={{
-                display: "block",
-                marginTop: 4,
-                color: "#64748b",
-                fontSize: 14,
-                lineHeight: 1.5,
-              }}
-            >
-              {recommendation.candidate.platform} ·{" "}
-              {getGenreLabel(recommendation.candidate.mainGenre)} ·{" "}
-              {getStatusLabel(recommendation.candidate.status)}
-            </span>
-          </div>
-
-          <p
-            style={{
-              margin: 0,
-              color: "#334155",
-              fontSize: 14,
-              lineHeight: 1.7,
-            }}
-          >
-            추천 이유: {recommendation.candidate.recommendationReason}
-          </p>
-
-          <p
-            style={{
-              margin: 0,
-              color: "#15803d",
-              fontSize: 13,
-              fontWeight: 900,
-            }}
-          >
-            임시 매칭 점수 {recommendation.matchScore}
-          </p>
-
-          {process.env.NODE_ENV === "development" ? (
-            <details>
-              <summary
-                style={{
-                  cursor: "pointer",
-                  color: "#166534",
-                  fontSize: 13,
-                  fontWeight: 900,
-                }}
-              >
-                계산 상세
-              </summary>
-
-              <pre
-                style={{
-                  marginTop: 10,
-                  padding: 12,
-                  borderRadius: 12,
-                  background: "#052e16",
-                  color: "#dcfce7",
-                  overflowX: "auto",
-                  fontSize: 12,
-                  lineHeight: 1.5,
-                }}
-              >
-                {JSON.stringify(
-                  {
-                    finalRecommendationScore:
-                      recommendation.finalRecommendationScore,
-                    genreMatch: recommendation.genreMatch,
-                    typeMatch: recommendation.typeMatch,
-                    tagMatch: recommendation.tagMatch,
-                    qualityBoost: recommendation.qualityBoost,
-                    avoidancePenalty: recommendation.avoidancePenalty,
-                    matchedTagKeys: recommendation.matchedTagKeys,
-                    debug: recommendation.debug,
-                  },
-                  null,
-                  2
-                )}
-              </pre>
-            </details>
-          ) : null}
-        </article>
-      ))}
-    </section>
-  );
-}
-
 function ScenePickReadyScreen({ onBack }: { onBack: () => void }) {
   return (
     <>
@@ -1071,7 +817,7 @@ function ScenePickReadyScreen({ onBack }: { onBack: () => void }) {
               lineHeight: 1.7,
             }}
           >
-            D+24에서는 Secondary 문항 선택과 추천 결과를 아직 구현하지
+            D+25에서는 Secondary 문항 선택과 추천 결과를 아직 구현하지
             않습니다. 다음 단계에서 기존 `scene_pick` answers 구조를
             유지하면서 후보 좁히기 UX를 연결합니다. 실제 후보 수 숫자와
             4단계 회피 문항은 MVP 즉시 반영이 아니라 후속 검토 항목입니다.
