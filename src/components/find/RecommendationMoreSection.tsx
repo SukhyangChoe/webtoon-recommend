@@ -5,16 +5,41 @@ import { useState } from "react";
 import { RecommendationCard } from "./RecommendationCard";
 
 import type { SimilarWorkRecommendation } from "@/lib/recommendation/similarWorkRecommendation";
+import type {
+  RecommendationFeedbackAction,
+  RecommendationItemActionState,
+  RecommendationItemActionStateMap,
+} from "@/types/find";
 
 export function RecommendationMoreSection({
   recommendations,
+  actionStates,
+  onToggleSaved,
+  onSetFeedbackAction,
 }: {
   recommendations: SimilarWorkRecommendation[];
+  actionStates: RecommendationItemActionStateMap;
+  onToggleSaved: (canonicalWebtoonId: string) => void;
+  onSetFeedbackAction: (
+    canonicalWebtoonId: string,
+    feedbackAction: RecommendationFeedbackAction
+  ) => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
   if (recommendations.length === 0) {
     return null;
+  }
+
+  function getBaseActionState(
+    canonicalWebtoonId: string
+  ): RecommendationItemActionState {
+    return (
+      actionStates[canonicalWebtoonId] ?? {
+        canonicalWebtoonId,
+        isSaved: false,
+      }
+    );
   }
 
   return (
@@ -59,12 +84,20 @@ export function RecommendationMoreSection({
             다른 후보 TOP 6~10
           </h3>
 
-          {recommendations.map((recommendation) => (
-            <RecommendationCard
-              key={recommendation.candidate.canonicalWebtoonId}
-              recommendation={recommendation}
-            />
-          ))}
+          {recommendations.map((recommendation) => {
+            const canonicalWebtoonId =
+              recommendation.candidate.canonicalWebtoonId;
+
+            return (
+              <RecommendationCard
+                key={canonicalWebtoonId}
+                recommendation={recommendation}
+                actionState={getBaseActionState(canonicalWebtoonId)}
+                onToggleSaved={onToggleSaved}
+                onSetFeedbackAction={onSetFeedbackAction}
+              />
+            );
+          })}
         </>
       ) : null}
     </section>

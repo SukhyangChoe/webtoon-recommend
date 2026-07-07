@@ -1,18 +1,79 @@
 "use client";
 
+import { useState } from "react";
+
 import { RecommendationCard } from "./RecommendationCard";
 import { RecommendationMoreSection } from "./RecommendationMoreSection";
 import { SelectedSourceWorks } from "./SelectedSourceWorks";
 
 import type { SimilarWorkSelectionResult } from "@/lib/recommendation/similarWorkRecommendation";
+import type {
+  RecommendationFeedbackAction,
+  RecommendationItemActionState,
+  RecommendationItemActionStateMap,
+} from "@/types/find";
 
 export function FindRecommendationResult({
   selectionResult,
 }: {
   selectionResult: SimilarWorkSelectionResult;
 }) {
+  const [actionStates, setActionStates] =
+    useState<RecommendationItemActionStateMap>({});
+
   const topRecommendations = selectionResult.recommendations.slice(0, 5);
   const moreRecommendations = selectionResult.recommendations.slice(5, 10);
+
+  function getBaseActionState(
+    canonicalWebtoonId: string
+  ): RecommendationItemActionState {
+    return (
+      actionStates[canonicalWebtoonId] ?? {
+        canonicalWebtoonId,
+        isSaved: false,
+      }
+    );
+  }
+
+  function handleToggleSaved(canonicalWebtoonId: string) {
+    setActionStates((currentActionStates) => {
+      const currentState =
+        currentActionStates[canonicalWebtoonId] ?? {
+          canonicalWebtoonId,
+          isSaved: false,
+        };
+
+      return {
+        ...currentActionStates,
+        [canonicalWebtoonId]: {
+          ...currentState,
+          isSaved: !currentState.isSaved,
+        },
+      };
+    });
+  }
+
+  function handleSetFeedbackAction(
+    canonicalWebtoonId: string,
+    feedbackAction: RecommendationFeedbackAction
+  ) {
+    setActionStates((currentActionStates) => {
+      const currentState =
+        currentActionStates[canonicalWebtoonId] ?? {
+          canonicalWebtoonId,
+          isSaved: false,
+        };
+
+      return {
+        ...currentActionStates,
+        [canonicalWebtoonId]: {
+          ...currentState,
+          feedbackAction,
+          feedbackCreatedAt: new Date().toISOString(),
+        },
+      };
+    });
+  }
 
   return (
     <section
@@ -48,7 +109,8 @@ export function FindRecommendationResult({
           }}
         >
           선택한 작품의 장르, 세부 취향, 태그를 기준으로 임시 추천 후보를
-          정리했어요. D+25에서는 추천 카드 UI 1차 형태만 확인합니다.
+          정리했어요. D+26에서는 추천 카드 액션 상태를 현재 세션에서만
+          반영합니다.
         </p>
       </div>
 
@@ -73,12 +135,20 @@ export function FindRecommendationResult({
         </h3>
 
         {topRecommendations.length > 0 ? (
-          topRecommendations.map((recommendation) => (
-            <RecommendationCard
-              key={recommendation.candidate.canonicalWebtoonId}
-              recommendation={recommendation}
-            />
-          ))
+          topRecommendations.map((recommendation) => {
+            const canonicalWebtoonId =
+              recommendation.candidate.canonicalWebtoonId;
+
+            return (
+              <RecommendationCard
+                key={canonicalWebtoonId}
+                recommendation={recommendation}
+                actionState={getBaseActionState(canonicalWebtoonId)}
+                onToggleSaved={handleToggleSaved}
+                onSetFeedbackAction={handleSetFeedbackAction}
+              />
+            );
+          })
         ) : (
           <div
             style={{
@@ -97,7 +167,12 @@ export function FindRecommendationResult({
         )}
       </section>
 
-      <RecommendationMoreSection recommendations={moreRecommendations} />
+      <RecommendationMoreSection
+        recommendations={moreRecommendations}
+        actionStates={actionStates}
+        onToggleSaved={handleToggleSaved}
+        onSetFeedbackAction={handleSetFeedbackAction}
+      />
 
       {process.env.NODE_ENV === "development" ? (
         <details>
@@ -108,7 +183,7 @@ export function FindRecommendationResult({
               fontWeight: 900,
             }}
           >
-            개발 확인용 userSimilarWorkProfile / TOP10 원본
+            개발 확인용 userSimilarWorkProfile / TOP10 / actionStates
           </summary>
 
           <pre
@@ -123,7 +198,14 @@ export function FindRecommendationResult({
               lineHeight: 1.5,
             }}
           >
-            {JSON.stringify(selectionResult, null, 2)}
+            {JSON.stringify(
+              {
+                selectionResult,
+                actionStates,
+              },
+              null,
+              2
+            )}
           </pre>
         </details>
       ) : null}
