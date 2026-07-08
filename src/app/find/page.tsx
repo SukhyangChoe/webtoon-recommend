@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState, type CSSProperties } from "react";
 
 import { FindRecommendationResult } from "@/components/find/FindRecommendationResult";
-import webtoonSeedData from "@/data/webtoons/webtoons_seed_v0_1.json";
+import webtoonSeedData from "@/data/webtoons/webtoons_seed_current.json";
 import {
   createSimilarWorkSelectionResult,
   getGenreLabel,
