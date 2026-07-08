@@ -8,7 +8,10 @@ import {
   getStatusLabel,
 } from "@/lib/recommendation/similarWorkRecommendation";
 
-import type { SimilarWorkRecommendation } from "@/lib/recommendation/similarWorkRecommendation";
+import type {
+  RecommendationType,
+  SimilarWorkRecommendation,
+} from "@/lib/recommendation/similarWorkRecommendation";
 import type {
   RecommendationFeedbackAction,
   RecommendationItemActionState,
@@ -32,19 +35,32 @@ function getFeedbackDescription(feedbackAction?: RecommendationFeedbackAction) {
   }
 
   if (feedbackAction === "not_my_taste") {
-    return "작품 자체가 취향과 맞지 않는다는 신호로만 기록합니다. D+26에서는 재계산하지 않습니다.";
+    return "작품 자체가 취향과 맞지 않는다는 신호로만 기록합니다. 현재 화면에서는 추천 목록을 다시 계산하지 않습니다.";
   }
 
   return null;
 }
 
+function getRecommendationTypeLabel(recommendationType: RecommendationType) {
+  const labelMap: Record<RecommendationType, string> = {
+    stable_match: "핵심 추천",
+    similar_texture: "비슷한 결",
+    new_texture: "새로운 결",
+    taste_expansion: "취향 확장",
+  };
+
+  return labelMap[recommendationType];
+}
+
 export function RecommendationCard({
   recommendation,
+  rankLabel,
   actionState,
   onToggleSaved,
   onSetFeedbackAction,
 }: {
   recommendation: SimilarWorkRecommendation;
+  rankLabel?: string;
   actionState: RecommendationItemActionState;
   onToggleSaved: (canonicalWebtoonId: string) => void;
   onSetFeedbackAction: (
@@ -53,7 +69,6 @@ export function RecommendationCard({
   ) => void;
 }) {
   const [isFeedbackMenuOpen, setIsFeedbackMenuOpen] = useState(false);
-
   const canonicalWebtoonId = recommendation.candidate.canonicalWebtoonId;
   const tagLabels = getTagLabels(recommendation.matchedTagKeys, 4);
   const feedbackMessage = getFeedbackMessage(actionState.feedbackAction);
@@ -68,112 +83,131 @@ export function RecommendationCard({
   return (
     <article
       style={{
-        display: "grid",
-        gap: 14,
-        borderRadius: 22,
-        border: isExcludedInSession
-          ? "1px dashed #cbd5e1"
-          : "1px solid #e2e8f0",
+        borderRadius: 28,
+        border: "1px solid #dbeafe",
         background: isExcludedInSession ? "#f8fafc" : "#ffffff",
-        padding: 18,
-        boxShadow: "0 12px 32px rgba(15, 23, 42, 0.08)",
-        opacity: isExcludedInSession ? 0.68 : 1,
+        opacity: isExcludedInSession ? 0.72 : 1,
+        padding: "clamp(22px, 5vw, 34px)",
+        boxShadow: "0 18px 50px rgba(15, 23, 42, 0.08)",
+        display: "grid",
+        gap: 18,
       }}
     >
-    <div
-    style={{
-        display: "grid",
-        gap: 10,
-    }}
-    >
-    <div
+      <div
         style={{
-        display: "flex",
-        justifyContent: "space-between",
-        gap: 10,
-        alignItems: "center",
-        flexWrap: "wrap",
+          display: "grid",
+          gap: 12,
         }}
-    >
-        <p
-        style={{
-            margin: 0,
-            color: "#4f46e5",
-            fontSize: 13,
-            fontWeight: 900,
-        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 10,
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
         >
-        TOP {recommendation.rank}
-        </p>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              flexWrap: "wrap",
+            }}
+          >
+            <p
+              style={{
+                margin: 0,
+                color: "#4f46e5",
+                fontSize: 13,
+                fontWeight: 900,
+              }}
+            >
+              {rankLabel ?? `TOP ${recommendation.rank}`}
+            </p>
 
-        <button
-        type="button"
-        onClick={() => onToggleSaved(canonicalWebtoonId)}
-        aria-pressed={actionState.isSaved}
-        style={{
-            minWidth: 118,
-            minHeight: 38,
-            borderRadius: 999,
-            border: actionState.isSaved
-            ? "1px solid #4f46e5"
-            : "1px solid #c7d2fe",
-            background: actionState.isSaved ? "#eef2ff" : "#ffffff",
-            color: "#4338ca",
-            padding: "8px 11px",
-            fontSize: 13,
-            fontWeight: 900,
-            cursor: "pointer",
-            whiteSpace: "nowrap",
-        }}
-        >
-        <span aria-hidden="true">🔖</span>{" "}
-        {actionState.isSaved ? "저장됨" : "저장해두기"}
-        </button>
-    </div>
+            <span
+              style={{
+                borderRadius: 999,
+                background: "#eef2ff",
+                color: "#4338ca",
+                padding: "5px 9px",
+                fontSize: 12,
+                fontWeight: 900,
+              }}
+            >
+              {getRecommendationTypeLabel(recommendation.recommendationType)}
+            </span>
+          </div>
 
-    <div>
-        <h3
-        style={{
-            margin: 0,
-            color: "#0f172a",
-            fontSize: 22,
-            lineHeight: 1.35,
-            letterSpacing: "-0.03em",
-            wordBreak: "keep-all",
-            overflowWrap: "break-word",
-        }}
-        >
-        {recommendation.candidate.title}
-        </h3>
+          <button
+            type="button"
+            onClick={() => onToggleSaved(canonicalWebtoonId)}
+            aria-pressed={actionState.isSaved}
+            style={{
+              minWidth: 118,
+              minHeight: 38,
+              borderRadius: 999,
+              border: actionState.isSaved
+                ? "1px solid #4f46e5"
+                : "1px solid #c7d2fe",
+              background: actionState.isSaved ? "#eef2ff" : "#ffffff",
+              color: "#4338ca",
+              padding: "8px 11px",
+              fontSize: 13,
+              fontWeight: 900,
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            <span aria-hidden="true">🔖</span>{" "}
+            {actionState.isSaved ? "저장됨" : "저장해두기"}
+          </button>
+        </div>
 
-        <p
-        style={{
-            margin: "6px 0 0",
-            color: "#64748b",
-            fontSize: 14,
-            lineHeight: 1.6,
-        }}
-        >
-        {recommendation.candidate.platform} ·{" "}
-        {getGenreLabel(recommendation.candidate.mainGenre)} ·{" "}
-        {getStatusLabel(recommendation.candidate.status)}
-        </p>
-    </div>
-    </div>
+        <div>
+          <h3
+            style={{
+              margin: 0,
+              color: "#0f172a",
+              fontSize: 24,
+              lineHeight: 1.35,
+              letterSpacing: "-0.03em",
+              wordBreak: "keep-all",
+              overflowWrap: "break-word",
+            }}
+          >
+            {recommendation.candidate.title}
+          </h3>
+
+          <p
+            style={{
+              margin: "8px 0 0",
+              color: "#64748b",
+              fontSize: 15,
+              lineHeight: 1.6,
+            }}
+          >
+            {recommendation.candidate.platform} ·{" "}
+            {getGenreLabel(recommendation.candidate.mainGenre)} ·{" "}
+            {getStatusLabel(recommendation.candidate.status)}
+          </p>
+        </div>
+      </div>
 
       {feedbackMessage ? (
         <div
           style={{
             borderRadius: 16,
-            border: "1px solid #e2e8f0",
-            background: "#ffffff",
-            padding: 12,
-            color: "#475569",
-            fontSize: 13,
-            lineHeight: 1.65,
+            background: "#f1f5f9",
+            color: "#334155",
+            padding: 14,
+            fontSize: 14,
+            lineHeight: 1.6,
           }}
         >
-          <strong style={{ color: "#0f172a" }}>{feedbackMessage}</strong>
+          <strong>{feedbackMessage}</strong>
           {feedbackDescription ? (
             <>
               <br />
@@ -189,8 +223,8 @@ export function RecommendationCard({
           borderRadius: 999,
           background: "#eef2ff",
           color: "#4338ca",
-          padding: "7px 11px",
-          fontSize: 13,
+          padding: "8px 12px",
+          fontSize: 14,
           fontWeight: 900,
         }}
       >
@@ -201,8 +235,10 @@ export function RecommendationCard({
         style={{
           margin: 0,
           color: "#334155",
-          fontSize: 15,
+          fontSize: 16,
           lineHeight: 1.75,
+          wordBreak: "keep-all",
+          overflowWrap: "break-word",
         }}
       >
         {recommendation.candidate.recommendationReason}
@@ -211,23 +247,21 @@ export function RecommendationCard({
       <div
         style={{
           display: "flex",
-          gap: 8,
           flexWrap: "wrap",
+          gap: 8,
         }}
-        aria-label="매칭 포인트"
       >
         {tagLabels.length > 0 ? (
           tagLabels.map((tagLabel) => (
             <span
               key={tagLabel}
               style={{
-                display: "inline-flex",
                 borderRadius: 999,
                 background: "#f1f5f9",
                 color: "#334155",
-                padding: "7px 10px",
-                fontSize: 13,
-                fontWeight: 800,
+                padding: "8px 11px",
+                fontSize: 14,
+                fontWeight: 900,
               }}
             >
               #{tagLabel}
@@ -236,13 +270,12 @@ export function RecommendationCard({
         ) : (
           <span
             style={{
-              display: "inline-flex",
               borderRadius: 999,
               background: "#f1f5f9",
               color: "#334155",
-              padding: "7px 10px",
-              fontSize: 13,
-              fontWeight: 800,
+              padding: "8px 11px",
+              fontSize: 14,
+              fontWeight: 900,
             }}
           >
             #취향 접점
@@ -261,108 +294,104 @@ export function RecommendationCard({
           target="_blank"
           rel="noreferrer"
           style={{
+            width: "100%",
+            minHeight: 50,
+            borderRadius: 16,
+            background: "#4f46e5",
+            color: "#ffffff",
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
-            minHeight: 46,
-            borderRadius: 14,
-            background: "#4f46e5",
-            color: "#ffffff",
             padding: "12px 16px",
-            fontSize: 15,
+            fontSize: 16,
             fontWeight: 900,
             textDecoration: "none",
+            boxSizing: "border-box",
           }}
         >
           보러가기
         </a>
 
-        <div
+        <button
+          type="button"
+          onClick={() => setIsFeedbackMenuOpen((current) => !current)}
+          aria-expanded={isFeedbackMenuOpen}
           style={{
-            position: "relative",
-            display: "grid",
-            gap: 8,
+            width: "100%",
+            minHeight: 44,
+            borderRadius: 16,
+            border: "1px solid #e2e8f0",
+            background: "#ffffff",
+            color: "#475569",
+            padding: "10px 14px",
+            fontSize: 14,
+            fontWeight: 900,
+            cursor: "pointer",
           }}
         >
-          <button
-            type="button"
-            onClick={() => setIsFeedbackMenuOpen((current) => !current)}
-            aria-expanded={isFeedbackMenuOpen}
+          ⋯ 추천에서 제외
+        </button>
+
+        {isFeedbackMenuOpen ? (
+          <div
             style={{
-              width: "100%",
-              minHeight: 40,
-              borderRadius: 14,
-              border: "1px solid #e2e8f0",
-              background: "#ffffff",
-              color: "#475569",
-              padding: "10px 14px",
-              fontSize: 14,
-              fontWeight: 900,
-              cursor: "pointer",
+              display: "grid",
+              gap: 8,
             }}
           >
-            ⋯ 추천에서 제외
-          </button>
-
-          {isFeedbackMenuOpen ? (
-            <div
+            <button
+              type="button"
+              onClick={() => handleFeedbackAction("already_read")}
               style={{
-                display: "grid",
-                gap: 8,
-                borderRadius: 16,
+                minHeight: 40,
+                borderRadius: 12,
                 border: "1px solid #e2e8f0",
-                background: "#ffffff",
-                padding: 10,
+                background: "#f8fafc",
+                color: "#334155",
+                padding: "10px 12px",
+                fontSize: 14,
+                fontWeight: 900,
+                cursor: "pointer",
+                textAlign: "left",
               }}
             >
-              <button
-                type="button"
-                onClick={() => handleFeedbackAction("already_read")}
-                style={{
-                  minHeight: 40,
-                  borderRadius: 12,
-                  border: "1px solid #e2e8f0",
-                  background: "#f8fafc",
-                  color: "#334155",
-                  padding: "10px 12px",
-                  fontSize: 14,
-                  fontWeight: 900,
-                  cursor: "pointer",
-                  textAlign: "left",
-                }}
-              >
-                이미 봤어요
-              </button>
+              이미 봤어요
+            </button>
 
-              <button
-                type="button"
-                onClick={() => handleFeedbackAction("not_my_taste")}
-                style={{
-                  minHeight: 40,
-                  borderRadius: 12,
-                  border: "1px solid #e2e8f0",
-                  background: "#f8fafc",
-                  color: "#334155",
-                  padding: "10px 12px",
-                  fontSize: 14,
-                  fontWeight: 900,
-                  cursor: "pointer",
-                  textAlign: "left",
-                }}
-              >
-                내 취향 아님
-              </button>
-            </div>
-          ) : null}
-        </div>
+            <button
+              type="button"
+              onClick={() => handleFeedbackAction("not_my_taste")}
+              style={{
+                minHeight: 40,
+                borderRadius: 12,
+                border: "1px solid #e2e8f0",
+                background: "#f8fafc",
+                color: "#334155",
+                padding: "10px 12px",
+                fontSize: 14,
+                fontWeight: 900,
+                cursor: "pointer",
+                textAlign: "left",
+              }}
+            >
+              내 취향 아님
+            </button>
+          </div>
+        ) : null}
       </div>
 
       {process.env.NODE_ENV === "development" ? (
-        <details>
+        <details
+          style={{
+            borderRadius: 14,
+            background: "#f0fdf4",
+            color: "#166534",
+            padding: 12,
+          }}
+        >
           <summary
             style={{
               cursor: "pointer",
-              color: "#166534",
               fontSize: 13,
               fontWeight: 900,
             }}
@@ -372,19 +401,24 @@ export function RecommendationCard({
 
           <pre
             style={{
-              marginTop: 10,
-              padding: 12,
-              borderRadius: 12,
-              background: "#052e16",
-              color: "#dcfce7",
-              overflowX: "auto",
+              margin: "10px 0 0",
+              maxHeight: 360,
+              overflow: "auto",
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-word",
               fontSize: 12,
-              lineHeight: 1.5,
+              lineHeight: 1.55,
             }}
           >
             {JSON.stringify(
               {
                 actionState,
+                rank: recommendation.rank,
+                effectiveRank: recommendation.effectiveRank,
+                recommendationType: recommendation.recommendationType,
+                stage1Score: recommendation.stage1Score,
+                longTermScore: recommendation.longTermScore,
+                effectiveScore: recommendation.effectiveScore,
                 finalRecommendationScore:
                   recommendation.finalRecommendationScore,
                 genreMatch: recommendation.genreMatch,

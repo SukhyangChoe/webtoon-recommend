@@ -21,8 +21,11 @@ export function FindRecommendationResult({
   const [actionStates, setActionStates] =
     useState<RecommendationItemActionStateMap>({});
 
-  const topRecommendations = selectionResult.recommendations.slice(0, 5);
-  const moreRecommendations = selectionResult.recommendations.slice(5, 10);
+  const mainDisplayItems =
+    selectionResult.mainDisplayItems ?? selectionResult.recommendations.slice(0, 5);
+  const expansionDisplayItems =
+    selectionResult.expansionDisplayItems ??
+    selectionResult.recommendations.slice(5, 10);
 
   function getBaseActionState(
     canonicalWebtoonId: string
@@ -37,11 +40,10 @@ export function FindRecommendationResult({
 
   function handleToggleSaved(canonicalWebtoonId: string) {
     setActionStates((currentActionStates) => {
-      const currentState =
-        currentActionStates[canonicalWebtoonId] ?? {
-          canonicalWebtoonId,
-          isSaved: false,
-        };
+      const currentState = currentActionStates[canonicalWebtoonId] ?? {
+        canonicalWebtoonId,
+        isSaved: false,
+      };
 
       return {
         ...currentActionStates,
@@ -58,11 +60,10 @@ export function FindRecommendationResult({
     feedbackAction: RecommendationFeedbackAction
   ) {
     setActionStates((currentActionStates) => {
-      const currentState =
-        currentActionStates[canonicalWebtoonId] ?? {
-          canonicalWebtoonId,
-          isSaved: false,
-        };
+      const currentState = currentActionStates[canonicalWebtoonId] ?? {
+        canonicalWebtoonId,
+        isSaved: false,
+      };
 
       return {
         ...currentActionStates,
@@ -78,23 +79,35 @@ export function FindRecommendationResult({
   return (
     <section
       style={{
-        borderRadius: 24,
-        border: "1px solid #bbf7d0",
-        background: "#f0fdf4",
-        padding: 20,
-        color: "#166534",
+        marginTop: 34,
         display: "grid",
-        gap: 20,
+        gap: 22,
       }}
     >
-      <div>
+      <div
+        style={{
+          display: "grid",
+          gap: 10,
+        }}
+      >
+        <p
+          style={{
+            margin: 0,
+            color: "#4f46e5",
+            fontSize: 14,
+            fontWeight: 900,
+          }}
+        >
+          Primary · similar_work
+        </p>
+
         <h2
           style={{
             margin: 0,
-            color: "#14532d",
-            fontSize: 24,
-            lineHeight: 1.35,
-            letterSpacing: "-0.03em",
+            color: "#0f172a",
+            fontSize: "clamp(26px, 5vw, 38px)",
+            lineHeight: 1.18,
+            letterSpacing: "-0.04em",
           }}
         >
           선택한 작품과 비슷한 후보를 골라봤어요.
@@ -102,40 +115,52 @@ export function FindRecommendationResult({
 
         <p
           style={{
-            margin: "8px 0 0",
-            color: "#166534",
-            fontSize: 14,
+            margin: 0,
+            color: "#475569",
+            fontSize: 16,
             lineHeight: 1.7,
           }}
         >
-          선택한 작품의 장르, 세부 취향, 태그를 기준으로 임시 추천 후보를
-          정리했어요. D+26에서는 추천 카드 액션 상태를 현재 세션에서만
-          반영합니다.
+          먼저 선택한 작품의 취향 결을 기준으로 후보를 만들고, 저장된 테스트 결과가
+          있으면 그 후보 안에서 약하게 다시 정렬했어요.
         </p>
       </div>
 
       <SelectedSourceWorks selectedWebtoons={selectionResult.selectedWebtoons} />
 
-      <section
+      <div
         style={{
           display: "grid",
-          gap: 12,
+          gap: 14,
         }}
-        aria-label="추천 후보 TOP 1~5"
       >
-        <h3
-          style={{
-            margin: 0,
-            color: "#14532d",
-            fontSize: 17,
-            letterSpacing: "-0.02em",
-          }}
-        >
-          추천 후보 TOP 1~5
-        </h3>
+        <div>
+          <h3
+            style={{
+              margin: 0,
+              color: "#0f172a",
+              fontSize: 22,
+              lineHeight: 1.35,
+              letterSpacing: "-0.03em",
+            }}
+          >
+            핵심 추천
+          </h3>
 
-        {topRecommendations.length > 0 ? (
-          topRecommendations.map((recommendation) => {
+          <p
+            style={{
+              margin: "6px 0 0",
+              color: "#64748b",
+              fontSize: 15,
+              lineHeight: 1.6,
+            }}
+          >
+            선택한 작품과 가장 안정적으로 맞는 후보 5개예요.
+          </p>
+        </div>
+
+        {mainDisplayItems.length > 0 ? (
+          mainDisplayItems.map((recommendation) => {
             const canonicalWebtoonId =
               recommendation.candidate.canonicalWebtoonId;
 
@@ -150,57 +175,71 @@ export function FindRecommendationResult({
             );
           })
         ) : (
-          <div
+          <p
             style={{
-              borderRadius: 18,
-              border: "1px dashed #86efac",
-              background: "#ffffff",
-              padding: 18,
-              color: "#166534",
-              fontSize: 14,
+              margin: 0,
+              color: "#64748b",
+              fontSize: 15,
               lineHeight: 1.7,
             }}
           >
             추천 후보가 없어요. seed의 officialUrl, urlStatus, inputStatus를
             확인해야 합니다.
-          </div>
+          </p>
         )}
-      </section>
+      </div>
 
       <RecommendationMoreSection
-        recommendations={moreRecommendations}
+        recommendations={expansionDisplayItems}
         actionStates={actionStates}
         onToggleSaved={handleToggleSaved}
         onSetFeedbackAction={handleSetFeedbackAction}
       />
 
       {process.env.NODE_ENV === "development" ? (
-        <details>
+        <details
+          style={{
+            borderRadius: 18,
+            border: "1px solid #bbf7d0",
+            background: "#f0fdf4",
+            color: "#166534",
+            padding: 16,
+          }}
+        >
           <summary
             style={{
               cursor: "pointer",
-              color: "#14532d",
+              fontSize: 14,
               fontWeight: 900,
             }}
           >
-            개발 확인용 userSimilarWorkProfile / TOP10 / actionStates
+            개발 확인용 two-stage rerank / pools / actionStates
           </summary>
 
           <pre
             style={{
-              marginTop: 12,
-              padding: 14,
-              borderRadius: 14,
-              background: "#052e16",
-              color: "#dcfce7",
-              overflowX: "auto",
+              margin: "14px 0 0",
+              maxHeight: 460,
+              overflow: "auto",
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-word",
               fontSize: 12,
-              lineHeight: 1.5,
+              lineHeight: 1.55,
             }}
           >
             {JSON.stringify(
               {
-                selectionResult,
+                scoringVersion: selectionResult.scoringVersion,
+                hasLongTermProfile: selectionResult.hasLongTermProfile,
+                blendingWeights: selectionResult.blendingWeights,
+                candidatePoolSize: selectionResult.candidatePoolSize,
+                similarWorkSessionVector:
+                  selectionResult.similarWorkSessionVector,
+                storedUserTasteProfile: selectionResult.storedUserTasteProfile,
+                mainDisplayItems: selectionResult.mainDisplayItems,
+                mainReservePool: selectionResult.mainReservePool,
+                expansionCandidatePool: selectionResult.expansionCandidatePool,
+                expansionDisplayItems: selectionResult.expansionDisplayItems,
                 actionStates,
               },
               null,

@@ -1,12 +1,19 @@
 import { cosineSimilarity } from "./similarity";
+import { buildStoredUserTasteProfile } from "./storedUserTasteProfile";
 import {
   averageScoreMaps,
   clamp,
+  dotProduct,
   flattenTypeScores,
   roundScore,
 } from "./vector";
 
+import type { StoredUserTasteProfile } from "./storedUserTasteProfile";
 import type { ScoreMap } from "./vector";
+
+const PRIMARY_STAGE1_WEIGHT = 0.8;
+const PRIMARY_LONG_TERM_WEIGHT = 0.2;
+const STAGE1_CANDIDATE_POOL_SIZE = 100;
 
 export type WebtoonSeedItem = {
   canonicalWebtoonId: string;
@@ -51,8 +58,16 @@ export type SimilarWorkProfile = {
   userAvoidanceScores: ScoreMap;
 };
 
+export type RecommendationType =
+  | "stable_match"
+  | "similar_texture"
+  | "new_texture"
+  | "taste_expansion";
+
 export type SimilarWorkRecommendation = {
   rank: number;
+  effectiveRank: number;
+  recommendationType: RecommendationType;
   candidate: {
     canonicalWebtoonId: string;
     title: string;
@@ -63,6 +78,9 @@ export type SimilarWorkRecommendation = {
     recommendationReason: string;
   };
   finalRecommendationScore: number;
+  stage1Score: number;
+  longTermScore: number | null;
+  effectiveScore: number;
   matchScore: number;
   genreMatch: number;
   typeMatch: number;
@@ -75,17 +93,54 @@ export type SimilarWorkRecommendation = {
     candidateTypeScores: ScoreMap;
     candidateTagScores: ScoreMap;
     candidateAvoidanceTagScores: ScoreMap;
+    stage1Breakdown: ScoreBreakdown;
+    longTermBreakdown: ScoreBreakdown | null;
   };
 };
 
 export type SimilarWorkSelectionResult = {
   mode: "similar_work";
   selectedWebtoons: SimilarWorkSelectedWebtoon[];
+  similarWorkSessionVector: SimilarWorkProfile;
   userSimilarWorkProfile: SimilarWorkProfile;
+  storedUserTasteProfile: StoredUserTasteProfile | null;
+  hasLongTermProfile: boolean;
+  scoringVersion: "two_stage_rerank_v1_8_primary";
+  candidatePoolSize: number;
+  blendingWeights: {
+    stage1Weight: number;
+    longTermWeight: number;
+  };
+  mainDisplayItems: SimilarWorkRecommendation[];
+  mainReservePool: SimilarWorkRecommendation[];
+  expansionCandidatePool: SimilarWorkRecommendation[];
+  expansionDisplayItems: SimilarWorkRecommendation[];
+
+  /**
+   * 기존 D+25~D+29 컴포넌트 호환용.
+   * D+30부터는 화면 표시용 10개 = 핵심 추천 5개 + 확장 추천 5개다.
+   */
   recommendations: SimilarWorkRecommendation[];
 };
 
 type RawRecord = Record<string, unknown>;
+
+type UserSignalProfile = {
+  userGenreScores: ScoreMap;
+  userTypeScores: ScoreMap;
+  userTagScores: ScoreMap;
+  userAvoidanceScores: ScoreMap;
+};
+
+type ScoreBreakdown = {
+  score: number;
+  genreMatch: number;
+  typeMatch: number;
+  tagMatch: number;
+  qualityBoost: number;
+  avoidancePenalty: number;
+  matchedTagKeys: string[];
+};
 
 function isRecord(value: unknown): value is RawRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -273,7 +328,7 @@ export function normalizeSearchText(value: string) {
 }
 
 function compactSearchText(value: string) {
-    return normalizeSearchText(value).replace(/\s+/g, "");
+  return normalizeSearchText(value).replace(/\s+/g, "");
 }
 
 function createSearchableText(webtoon: WebtoonSeedItem) {
@@ -289,32 +344,32 @@ function createSearchableText(webtoon: WebtoonSeedItem) {
 }
 
 export function matchesSearchQuery(webtoon: WebtoonSeedItem, query: string) {
-    const normalizedQuery = normalizeSearchText(query);
-  
-    if (!normalizedQuery) return false;
-  
-    const searchableText = createSearchableText(webtoon);
-    const queryTokens = normalizedQuery.split(" ").filter(Boolean);
-  
-    const tokenMatched = queryTokens.every((token) => {
-      return searchableText.includes(token);
-    });
-  
-    if (tokenMatched) return true;
-  
-    const compactQuery = compactSearchText(query);
-    const compactSearchableText = compactSearchText(
-      [
-        webtoon.title,
-        webtoon.platform,
-        webtoon.mainGenre,
-        getGenreLabel(webtoon.mainGenre),
-        getStatusLabel(webtoon.metadata.status),
-      ].join(" ")
-    );
-  
-    return compactSearchableText.includes(compactQuery);
-  }
+  const normalizedQuery = normalizeSearchText(query);
+
+  if (!normalizedQuery) return false;
+
+  const searchableText = createSearchableText(webtoon);
+  const queryTokens = normalizedQuery.split(" ").filter(Boolean);
+
+  const tokenMatched = queryTokens.every((token) => {
+    return searchableText.includes(token);
+  });
+
+  if (tokenMatched) return true;
+
+  const compactQuery = compactSearchText(query);
+  const compactSearchableText = compactSearchText(
+    [
+      webtoon.title,
+      webtoon.platform,
+      webtoon.mainGenre,
+      getGenreLabel(webtoon.mainGenre),
+      getStatusLabel(webtoon.metadata.status),
+    ].join(" ")
+  );
+
+  return compactSearchableText.includes(compactQuery);
+}
 
 export function buildSimilarWorkProfile(
   selectedWebtoons: WebtoonSeedItem[]
@@ -337,9 +392,8 @@ export function buildSimilarWorkProfile(
     ),
 
     /**
-     * D+24 기준:
      * 재밌게 본 작품의 avoidanceTagScores는 사용자가 싫어하는 요소가 아니다.
-     * 세부 테스트 Q6 또는 scene_pick 회피 문항이 연결되기 전까지는 비워둔다.
+     * D+30에서도 selectedWebtoons 쪽 avoidance는 비워둔다.
      */
     userAvoidanceScores: {},
   };
@@ -351,8 +405,118 @@ export function getSimilarWorkRecommendations(params: {
   limit?: number;
 }): SimilarWorkRecommendation[] {
   const { selectedWebtoons, allWebtoons, limit = 10 } = params;
-  const profile = buildSimilarWorkProfile(selectedWebtoons);
-  const selectedWebtoonIds = new Set(profile.sourceWebtoonIds);
+
+  return createSimilarWorkSelectionResult({
+    selectedWebtoons,
+    allWebtoons,
+  }).recommendations.slice(0, limit);
+}
+
+export function createSimilarWorkSelectionResult(params: {
+  selectedWebtoons: WebtoonSeedItem[];
+  allWebtoons: WebtoonSeedItem[];
+  limit?: number;
+}): SimilarWorkSelectionResult {
+  const { selectedWebtoons, allWebtoons } = params;
+  const similarWorkSessionVector = buildSimilarWorkProfile(selectedWebtoons);
+  const storedUserTasteProfile = buildStoredUserTasteProfile();
+  const hasLongTermProfile = Boolean(storedUserTasteProfile);
+
+  const stage1ScoredRecommendations = scoreCandidatesForProfile({
+    profile: similarWorkSessionVector,
+    selectedWebtoons,
+    allWebtoons,
+  });
+
+  const stage1CandidatePool = stage1ScoredRecommendations.slice(
+    0,
+    STAGE1_CANDIDATE_POOL_SIZE
+  );
+
+  const effectiveRecommendations = stage1CandidatePool
+    .map((stage1Recommendation) => {
+      return applyLongTermRerank({
+        stage1Recommendation,
+        storedUserTasteProfile,
+      });
+    })
+    .sort(sortRecommendationsByEffectiveScore)
+    .map((recommendation, index) => ({
+      ...recommendation,
+      rank: index + 1,
+      effectiveRank: index + 1,
+    }));
+
+  const mainDisplayItems = effectiveRecommendations
+    .slice(0, 5)
+    .map((recommendation) => ({
+      ...recommendation,
+      recommendationType: "stable_match" as const,
+    }));
+
+  const mainReservePool = effectiveRecommendations
+    .slice(5, 15)
+    .map((recommendation) => ({
+      ...recommendation,
+      recommendationType: "similar_texture" as const,
+    }));
+
+  const expansionCandidatePool = effectiveRecommendations
+    .slice(15, 50)
+    .map((recommendation) => ({
+      ...recommendation,
+      recommendationType: "taste_expansion" as const,
+    }));
+
+  const expansionDisplayItems = pickExpansionDisplayItems({
+    mainDisplayItems,
+    expansionCandidatePool,
+  });
+
+  return {
+    mode: "similar_work",
+    selectedWebtoons: selectedWebtoons.map((webtoon) => ({
+      canonicalWebtoonId: webtoon.canonicalWebtoonId,
+      title: webtoon.title,
+      platform: webtoon.platform,
+      mainGenre: webtoon.mainGenre,
+      genreScores: webtoon.recommendation.genreScores,
+      typeScores: webtoon.recommendation.typeScores,
+      tagScores: webtoon.recommendation.tagScores,
+      avoidanceTagScores: webtoon.recommendation.avoidanceTagScores,
+    })),
+    similarWorkSessionVector,
+
+    /**
+     * 기존 D+24~D+29 debug 호환용 alias.
+     * D+30에서는 stage1 세션 벡터를 가리킨다.
+     */
+    userSimilarWorkProfile: similarWorkSessionVector,
+    storedUserTasteProfile,
+    hasLongTermProfile,
+    scoringVersion: "two_stage_rerank_v1_8_primary",
+    candidatePoolSize: stage1CandidatePool.length,
+    blendingWeights: {
+      stage1Weight: hasLongTermProfile ? PRIMARY_STAGE1_WEIGHT : 1,
+      longTermWeight: hasLongTermProfile ? PRIMARY_LONG_TERM_WEIGHT : 0,
+    },
+    mainDisplayItems,
+    mainReservePool,
+    expansionCandidatePool,
+    expansionDisplayItems,
+    recommendations: [...mainDisplayItems, ...expansionDisplayItems],
+  };
+}
+
+function scoreCandidatesForProfile(params: {
+  profile: UserSignalProfile;
+  selectedWebtoons: WebtoonSeedItem[];
+  allWebtoons: WebtoonSeedItem[];
+}) {
+  const { profile, selectedWebtoons, allWebtoons } = params;
+  const selectedWebtoonIds = new Set(
+    selectedWebtoons.map((webtoon) => webtoon.canonicalWebtoonId)
+  );
   const seenCandidateIds = new Set<string>();
 
   return allWebtoons
@@ -369,52 +533,22 @@ export function getSimilarWorkRecommendations(params: {
 
       return isRecommendableCandidate(candidate);
     })
-    .map((candidate) => scoreSimilarWorkCandidate(profile, candidate))
-    .sort((a, b) => {
-      if (b.finalRecommendationScore !== a.finalRecommendationScore) {
-        return b.finalRecommendationScore - a.finalRecommendationScore;
-      }
+    .map((candidate) => {
+      const stage1Breakdown = scoreCandidateForProfile(profile, candidate);
 
-      if (b.qualityBoost !== a.qualityBoost) {
-        return b.qualityBoost - a.qualityBoost;
-      }
-
-      return a.candidate.title.localeCompare(b.candidate.title, "ko-KR");
+      return createRecommendationFromBreakdowns({
+        candidate,
+        stage1Breakdown,
+        longTermBreakdown: null,
+        recommendationType: "stable_match",
+      });
     })
-    .slice(0, limit)
+    .sort(sortRecommendationsByStage1Score)
     .map((recommendation, index) => ({
       ...recommendation,
       rank: index + 1,
+      effectiveRank: index + 1,
     }));
-}
-
-export function createSimilarWorkSelectionResult(params: {
-  selectedWebtoons: WebtoonSeedItem[];
-  allWebtoons: WebtoonSeedItem[];
-  limit?: number;
-}): SimilarWorkSelectionResult {
-  const { selectedWebtoons, allWebtoons, limit = 10 } = params;
-  const userSimilarWorkProfile = buildSimilarWorkProfile(selectedWebtoons);
-
-  return {
-    mode: "similar_work",
-    selectedWebtoons: selectedWebtoons.map((webtoon) => ({
-      canonicalWebtoonId: webtoon.canonicalWebtoonId,
-      title: webtoon.title,
-      platform: webtoon.platform,
-      mainGenre: webtoon.mainGenre,
-      genreScores: webtoon.recommendation.genreScores,
-      typeScores: webtoon.recommendation.typeScores,
-      tagScores: webtoon.recommendation.tagScores,
-      avoidanceTagScores: webtoon.recommendation.avoidanceTagScores,
-    })),
-    userSimilarWorkProfile,
-    recommendations: getSimilarWorkRecommendations({
-      selectedWebtoons,
-      allWebtoons,
-      limit,
-    }),
-  };
 }
 
 function isRecommendableCandidate(candidate: WebtoonSeedItem) {
@@ -425,10 +559,75 @@ function isRecommendableCandidate(candidate: WebtoonSeedItem) {
   return true;
 }
 
-function scoreSimilarWorkCandidate(
-  profile: SimilarWorkProfile,
-  candidate: WebtoonSeedItem
-): Omit<SimilarWorkRecommendation, "rank"> {
+function applyLongTermRerank(params: {
+  stage1Recommendation: SimilarWorkRecommendation;
+  storedUserTasteProfile: StoredUserTasteProfile | null;
+}): SimilarWorkRecommendation {
+  const { stage1Recommendation, storedUserTasteProfile } = params;
+
+  if (!storedUserTasteProfile) {
+    return {
+      ...stage1Recommendation,
+      longTermScore: null,
+      effectiveScore: stage1Recommendation.stage1Score,
+      finalRecommendationScore: stage1Recommendation.stage1Score,
+      matchScore: Math.round(stage1Recommendation.stage1Score * 100),
+      debug: {
+        ...stage1Recommendation.debug,
+        longTermBreakdown: null,
+      },
+    };
+  }
+
+  const candidateDebug = stage1Recommendation.debug;
+  const longTermBreakdown = scoreCandidateMapsForProfile({
+    profile: storedUserTasteProfile,
+    candidateGenreScores: candidateDebug.candidateGenreScores,
+    candidateTypeScores: candidateDebug.candidateTypeScores,
+    candidateTagScores: candidateDebug.candidateTagScores,
+    candidateAvoidanceTagScores: candidateDebug.candidateAvoidanceTagScores,
+    qualityBoost: stage1Recommendation.qualityBoost,
+  });
+
+  const effectiveScore = roundScore(
+    stage1Recommendation.stage1Score * PRIMARY_STAGE1_WEIGHT +
+      longTermBreakdown.score * PRIMARY_LONG_TERM_WEIGHT
+  );
+
+  const matchedTagKeys = mergeMatchedTagKeys(
+    stage1Recommendation.matchedTagKeys,
+    longTermBreakdown.matchedTagKeys
+  );
+
+  const effectiveAvoidancePenalty = roundScore(
+    stage1Recommendation.debug.stage1Breakdown.avoidancePenalty *
+      PRIMARY_STAGE1_WEIGHT +
+      longTermBreakdown.avoidancePenalty * PRIMARY_LONG_TERM_WEIGHT
+  );
+
+  return {
+    ...stage1Recommendation,
+    longTermScore: longTermBreakdown.score,
+    effectiveScore,
+    finalRecommendationScore: effectiveScore,
+    matchScore: Math.round(effectiveScore * 100),
+    avoidancePenalty: effectiveAvoidancePenalty,
+    matchedTagKeys,
+    debug: {
+      ...stage1Recommendation.debug,
+      longTermBreakdown,
+    },
+  };
+}
+
+function createRecommendationFromBreakdowns(params: {
+  candidate: WebtoonSeedItem;
+  stage1Breakdown: ScoreBreakdown;
+  longTermBreakdown: ScoreBreakdown | null;
+  recommendationType: RecommendationType;
+}): SimilarWorkRecommendation {
+  const { candidate, stage1Breakdown, longTermBreakdown, recommendationType } =
+    params;
   const candidateTypeScores = flattenTypeScores(
     candidate.recommendation.typeScores
   );
@@ -436,31 +635,10 @@ function scoreSimilarWorkCandidate(
   const candidateAvoidanceTagScores =
     candidate.recommendation.avoidanceTagScores ?? {};
 
-  const genreMatch = cosineSimilarity(
-    profile.userGenreScores,
-    candidate.recommendation.genreScores
-  );
-  const typeMatch = cosineSimilarity(profile.userTypeScores, candidateTypeScores);
-  const tagMatch = cosineSimilarity(profile.userTagScores, candidateTagScores);
-  const qualityBoost = roundScore(
-    clamp(candidate.metadata.qualityScore ?? 0, 0, 5) / 5
-  );
-
-  /**
-   * D+24 기준 avoidancePenalty는 0으로 고정한다.
-   * userAvoidanceScores는 아직 연결하지 않는다.
-   */
-  const avoidancePenalty = 0;
-
-  const finalRecommendationScore = roundScore(
-    genreMatch * 0.25 +
-      typeMatch * 0.25 +
-      tagMatch * 0.35 +
-      qualityBoost * 0.15 -
-      avoidancePenalty
-  );
-
   return {
+    rank: 0,
+    effectiveRank: 0,
+    recommendationType,
     candidate: {
       canonicalWebtoonId: candidate.canonicalWebtoonId,
       title: candidate.title,
@@ -472,20 +650,102 @@ function scoreSimilarWorkCandidate(
         candidate.recommendation.recommendationReason ??
         "선택한 작품의 취향 신호와 비슷한 점이 있는 후보입니다.",
     },
-    finalRecommendationScore,
-    matchScore: Math.round(finalRecommendationScore * 100),
-    genreMatch,
-    typeMatch,
-    tagMatch,
-    qualityBoost,
-    avoidancePenalty,
-    matchedTagKeys: getMatchedTagKeys(profile.userTagScores, candidateTagScores),
+    stage1Score: stage1Breakdown.score,
+    longTermScore: longTermBreakdown?.score ?? null,
+    effectiveScore: stage1Breakdown.score,
+    finalRecommendationScore: stage1Breakdown.score,
+    matchScore: Math.round(stage1Breakdown.score * 100),
+    genreMatch: stage1Breakdown.genreMatch,
+    typeMatch: stage1Breakdown.typeMatch,
+    tagMatch: stage1Breakdown.tagMatch,
+    qualityBoost: stage1Breakdown.qualityBoost,
+    avoidancePenalty: stage1Breakdown.avoidancePenalty,
+    matchedTagKeys: stage1Breakdown.matchedTagKeys,
     debug: {
       candidateGenreScores: candidate.recommendation.genreScores,
       candidateTypeScores,
       candidateTagScores,
       candidateAvoidanceTagScores,
+      stage1Breakdown,
+      longTermBreakdown,
     },
+  };
+}
+
+function scoreCandidateForProfile(
+  profile: UserSignalProfile,
+  candidate: WebtoonSeedItem
+): ScoreBreakdown {
+  const candidateTypeScores = flattenTypeScores(
+    candidate.recommendation.typeScores
+  );
+  const candidateTagScores = candidate.recommendation.tagScores ?? {};
+  const candidateAvoidanceTagScores =
+    candidate.recommendation.avoidanceTagScores ?? {};
+  const qualityBoost = roundScore(
+    clamp(candidate.metadata.qualityScore ?? 0, 0, 5) / 5
+  );
+
+  return scoreCandidateMapsForProfile({
+    profile,
+    candidateGenreScores: candidate.recommendation.genreScores,
+    candidateTypeScores,
+    candidateTagScores,
+    candidateAvoidanceTagScores,
+    qualityBoost,
+  });
+}
+
+function scoreCandidateMapsForProfile(params: {
+  profile: UserSignalProfile;
+  candidateGenreScores: ScoreMap;
+  candidateTypeScores: ScoreMap;
+  candidateTagScores: ScoreMap;
+  candidateAvoidanceTagScores: ScoreMap;
+  qualityBoost: number;
+}): ScoreBreakdown {
+  const {
+    profile,
+    candidateGenreScores,
+    candidateTypeScores,
+    candidateTagScores,
+    candidateAvoidanceTagScores,
+    qualityBoost,
+  } = params;
+
+  const genreMatch = cosineSimilarity(
+    profile.userGenreScores,
+    candidateGenreScores
+  );
+  const typeMatch = cosineSimilarity(
+    profile.userTypeScores,
+    candidateTypeScores
+  );
+  const tagMatch = cosineSimilarity(profile.userTagScores, candidateTagScores);
+
+  const avoidancePenalty = roundScore(
+    dotProduct(profile.userAvoidanceScores, candidateAvoidanceTagScores) / 100
+  );
+
+  const score = roundScore(
+    genreMatch * 0.25 +
+      typeMatch * 0.25 +
+      tagMatch * 0.35 +
+      qualityBoost * 0.15 -
+      avoidancePenalty
+  );
+
+  return {
+    score,
+    genreMatch,
+    typeMatch,
+    tagMatch,
+    qualityBoost,
+    avoidancePenalty,
+    matchedTagKeys: getMatchedTagKeys(
+      profile.userTagScores,
+      candidateTagScores
+    ),
   };
 }
 
@@ -501,4 +761,124 @@ function getMatchedTagKeys(userTagScores: ScoreMap, candidateTagScores: ScoreMap
       return bScore - aScore;
     })
     .slice(0, 8);
+}
+
+function mergeMatchedTagKeys(primaryTagKeys: string[], secondaryTagKeys: string[]) {
+  return [...new Set([...primaryTagKeys, ...secondaryTagKeys])].slice(0, 8);
+}
+
+function sortRecommendationsByStage1Score(
+  a: SimilarWorkRecommendation,
+  b: SimilarWorkRecommendation
+) {
+  if (b.stage1Score !== a.stage1Score) {
+    return b.stage1Score - a.stage1Score;
+  }
+
+  if (b.qualityBoost !== a.qualityBoost) {
+    return b.qualityBoost - a.qualityBoost;
+  }
+
+  return a.candidate.title.localeCompare(b.candidate.title, "ko-KR");
+}
+
+function sortRecommendationsByEffectiveScore(
+  a: SimilarWorkRecommendation,
+  b: SimilarWorkRecommendation
+) {
+  if (b.effectiveScore !== a.effectiveScore) {
+    return b.effectiveScore - a.effectiveScore;
+  }
+
+  if (b.stage1Score !== a.stage1Score) {
+    return b.stage1Score - a.stage1Score;
+  }
+
+  if (b.qualityBoost !== a.qualityBoost) {
+    return b.qualityBoost - a.qualityBoost;
+  }
+
+  return a.candidate.title.localeCompare(b.candidate.title, "ko-KR");
+}
+
+function pickExpansionDisplayItems(params: {
+  mainDisplayItems: SimilarWorkRecommendation[];
+  expansionCandidatePool: SimilarWorkRecommendation[];
+}) {
+  const { mainDisplayItems, expansionCandidatePool } = params;
+  const mainGenreSet = new Set(
+    mainDisplayItems.map((item) => item.candidate.mainGenre)
+  );
+  const selectedItems: SimilarWorkRecommendation[] = [];
+  const selectedGenreCounts = new Map<string, number>();
+
+  function canSelect(candidate: SimilarWorkRecommendation) {
+    if (
+      selectedItems.some(
+        (item) =>
+          item.candidate.canonicalWebtoonId ===
+          candidate.candidate.canonicalWebtoonId
+      )
+    ) {
+      return false;
+    }
+
+    const currentGenreCount =
+      selectedGenreCounts.get(candidate.candidate.mainGenre) ?? 0;
+
+    return currentGenreCount < 2;
+  }
+
+  function selectCandidate(
+    candidate: SimilarWorkRecommendation,
+    recommendationType: RecommendationType
+  ) {
+    selectedItems.push({
+      ...candidate,
+      recommendationType,
+    });
+    selectedGenreCounts.set(
+      candidate.candidate.mainGenre,
+      (selectedGenreCounts.get(candidate.candidate.mainGenre) ?? 0) + 1
+    );
+  }
+
+  for (const candidate of expansionCandidatePool) {
+    if (selectedItems.length >= 3) break;
+    if (!canSelect(candidate)) continue;
+    if (mainGenreSet.has(candidate.candidate.mainGenre)) continue;
+
+    selectCandidate(candidate, "new_texture");
+  }
+
+  for (const candidate of expansionCandidatePool) {
+    if (selectedItems.length >= 5) break;
+    if (!canSelect(candidate)) continue;
+
+    const recommendationType: RecommendationType = mainGenreSet.has(
+      candidate.candidate.mainGenre
+    )
+      ? "similar_texture"
+      : "taste_expansion";
+
+    selectCandidate(candidate, recommendationType);
+  }
+
+  for (const candidate of expansionCandidatePool) {
+    if (selectedItems.length >= 5) break;
+
+    if (
+      selectedItems.some(
+        (item) =>
+          item.candidate.canonicalWebtoonId ===
+          candidate.candidate.canonicalWebtoonId
+      )
+    ) {
+      continue;
+    }
+
+    selectCandidate(candidate, "taste_expansion");
+  }
+
+  return selectedItems.slice(0, 5);
 }

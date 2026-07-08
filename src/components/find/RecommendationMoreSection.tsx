@@ -46,9 +46,8 @@ export function RecommendationMoreSection({
     <section
       style={{
         display: "grid",
-        gap: 12,
+        gap: 14,
       }}
-      aria-label="추천 후보 더보기"
     >
       {!isOpen ? (
         <button
@@ -56,7 +55,7 @@ export function RecommendationMoreSection({
           onClick={() => setIsOpen(true)}
           style={{
             width: "100%",
-            minHeight: 50,
+            minHeight: 54,
             borderRadius: 16,
             border: "1px solid #c7d2fe",
             background: "#ffffff",
@@ -67,24 +66,43 @@ export function RecommendationMoreSection({
             cursor: "pointer",
           }}
         >
-          추천작 더보기
+          추천 웹툰 더보기
         </button>
       ) : null}
 
       {isOpen ? (
         <>
-          <h3
+          <div
             style={{
-              margin: "4px 0 0",
-              color: "#14532d",
-              fontSize: 17,
-              letterSpacing: "-0.02em",
+              display: "grid",
+              gap: 6,
             }}
           >
-            다른 후보 TOP 6~10
-          </h3>
+            <h3
+              style={{
+                margin: 0,
+                color: "#0f172a",
+                fontSize: 22,
+                lineHeight: 1.35,
+                letterSpacing: "-0.03em",
+              }}
+            >
+              이런 작품도 잘 맞을 수 있어요
+            </h3>
 
-          {recommendations.map((recommendation) => {
+            <p
+              style={{
+                margin: 0,
+                color: "#64748b",
+                fontSize: 15,
+                lineHeight: 1.6,
+              }}
+            >
+              취향은 이어가되, 조금 다른 방향까지 넓혀봤어요.
+            </p>
+          </div>
+
+          {recommendations.map((recommendation, index) => {
             const canonicalWebtoonId =
               recommendation.candidate.canonicalWebtoonId;
 
@@ -92,6 +110,7 @@ export function RecommendationMoreSection({
               <RecommendationCard
                 key={canonicalWebtoonId}
                 recommendation={recommendation}
+                rankLabel={`확장 추천 ${index + 1}`}
                 actionState={getBaseActionState(canonicalWebtoonId)}
                 onToggleSaved={onToggleSaved}
                 onSetFeedbackAction={onSetFeedbackAction}
