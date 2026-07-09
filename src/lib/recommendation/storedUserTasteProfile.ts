@@ -22,6 +22,8 @@ type DetailTestConfig = {
   storageKey: string;
 };
 
+type StoredTasteProfileTestKey = "genre_preference" | DetailTestConfig["testKey"];
+
 const DETAIL_TEST_CONFIGS: DetailTestConfig[] = [
   {
     testKey: "fantasy_detail",
@@ -183,7 +185,13 @@ function getGenrePreferenceScores(result: RawRecord | null): ScoreMap {
   return scoreMapFromPercentArray(result.genrePercentages);
 }
 
-function loadRawTestResult(testKey: string): RawRecord | null {
+function loadRawTestResult(
+  testKey: StoredTasteProfileTestKey
+): RawRecord | null {
+  if (testKey === "genre_preference") {
+    return loadTestResult("genre_preference") as unknown as RawRecord | null;
+  }
+
   return loadTestResult(testKey) as unknown as RawRecord | null;
 }
 
