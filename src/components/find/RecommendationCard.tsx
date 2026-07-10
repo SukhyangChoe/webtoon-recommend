@@ -58,6 +58,7 @@ export function RecommendationCard({
   actionState,
   onToggleSaved,
   onSetFeedbackAction,
+  onMarkOfficialOpened,
 }: {
   recommendation: SimilarWorkRecommendation;
   rankLabel?: string;
@@ -67,6 +68,7 @@ export function RecommendationCard({
     canonicalWebtoonId: string,
     feedbackAction: RecommendationFeedbackAction
   ) => void;
+  onMarkOfficialOpened: (canonicalWebtoonId: string) => void;
 }) {
   const [isFeedbackMenuOpen, setIsFeedbackMenuOpen] = useState(false);
   const canonicalWebtoonId = recommendation.candidate.canonicalWebtoonId;
@@ -293,6 +295,7 @@ export function RecommendationCard({
           href={recommendation.candidate.officialUrl}
           target="_blank"
           rel="noreferrer"
+          onClick={() => onMarkOfficialOpened(canonicalWebtoonId)}
           style={{
             width: "100%",
             minHeight: 50,

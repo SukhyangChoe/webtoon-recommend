@@ -16,6 +16,7 @@ export function RecommendationMoreSection({
   actionStates,
   onToggleSaved,
   onSetFeedbackAction,
+  onMarkOfficialOpened,
 }: {
   recommendations: SimilarWorkRecommendation[];
   actionStates: RecommendationItemActionStateMap;
@@ -24,6 +25,7 @@ export function RecommendationMoreSection({
     canonicalWebtoonId: string,
     feedbackAction: RecommendationFeedbackAction
   ) => void;
+  onMarkOfficialOpened: (canonicalWebtoonId: string) => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -114,6 +116,7 @@ export function RecommendationMoreSection({
                 actionState={getBaseActionState(canonicalWebtoonId)}
                 onToggleSaved={onToggleSaved}
                 onSetFeedbackAction={onSetFeedbackAction}
+                onMarkOfficialOpened={onMarkOfficialOpened}
               />
             );
           })}

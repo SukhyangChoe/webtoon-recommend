@@ -6,6 +6,9 @@ import { RecommendationCard } from "./RecommendationCard";
 import { RecommendationMoreSection } from "./RecommendationMoreSection";
 import { SelectedSourceWorks } from "./SelectedSourceWorks";
 
+import { updateFindPrimarySessionActionStates } from "@/lib/storage/findPrimarySessionStorage";
+
+import type { FindPrimarySession } from "@/lib/storage/findPrimarySessionStorage";
 import type { SimilarWorkSelectionResult } from "@/lib/recommendation/similarWorkRecommendation";
 import type {
   RecommendationFeedbackAction,
@@ -15,11 +18,15 @@ import type {
 
 export function FindRecommendationResult({
   selectionResult,
+  initialActionStates = {},
+  restoredSession,
 }: {
   selectionResult: SimilarWorkSelectionResult;
+  initialActionStates?: RecommendationItemActionStateMap;
+  restoredSession?: FindPrimarySession | null;
 }) {
   const [actionStates, setActionStates] =
-    useState<RecommendationItemActionStateMap>({});
+    useState<RecommendationItemActionStateMap>(initialActionStates);
 
   const mainDisplayItems =
     selectionResult.mainDisplayItems ?? selectionResult.recommendations.slice(0, 5);
@@ -38,20 +45,27 @@ export function FindRecommendationResult({
     );
   }
 
+  function persistActionStates(nextActionStates: RecommendationItemActionStateMap) {
+    updateFindPrimarySessionActionStates(nextActionStates);
+  }
+
   function handleToggleSaved(canonicalWebtoonId: string) {
     setActionStates((currentActionStates) => {
       const currentState = currentActionStates[canonicalWebtoonId] ?? {
         canonicalWebtoonId,
         isSaved: false,
       };
-
-      return {
+      const nextActionStates = {
         ...currentActionStates,
         [canonicalWebtoonId]: {
           ...currentState,
           isSaved: !currentState.isSaved,
         },
       };
+
+      persistActionStates(nextActionStates);
+
+      return nextActionStates;
     });
   }
 
@@ -64,8 +78,7 @@ export function FindRecommendationResult({
         canonicalWebtoonId,
         isSaved: false,
       };
-
-      return {
+      const nextActionStates = {
         ...currentActionStates,
         [canonicalWebtoonId]: {
           ...currentState,
@@ -73,6 +86,30 @@ export function FindRecommendationResult({
           feedbackCreatedAt: new Date().toISOString(),
         },
       };
+
+      persistActionStates(nextActionStates);
+
+      return nextActionStates;
+    });
+  }
+
+  function handleMarkOfficialOpened(canonicalWebtoonId: string) {
+    setActionStates((currentActionStates) => {
+      const currentState = currentActionStates[canonicalWebtoonId] ?? {
+        canonicalWebtoonId,
+        isSaved: false,
+      };
+      const nextActionStates = {
+        ...currentActionStates,
+        [canonicalWebtoonId]: {
+          ...currentState,
+          openedOfficialAt: new Date().toISOString(),
+        },
+      };
+
+      persistActionStates(nextActionStates);
+
+      return nextActionStates;
     });
   }
 
@@ -171,6 +208,7 @@ export function FindRecommendationResult({
                 actionState={getBaseActionState(canonicalWebtoonId)}
                 onToggleSaved={handleToggleSaved}
                 onSetFeedbackAction={handleSetFeedbackAction}
+                onMarkOfficialOpened={handleMarkOfficialOpened}
               />
             );
           })
@@ -194,6 +232,7 @@ export function FindRecommendationResult({
         actionStates={actionStates}
         onToggleSaved={handleToggleSaved}
         onSetFeedbackAction={handleSetFeedbackAction}
+        onMarkOfficialOpened={handleMarkOfficialOpened}
       />
 
       {process.env.NODE_ENV === "development" ? (
@@ -213,7 +252,7 @@ export function FindRecommendationResult({
               fontWeight: 900,
             }}
           >
-            개발 확인용 two-stage rerank / pools / actionStates
+            개발 확인용 two-stage rerank / session snapshot / actionStates
           </summary>
 
           <pre
@@ -240,6 +279,7 @@ export function FindRecommendationResult({
                 mainReservePool: selectionResult.mainReservePool,
                 expansionCandidatePool: selectionResult.expansionCandidatePool,
                 expansionDisplayItems: selectionResult.expansionDisplayItems,
+                restoredSession,
                 actionStates,
               },
               null,

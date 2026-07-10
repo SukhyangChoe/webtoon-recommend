@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 
 import { FindRecommendationResult } from "@/components/find/FindRecommendationResult";
 import webtoonSeedData from "@/data/webtoons/webtoons_seed_current.json";
@@ -13,13 +13,20 @@ import {
   normalizeSearchText,
   normalizeWebtoonSeedData,
 } from "@/lib/recommendation/similarWorkRecommendation";
+import {
+  createFindPrimarySession,
+  loadFindPrimarySession,
+  restoreSimilarWorkSelectionResultFromSession,
+  saveFindPrimarySession,
+} from "@/lib/storage/findPrimarySessionStorage";
 
 import type {
   SimilarWorkSelectionResult,
   WebtoonSeedItem,
 } from "@/lib/recommendation/similarWorkRecommendation";
+import type { FindPrimarySession } from "@/lib/storage/findPrimarySessionStorage";
 
-type FindMode = "entry" | "similar_work" | "scene_pick";
+type FindMode = "entry" | "similar_work" | "scene_pick" | "recent_primary_session";
 
 const WEBTOONS = normalizeWebtoonSeedData(webtoonSeedData);
 
@@ -163,8 +170,38 @@ const selectedChipStyle: CSSProperties = {
   padding: 14,
 };
 
+function formatSessionDate(value: string) {
+  try {
+    return new Intl.DateTimeFormat("ko-KR", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(value));
+  } catch {
+    return "최근";
+  }
+}
+
 export default function FindPage() {
   const [mode, setMode] = useState<FindMode>("entry");
+  const [recentSession, setRecentSession] = useState<FindPrimarySession | null>(
+    null
+  );
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      setRecentSession(loadFindPrimarySession());
+    }, 0);
+  
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, []);
+
+  function handleSessionSaved(session: FindPrimarySession) {
+    setRecentSession(session);
+  }
 
   return (
     <main style={pageStyle}>
@@ -173,13 +210,26 @@ export default function FindPage() {
 
         {mode === "entry" ? (
           <FindEntryScreen
+            recentSession={recentSession}
             onSelectSimilarWork={() => setMode("similar_work")}
             onSelectScenePick={() => setMode("scene_pick")}
+            onRestoreRecentSession={() => setMode("recent_primary_session")}
           />
         ) : null}
 
         {mode === "similar_work" ? (
-          <SimilarWorkSearchScreen onBack={() => setMode("entry")} />
+          <SimilarWorkSearchScreen
+            onBack={() => setMode("entry")}
+            onSessionSaved={handleSessionSaved}
+          />
+        ) : null}
+
+        {mode === "recent_primary_session" && recentSession ? (
+          <RestoredPrimarySessionScreen
+            session={recentSession}
+            onBack={() => setMode("entry")}
+            onStartFresh={() => setMode("similar_work")}
+          />
         ) : null}
 
         {mode === "scene_pick" ? (
@@ -191,11 +241,15 @@ export default function FindPage() {
 }
 
 function FindEntryScreen({
+  recentSession,
   onSelectSimilarWork,
   onSelectScenePick,
+  onRestoreRecentSession,
 }: {
+  recentSession: FindPrimarySession | null;
   onSelectSimilarWork: () => void;
   onSelectScenePick: () => void;
+  onRestoreRecentSession: () => void;
 }) {
   return (
     <>
@@ -213,6 +267,100 @@ function FindEntryScreen({
         작품명이 바로 안 떠오르면, 몇 가지만 골라서 후보를 좁혀볼게요.
       </p>
 
+      {recentSession ? (
+        <section
+          style={{
+            marginTop: 28,
+            borderRadius: 24,
+            border: "1px solid #c7d2fe",
+            background: "#eef2ff",
+            padding: "clamp(20px, 4vw, 28px)",
+            display: "grid",
+            gap: 14,
+          }}
+        >
+          <div>
+            <p
+              style={{
+                margin: 0,
+                color: "#4338ca",
+                fontSize: 14,
+                fontWeight: 900,
+              }}
+            >
+              최근 추천 결과 · {formatSessionDate(recentSession.createdAt)}
+            </p>
+
+            <h2
+              style={{
+                margin: "8px 0 0",
+                color: "#0f172a",
+                fontSize: 24,
+                lineHeight: 1.35,
+                letterSpacing: "-0.03em",
+              }}
+            >
+              최근 추천 결과가 있어요.
+            </h2>
+
+            <p
+              style={{
+                margin: "8px 0 0",
+                color: "#475569",
+                fontSize: 15,
+                lineHeight: 1.7,
+              }}
+            >
+              지난번에 고른 작품과 비슷한 결로 다시 볼 수 있어요.
+            </p>
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: 10,
+            }}
+          >
+            <button
+              type="button"
+              onClick={onRestoreRecentSession}
+              style={{
+                minHeight: 48,
+                borderRadius: 14,
+                border: "none",
+                background: "#4f46e5",
+                color: "#ffffff",
+                padding: "12px 16px",
+                fontSize: 15,
+                fontWeight: 900,
+                cursor: "pointer",
+              }}
+            >
+              최근 추천 결과 다시 보기
+            </button>
+
+            <button
+              type="button"
+              onClick={onSelectSimilarWork}
+              style={{
+                minHeight: 48,
+                borderRadius: 14,
+                border: "1px solid #c7d2fe",
+                background: "#ffffff",
+                color: "#4338ca",
+                padding: "12px 16px",
+                fontSize: 15,
+                fontWeight: 900,
+                cursor: "pointer",
+              }}
+            >
+              다른 작품으로 다시 찾아보기
+            </button>
+          </div>
+        </section>
+      ) : null}
+
       <div style={cardGridStyle}>
         <button
           type="button"
@@ -226,7 +374,7 @@ function FindEntryScreen({
               margin: 0,
               fontSize: 26,
               lineHeight: 1.25,
-              letterSpacing: "-0.04em",
+              letterSpacing: "-0.03em",
             }}
           >
             재밌게 본 작품으로 찾기
@@ -234,20 +382,19 @@ function FindEntryScreen({
 
           <p
             style={{
-              margin: "12px 0 0",
+              margin: "14px 0 0",
               color: "#475569",
-              fontSize: 16,
+              fontSize: 15,
               lineHeight: 1.7,
             }}
           >
-            최근 재밌게 본 웹툰을 기준으로 비슷하거나 잘 맞는 작품을
-            찾아요.
+            최근 재밌게 본 웹툰을 기준으로 비슷하거나 잘 맞는 작품을 찾아요.
           </p>
 
           <p
             style={{
-              margin: "18px 0 0",
-              color: "#4f46e5",
+              margin: "16px 0 0",
+              color: "#4338ca",
               fontSize: 14,
               fontWeight: 900,
             }}
@@ -256,23 +403,19 @@ function FindEntryScreen({
           </p>
         </button>
 
-        <button type="button" onClick={onSelectScenePick} style={cardButtonStyle}>
-          <span
-            style={{
-              ...cardBadgeStyle,
-              color: "#0f766e",
-              background: "#ccfbf1",
-            }}
-          >
-            Secondary
-          </span>
+        <button
+          type="button"
+          onClick={onSelectScenePick}
+          style={cardButtonStyle}
+        >
+          <span style={cardBadgeStyle}>Secondary</span>
 
           <h2
             style={{
               margin: 0,
               fontSize: 26,
               lineHeight: 1.25,
-              letterSpacing: "-0.04em",
+              letterSpacing: "-0.03em",
             }}
           >
             지금 끌리는 분위기 고르기
@@ -280,20 +423,20 @@ function FindEntryScreen({
 
           <p
             style={{
-              margin: "12px 0 0",
+              margin: "14px 0 0",
               color: "#475569",
-              fontSize: 16,
+              fontSize: 15,
               lineHeight: 1.7,
             }}
           >
-            작품명이 바로 안 떠오르면, 분위기와 장면을 몇 가지만 골라
-            오늘 볼 후보를 좁혀요.
+            작품명이 바로 안 떠오르면, 분위기와 장면을 몇 가지만 골라 오늘
+            볼 후보를 좁혀요.
           </p>
 
           <p
             style={{
-              margin: "18px 0 0",
-              color: "#0f766e",
+              margin: "16px 0 0",
+              color: "#64748b",
               fontSize: 14,
               fontWeight: 900,
             }}
@@ -303,29 +446,24 @@ function FindEntryScreen({
         </button>
       </div>
 
-      <div
+      <p
         style={{
-          marginTop: 28,
-          borderRadius: 20,
-          background: "#f8fafc",
-          border: "1px solid #e2e8f0",
-          padding: 18,
+          margin: "28px 0 0",
           color: "#64748b",
           fontSize: 14,
           lineHeight: 1.7,
         }}
       >
-        D+25에서는 Primary 추천 결과를 TOP1~5 기본, TOP6~10 더보기
-        구조로 정리합니다. Secondary는 기존 후보 좁히기 준비 화면을
-        유지합니다.
-      </div>
+        D+31에서는 최근 Primary 추천 세션 1개를 localStorage에 저장하고
+        복원합니다. Secondary는 기존 후보 좁히기 준비 화면을 유지합니다.
+      </p>
 
       <div
         style={{
-          marginTop: 24,
+          marginTop: 22,
           display: "flex",
-          gap: 12,
           flexWrap: "wrap",
+          gap: 10,
         }}
       >
         <Link href="/tests" style={linkButtonStyle}>
@@ -340,13 +478,98 @@ function FindEntryScreen({
   );
 }
 
-function SimilarWorkSearchScreen({ onBack }: { onBack: () => void }) {
+function RestoredPrimarySessionScreen({
+  session,
+  onBack,
+  onStartFresh,
+}: {
+  session: FindPrimarySession;
+  onBack: () => void;
+  onStartFresh: () => void;
+}) {
+  const selectionResult = useMemo(() => {
+    return restoreSimilarWorkSelectionResultFromSession(session);
+  }, [session]);
+
+  return (
+    <>
+      <div
+        style={{
+          display: "flex",
+          gap: 10,
+          flexWrap: "wrap",
+        }}
+      >
+        <button type="button" onClick={onBack} style={backButtonStyle}>
+          ← 찾기 방식 다시 고르기
+        </button>
+
+        <button type="button" onClick={onStartFresh} style={backButtonStyle}>
+          다른 작품으로 다시 찾아보기
+        </button>
+      </div>
+
+      <section
+        style={{
+          ...modePanelStyle,
+          background: "#eef2ff",
+          border: "1px solid #c7d2fe",
+        }}
+      >
+        <p
+          style={{
+            margin: 0,
+            color: "#4338ca",
+            fontSize: 14,
+            fontWeight: 900,
+          }}
+        >
+          최근 추천 결과 복원 · {formatSessionDate(session.createdAt)}
+        </p>
+
+        <h1
+          style={{
+            ...titleStyle,
+            marginTop: 10,
+          }}
+        >
+          지난 추천 결과를
+          <br />
+          다시 불러왔어요.
+        </h1>
+
+        <p style={descriptionStyle}>
+          저장 당시의 추천 결과와 점수 snapshot을 기준으로 복원했어요.
+          <br />
+          새 추천을 받으면 최근 Primary 추천 세션이 새 결과로 덮어써집니다.
+        </p>
+      </section>
+
+      <FindRecommendationResult
+        selectionResult={selectionResult}
+        initialActionStates={session.actionStateByWebtoonId}
+        restoredSession={session}
+      />
+    </>
+  );
+}
+
+function SimilarWorkSearchScreen({
+  onBack,
+  onSessionSaved,
+}: {
+  onBack: () => void;
+  onSessionSaved: (session: FindPrimarySession) => void;
+}) {
   const [query, setQuery] = useState("");
   const [selectedWebtoons, setSelectedWebtoons] = useState<WebtoonSeedItem[]>(
     []
   );
   const [selectionResult, setSelectionResult] =
     useState<SimilarWorkSelectionResult | null>(null);
+  const [savedSession, setSavedSession] = useState<FindPrimarySession | null>(
+    null
+  );
 
   const searchResults = useMemo(() => {
     if (!normalizeSearchText(query)) return [];
@@ -367,6 +590,7 @@ function SimilarWorkSearchScreen({ onBack }: { onBack: () => void }) {
 
   function handleSelectWebtoon(webtoon: WebtoonSeedItem) {
     setSelectionResult(null);
+    setSavedSession(null);
 
     if (selectedIdSet.has(webtoon.canonicalWebtoonId)) return;
     if (selectedWebtoons.length >= 3) return;
@@ -376,6 +600,7 @@ function SimilarWorkSearchScreen({ onBack }: { onBack: () => void }) {
 
   function handleRemoveWebtoon(canonicalWebtoonId: string) {
     setSelectionResult(null);
+    setSavedSession(null);
 
     setSelectedWebtoons((current) =>
       current.filter((webtoon) => {
@@ -387,13 +612,20 @@ function SimilarWorkSearchScreen({ onBack }: { onBack: () => void }) {
   function handleSubmitSelection() {
     if (!canSubmit) return;
 
-    setSelectionResult(
-      createSimilarWorkSelectionResult({
-        selectedWebtoons,
-        allWebtoons: WEBTOONS,
-        limit: 10,
-      })
-    );
+    const nextSelectionResult = createSimilarWorkSelectionResult({
+      selectedWebtoons,
+      allWebtoons: WEBTOONS,
+      limit: 10,
+    });
+    const nextSession = createFindPrimarySession({
+      selectionResult: nextSelectionResult,
+      selectedSourceWebtoons: selectedWebtoons,
+    });
+
+    saveFindPrimarySession(nextSession);
+    setSelectionResult(nextSelectionResult);
+    setSavedSession(nextSession);
+    onSessionSaved(nextSession);
   }
 
   return (
@@ -422,53 +654,57 @@ function SimilarWorkSearchScreen({ onBack }: { onBack: () => void }) {
           style={{
             marginTop: 28,
             display: "grid",
-            gap: 14,
+            gap: 16,
           }}
         >
           <label
-            htmlFor="liked-work-search"
             style={{
-              color: "#0f172a",
-              fontSize: 15,
-              fontWeight: 900,
+              display: "grid",
+              gap: 8,
             }}
           >
-            작품명 검색
-          </label>
+            <span
+              style={{
+                color: "#334155",
+                fontSize: 14,
+                fontWeight: 900,
+              }}
+            >
+              작품명 검색
+            </span>
 
-          <input
-            id="liked-work-search"
-            type="search"
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value);
-              setSelectionResult(null);
-            }}
-            placeholder="예: 전지적 독자 시점, 나 혼자만 레벨업, 화산귀환"
-            style={{
-              width: "100%",
-              minHeight: 52,
-              borderRadius: 14,
-              border: "1px solid #cbd5e1",
-              background: "#ffffff",
-              color: "#0f172a",
-              padding: "0 16px",
-              fontSize: 16,
-              boxSizing: "border-box",
-            }}
-          />
+            <input
+              value={query}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setSelectionResult(null);
+                setSavedSession(null);
+              }}
+              placeholder="예: 전지적 독자 시점, 나 혼자만 레벨업, 화산귀환"
+              style={{
+                width: "100%",
+                minHeight: 52,
+                borderRadius: 14,
+                border: "1px solid #cbd5e1",
+                background: "#ffffff",
+                color: "#0f172a",
+                padding: "0 16px",
+                fontSize: 16,
+                boxSizing: "border-box",
+              }}
+            />
+          </label>
 
           <p
             style={{
               margin: 0,
               color: "#64748b",
-              fontSize: 13,
+              fontSize: 14,
               lineHeight: 1.6,
             }}
           >
             작품명, 플랫폼, 대표 장르로 검색할 수 있어요. 쉼표나 특수문자가
-            있어도 단어 기준으로 찾아요. 초성 검색은 이후 단계에서
-            연결합니다.
+            있어도 단어 기준으로 찾아요. 초성 검색은 이후 단계에서 연결합니다.
           </p>
 
           <SearchResultList
@@ -486,18 +722,21 @@ function SimilarWorkSearchScreen({ onBack }: { onBack: () => void }) {
 
           <button
             type="button"
-            disabled={!canSubmit}
             onClick={handleSubmitSelection}
+            disabled={!canSubmit}
             style={canSubmit ? enabledButtonStyle : disabledButtonStyle}
           >
             이 작품들로 추천받기
           </button>
-
-          {selectionResult ? (
-            <FindRecommendationResult selectionResult={selectionResult} />
-          ) : null}
         </div>
       </section>
+
+      {selectionResult ? (
+        <FindRecommendationResult
+          selectionResult={selectionResult}
+          restoredSession={savedSession}
+        />
+      ) : null}
     </>
   );
 }
@@ -519,54 +758,47 @@ function SearchResultList({
 
   if (!trimmedQuery) {
     return (
-      <div
+      <p
         style={{
-          borderRadius: 18,
-          border: "1px dashed #cbd5e1",
-          background: "#ffffff",
-          padding: 18,
+          margin: 0,
           color: "#64748b",
           fontSize: 14,
-          lineHeight: 1.7,
+          lineHeight: 1.6,
         }}
       >
         작품명을 1글자 이상 입력하면 DB seed에 있는 작품을 검색합니다.
-      </div>
+      </p>
     );
   }
 
   if (searchResults.length === 0) {
     return (
-      <div
+      <p
         style={{
-          borderRadius: 18,
-          border: "1px dashed #cbd5e1",
-          background: "#ffffff",
-          padding: 18,
+          margin: 0,
           color: "#64748b",
           fontSize: 14,
-          lineHeight: 1.7,
+          lineHeight: 1.6,
         }}
       >
-        검색 결과가 없어요. 현재는 DB seed에 있는 작품명 기준으로만
-        검색합니다.
-      </div>
+        검색 결과가 없어요. 현재는 DB seed에 있는 작품명 기준으로만 검색합니다.
+      </p>
     );
   }
 
   return (
-    <section
+    <div
       style={{
         display: "grid",
         gap: 10,
       }}
-      aria-label="작품 검색 결과"
     >
       <h2
         style={{
-          margin: "4px 0 0",
+          margin: 0,
+          color: "#0f172a",
           fontSize: 18,
-          letterSpacing: "-0.03em",
+          letterSpacing: "-0.02em",
         }}
       >
         검색 결과
@@ -578,24 +810,26 @@ function SearchResultList({
         const isDisabled = isSelected || isMaxSelected;
 
         return (
-          <article
+          <div
             key={webtoon.canonicalWebtoonId}
             style={{
               display: "grid",
+              gridTemplateColumns: "1fr auto",
               gap: 12,
-              borderRadius: 18,
+              alignItems: "center",
+              borderRadius: 16,
               border: "1px solid #e2e8f0",
               background: "#ffffff",
-              padding: 16,
+              padding: 14,
             }}
           >
             <div>
               <h3
                 style={{
                   margin: 0,
-                  fontSize: 18,
+                  color: "#0f172a",
+                  fontSize: 16,
                   lineHeight: 1.35,
-                  letterSpacing: "-0.03em",
                 }}
               >
                 {webtoon.title}
@@ -605,8 +839,8 @@ function SearchResultList({
                 style={{
                   margin: "6px 0 0",
                   color: "#64748b",
-                  fontSize: 14,
-                  lineHeight: 1.6,
+                  fontSize: 13,
+                  lineHeight: 1.5,
                 }}
               >
                 {webtoon.platform} · {getGenreLabel(webtoon.mainGenre)} ·{" "}
@@ -634,16 +868,12 @@ function SearchResultList({
                 cursor: isDisabled ? "not-allowed" : "pointer",
               }}
             >
-              {isSelected
-                ? "선택됨"
-                : isMaxSelected
-                  ? "최대 3개 선택"
-                  : "선택"}
+              {isSelected ? "선택됨" : isMaxSelected ? "최대 3개 선택" : "선택"}
             </button>
-          </article>
+          </div>
         );
       })}
-    </section>
+    </div>
   );
 }
 
@@ -655,38 +885,35 @@ function SelectedWebtoonList({
   onRemoveWebtoon: (canonicalWebtoonId: string) => void;
 }) {
   return (
-    <section
+    <div
       style={{
         display: "grid",
         gap: 10,
       }}
-      aria-label="선택한 작품"
     >
       <h2
         style={{
-          margin: "8px 0 0",
+          margin: 0,
+          color: "#0f172a",
           fontSize: 18,
-          letterSpacing: "-0.03em",
+          letterSpacing: "-0.02em",
         }}
       >
         선택한 작품 {selectedWebtoons.length} / 3
       </h2>
 
       {selectedWebtoons.length === 0 ? (
-        <div
+        <p
           style={{
-            borderRadius: 18,
-            border: "1px dashed #cbd5e1",
-            background: "#ffffff",
-            padding: 18,
+            margin: 0,
             color: "#64748b",
             fontSize: 14,
-            lineHeight: 1.7,
+            lineHeight: 1.6,
           }}
         >
-          아직 선택한 작품이 없어요. 최소 1개를 선택하면 추천 준비를 할
-          수 있어요.
-        </div>
+          아직 선택한 작품이 없어요. 최소 1개를 선택하면 추천 준비를 할 수
+          있어요.
+        </p>
       ) : (
         <div
           style={{
@@ -695,30 +922,28 @@ function SelectedWebtoonList({
           }}
         >
           {selectedWebtoons.map((webtoon) => (
-            <article key={webtoon.canonicalWebtoonId} style={selectedChipStyle}>
+            <div key={webtoon.canonicalWebtoonId} style={selectedChipStyle}>
               <div>
                 <strong
                   style={{
-                    display: "block",
-                    fontSize: 16,
-                    lineHeight: 1.4,
+                    color: "#0f172a",
+                    fontSize: 15,
                   }}
                 >
                   {webtoon.title}
                 </strong>
 
-                <span
+                <p
                   style={{
-                    display: "block",
-                    marginTop: 4,
-                    color: "#475569",
-                    fontSize: 14,
+                    margin: "4px 0 0",
+                    color: "#64748b",
+                    fontSize: 13,
                     lineHeight: 1.5,
                   }}
                 >
                   {webtoon.platform} · {getGenreLabel(webtoon.mainGenre)} ·{" "}
                   {getStatusLabel(webtoon.metadata.status)}
-                </span>
+                </p>
               </div>
 
               <button
@@ -739,11 +964,11 @@ function SelectedWebtoonList({
               >
                 삭제
               </button>
-            </article>
+            </div>
           ))}
         </div>
       )}
-    </section>
+    </div>
   );
 }
 
@@ -769,9 +994,23 @@ function ScenePickReadyScreen({ onBack }: { onBack: () => void }) {
           몇 가지만 고르면 지금 볼 만한 후보가 정리돼요.
         </p>
 
+        <p
+          style={{
+            margin: "22px 0 0",
+            color: "#64748b",
+            fontSize: 15,
+            lineHeight: 1.7,
+          }}
+        >
+          D+31에서는 Secondary 문항 선택과 추천 결과를 아직 구현하지 않습니다.
+          다음 단계에서 기존 scene_pick answers 구조를 유지하면서 후보 좁히기
+          UX를 연결합니다. 실제 후보 수 숫자와 4단계 회피 문항은 MVP 즉시
+          반영이 아니라 후속 검토 항목입니다.
+        </p>
+
         <div
           style={{
-            marginTop: 28,
+            marginTop: 26,
             display: "grid",
             gap: 12,
           }}
@@ -780,53 +1019,36 @@ function ScenePickReadyScreen({ onBack }: { onBack: () => void }) {
             progress="1 / 3"
             title="분위기 좁히기"
             legacyCategory="마음의 날씨"
-            description="지금 필요한 에너지와 시작 분위기를 좁힙니다."
-            questionExample="지금은 어떤 시작이 더 끌리나요?"
-            optionExample="바로 사건이 터지는 시작 / 천천히 분위기가 스며드는 시작 / 성장 보상이 빨리 보이는 시작 / 관계가 먼저 궁금해지는 시작 / 기묘한 단서가 남는 시작"
-            feedbackText="분위기를 기준으로 한 번 좁혔어요."
+            description="오늘 보고 싶은 감정의 온도를 먼저 좁혀요."
+            questionExample="지금은 어떤 분위기의 웹툰이 더 끌리나요?"
+            optionExample="가볍게 보기 / 몰입해서 보기 / 긴장감 있게 보기"
+            feedbackText="지금은 편하게 볼 수 있는 후보부터 좁혀볼게요."
           />
 
           <NarrowingStepCard
             progress="2 / 3"
             title="장면 좁히기"
             legacyCategory="들어가고 싶은 장면"
-            description="오늘 보고 싶은 세계와 상황을 좁힙니다."
-            questionExample="어느 장면 쪽으로 더 들어가고 싶나요?"
-            optionExample="던전·탑·마법 / 문파·비급·복수 / 궁정·계약·관계 / 사건 현장·폐쇄공간 / 회사·집·학교·동네"
-            feedbackText="장면 취향까지 반영했어요."
+            description="머릿속에 먼저 떠오르는 장면으로 후보를 더 줄여요."
+            questionExample="어떤 장면으로 시작하는 웹툰이 더 보고 싶나요?"
+            optionExample="전투 / 관계 변화 / 사건 단서 / 일상 장면"
+            feedbackText="이 장면이 잘 살아나는 작품 위주로 정리할게요."
           />
 
           <NarrowingStepCard
             progress="3 / 3"
             title="감상 리듬 좁히기"
             legacyCategory="머무는 방식"
-            description="계속 볼 수 있는 전개 리듬을 좁힙니다."
-            questionExample="오늘은 어떤 리듬이면 계속 볼 수 있을까요?"
-            optionExample="빠르게 몰아치는 전개 / 떡밥을 따라가는 전개 / 감정이 쌓이는 전개 / 가볍게 넘기기 좋은 전개 / 한 장면이 오래 남는 전개"
-            feedbackText="이제 오늘 볼 만한 후보만 남겨볼게요."
+            description="빠르게 넘길지, 오래 머물지 감상 리듬을 맞춰요."
+            questionExample="오늘은 어떤 속도로 읽고 싶나요?"
+            optionExample="빠른 전개 / 차근차근 쌓이는 이야기 / 여운 있는 흐름"
+            feedbackText="지금 읽기 좋은 리듬의 후보로 마무리할게요."
           />
-
-          <div
-            style={{
-              borderRadius: 18,
-              border: "1px dashed #cbd5e1",
-              background: "#ffffff",
-              padding: 18,
-              color: "#64748b",
-              fontSize: 14,
-              lineHeight: 1.7,
-            }}
-          >
-            D+25에서는 Secondary 문항 선택과 추천 결과를 아직 구현하지
-            않습니다. 다음 단계에서 기존 `scene_pick` answers 구조를
-            유지하면서 후보 좁히기 UX를 연결합니다. 실제 후보 수 숫자와
-            4단계 회피 문항은 MVP 즉시 반영이 아니라 후속 검토 항목입니다.
-          </div>
-
-          <button type="button" disabled style={disabledButtonStyle}>
-            방금 고른 조건으로 추천 후보 정리하기
-          </button>
         </div>
+
+        <button type="button" disabled style={disabledButtonStyle}>
+          방금 고른 조건으로 추천 후보 정리하기
+        </button>
       </section>
     </>
   );
@@ -855,26 +1077,26 @@ function NarrowingStepCard({
         borderRadius: 18,
         border: "1px solid #e2e8f0",
         background: "#ffffff",
-        padding: 18,
-        display: "grid",
-        gap: 8,
+        padding: 16,
       }}
     >
-      <span
+      <p
         style={{
+          margin: 0,
           color: "#4f46e5",
           fontSize: 13,
           fontWeight: 900,
         }}
       >
         {progress} · {title}
-      </span>
+      </p>
 
       <h2
         style={{
-          margin: 0,
-          fontSize: 20,
-          letterSpacing: "-0.03em",
+          margin: "8px 0 0",
+          color: "#0f172a",
+          fontSize: 18,
+          lineHeight: 1.35,
         }}
       >
         {questionExample}
@@ -882,35 +1104,29 @@ function NarrowingStepCard({
 
       <p
         style={{
-          margin: 0,
-          color: "#64748b",
+          margin: "8px 0 0",
+          color: "#475569",
           fontSize: 14,
-          lineHeight: 1.7,
+          lineHeight: 1.6,
         }}
       >
         {description}
       </p>
 
-      <div
+      <p
         style={{
-          borderRadius: 14,
-          background: "#f8fafc",
-          border: "1px solid #e2e8f0",
-          padding: 12,
-          color: "#475569",
+          margin: "10px 0 0",
+          color: "#64748b",
           fontSize: 13,
-          lineHeight: 1.65,
+          lineHeight: 1.6,
         }}
       >
-        <strong style={{ color: "#0f172a" }}>기존 카테고리:</strong>{" "}
-        {legacyCategory}
+        기존 카테고리: <strong>{legacyCategory}</strong>
         <br />
-        <strong style={{ color: "#0f172a" }}>선택지 예시:</strong>{" "}
-        {optionExample}
+        선택지 예시: <strong>{optionExample}</strong>
         <br />
-        <strong style={{ color: "#0f172a" }}>단계 피드백:</strong>{" "}
-        {feedbackText}
-      </div>
+        단계 피드백: <strong>{feedbackText}</strong>
+      </p>
     </article>
   );
 }
