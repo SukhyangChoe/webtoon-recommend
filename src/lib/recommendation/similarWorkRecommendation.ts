@@ -1,5 +1,7 @@
+import { getContentAxisSearchLabels, getDisplayAxisLabel, getPrimaryContentAxisKey } from "./contentAxis";
 import { cosineSimilarity } from "./similarity";
 import { buildStoredUserTasteProfile } from "./storedUserTasteProfile";
+import { getSourceWeight, normalizeSourceDb } from "./sourceWeight";
 import {
   averageScoreMaps,
   clamp,
@@ -9,6 +11,7 @@ import {
 } from "./vector";
 
 import type { StoredUserTasteProfile } from "./storedUserTasteProfile";
+import type { SourceDb } from "./sourceWeight";
 import type { ScoreMap } from "./vector";
 
 const PRIMARY_STAGE1_WEIGHT = 0.8;
@@ -18,9 +21,15 @@ const STAGE1_CANDIDATE_POOL_SIZE = 100;
 export type WebtoonSeedItem = {
   canonicalWebtoonId: string;
   title: string;
+  titleAliases?: string[];
   platform: string;
   officialUrl: string;
   mainGenre: string;
+  sourceDb: SourceDb;
+  sourceType?: SourceDb;
+  sourceWeight: number;
+  primaryContentAxisKey: string | null;
+  displayAxisLabel: string;
   metadata: {
     status: string;
     ageRating?: string;
@@ -31,10 +40,12 @@ export type WebtoonSeedItem = {
   };
   recommendation: {
     recommendationReason?: string;
+    scoreVersion?: string;
     genreScores: ScoreMap;
     typeScores?: Record<string, ScoreMap>;
     tagScores?: ScoreMap;
     avoidanceTagScores?: ScoreMap;
+    contentAxisScores?: ScoreMap;
   };
 };
 
@@ -43,10 +54,15 @@ export type SimilarWorkSelectedWebtoon = {
   title: string;
   platform: string;
   mainGenre: string;
+  sourceDb?: SourceDb;
+  sourceWeight?: number;
+  primaryContentAxisKey?: string | null;
+  displayAxisLabel?: string;
   genreScores: ScoreMap;
   typeScores?: Record<string, ScoreMap>;
   tagScores?: ScoreMap;
   avoidanceTagScores?: ScoreMap;
+  contentAxisScores?: ScoreMap;
 };
 
 export type SimilarWorkProfile = {
@@ -76,6 +92,10 @@ export type SimilarWorkRecommendation = {
     mainGenre: string;
     status: string;
     recommendationReason: string;
+    sourceDb?: SourceDb;
+    sourceWeight?: number;
+    primaryContentAxisKey?: string | null;
+    displayAxisLabel?: string;
   };
   finalRecommendationScore: number;
   stage1Score: number;
@@ -93,6 +113,10 @@ export type SimilarWorkRecommendation = {
     candidateTypeScores: ScoreMap;
     candidateTagScores: ScoreMap;
     candidateAvoidanceTagScores: ScoreMap;
+    candidateContentAxisScores: ScoreMap;
+    candidateSourceDb: SourceDb;
+    candidateSourceWeight: number;
+    candidateDisplayAxisLabel: string;
     stage1Breakdown: ScoreBreakdown;
     longTermBreakdown: ScoreBreakdown | null;
   };
@@ -117,8 +141,8 @@ export type SimilarWorkSelectionResult = {
   expansionDisplayItems: SimilarWorkRecommendation[];
 
   /**
-   * 기존 D+25~D+29 컴포넌트 호환용.
-   * D+30부터는 화면 표시용 10개 = 핵심 추천 5개 + 확장 추천 5개다.
+   * 기존 컴포넌트 호환용.
+   * D+30부터 화면 표시용 10개 = 핵심 추천 5개 + 확장 추천 5개다.
    */
   recommendations: SimilarWorkRecommendation[];
 };
@@ -162,6 +186,16 @@ function getStringValue(record: RawRecord | undefined, key: string) {
   return typeof value === "string" ? value : undefined;
 }
 
+function getStringArrayValue(record: RawRecord | undefined, key: string) {
+  if (!record) return undefined;
+
+  const value = record[key];
+
+  if (!Array.isArray(value)) return undefined;
+
+  return value.filter((item): item is string => typeof item === "string");
+}
+
 function getNumberValue(record: RawRecord | undefined, key: string) {
   if (!record) return undefined;
 
@@ -198,6 +232,15 @@ function toNestedScoreMap(value: unknown) {
   return Object.keys(nestedScores).length > 0 ? nestedScores : undefined;
 }
 
+function getRawSourceDb(rawItem: RawRecord, sourceRecord?: RawRecord) {
+  return (
+    getStringValue(rawItem, "sourceDb") ??
+    getStringValue(rawItem, "sourceType") ??
+    getStringValue(sourceRecord, "sourceDb") ??
+    getStringValue(sourceRecord, "sourceType")
+  );
+}
+
 export function normalizeWebtoonSeedData(rawData: unknown): WebtoonSeedItem[] {
   if (!Array.isArray(rawData)) return [];
 
@@ -211,16 +254,21 @@ function normalizeWebtoonSeedItem(rawItem: unknown): WebtoonSeedItem | null {
 
   const metadata = getRecordValue(rawItem, "metadata");
   const recommendation = getRecordValue(rawItem, "recommendation");
+  const source = getRecordValue(rawItem, "source");
 
   const canonicalWebtoonId = getStringValue(rawItem, "canonicalWebtoonId");
   const title = getStringValue(rawItem, "title");
+  const titleAliases = getStringArrayValue(rawItem, "titleAliases");
   const platform = getStringValue(rawItem, "platform");
-  const officialUrl = getStringValue(rawItem, "officialUrl");
+  const officialUrl = getStringValue(rawItem, "officialUrl") ?? "";
   const mainGenre = getStringValue(rawItem, "mainGenre");
 
-  if (!canonicalWebtoonId || !title || !platform || !officialUrl || !mainGenre) {
+  if (!canonicalWebtoonId || !title || !platform || !mainGenre) {
     return null;
   }
+
+  const sourceDb = normalizeSourceDb(getRawSourceDb(rawItem, source));
+  const sourceWeight = getSourceWeight(sourceDb);
 
   const normalizedMetadata: WebtoonSeedItem["metadata"] = {
     status: getStringValue(metadata, "status") ?? "unknown",
@@ -254,6 +302,15 @@ function normalizeWebtoonSeedItem(rawItem: unknown): WebtoonSeedItem | null {
     normalizedMetadata.isAdult = isAdult;
   }
 
+  const contentAxisScores = toScoreMap(recommendation?.contentAxisScores);
+  const primaryContentAxisKey =
+    getStringValue(rawItem, "primaryContentAxisKey") ??
+    getPrimaryContentAxisKey(contentAxisScores);
+  const displayAxisLabel =
+    getStringValue(rawItem, "displayAxisLabel") ??
+    getStringValue(recommendation, "displayAxisLabel") ??
+    getDisplayAxisLabel(contentAxisScores, mainGenre);
+
   const normalizedRecommendation: WebtoonSeedItem["recommendation"] = {
     genreScores: toScoreMap(recommendation?.genreScores),
   };
@@ -262,12 +319,17 @@ function normalizeWebtoonSeedItem(rawItem: unknown): WebtoonSeedItem | null {
     recommendation,
     "recommendationReason"
   );
+  const scoreVersion = getStringValue(recommendation, "scoreVersion");
   const typeScores = toNestedScoreMap(recommendation?.typeScores);
   const tagScores = toScoreMap(recommendation?.tagScores);
   const avoidanceTagScores = toScoreMap(recommendation?.avoidanceTagScores);
 
   if (recommendationReason) {
     normalizedRecommendation.recommendationReason = recommendationReason;
+  }
+
+  if (scoreVersion) {
+    normalizedRecommendation.scoreVersion = scoreVersion;
   }
 
   if (typeScores) {
@@ -282,12 +344,20 @@ function normalizeWebtoonSeedItem(rawItem: unknown): WebtoonSeedItem | null {
     normalizedRecommendation.avoidanceTagScores = avoidanceTagScores;
   }
 
+  normalizedRecommendation.contentAxisScores = contentAxisScores;
+
   return {
     canonicalWebtoonId,
     title,
+    titleAliases,
     platform,
     officialUrl,
     mainGenre,
+    sourceDb,
+    sourceType: sourceDb,
+    sourceWeight,
+    primaryContentAxisKey,
+    displayAxisLabel,
     metadata: normalizedMetadata,
     recommendation: normalizedRecommendation,
   };
@@ -318,6 +388,13 @@ export function getStatusLabel(status?: string) {
   return labelMap[status] ?? status;
 }
 
+export function getWebtoonDisplayAxisLabel(webtoon: {
+  displayAxisLabel?: string;
+  mainGenre: string;
+}) {
+  return webtoon.displayAxisLabel ?? getGenreLabel(webtoon.mainGenre);
+}
+
 export function normalizeSearchText(value: string) {
   return value
     .normalize("NFKC")
@@ -335,9 +412,14 @@ function createSearchableText(webtoon: WebtoonSeedItem) {
   return normalizeSearchText(
     [
       webtoon.title,
+      ...(webtoon.titleAliases ?? []),
       webtoon.platform,
       webtoon.mainGenre,
       getGenreLabel(webtoon.mainGenre),
+      webtoon.displayAxisLabel,
+      ...getContentAxisSearchLabels(
+        webtoon.recommendation.contentAxisScores ?? {}
+      ),
       getStatusLabel(webtoon.metadata.status),
     ].join(" ")
   );
@@ -361,9 +443,14 @@ export function matchesSearchQuery(webtoon: WebtoonSeedItem, query: string) {
   const compactSearchableText = compactSearchText(
     [
       webtoon.title,
+      ...(webtoon.titleAliases ?? []),
       webtoon.platform,
       webtoon.mainGenre,
       getGenreLabel(webtoon.mainGenre),
+      webtoon.displayAxisLabel,
+      ...getContentAxisSearchLabels(
+        webtoon.recommendation.contentAxisScores ?? {}
+      ),
       getStatusLabel(webtoon.metadata.status),
     ].join(" ")
   );
@@ -393,7 +480,7 @@ export function buildSimilarWorkProfile(
 
     /**
      * 재밌게 본 작품의 avoidanceTagScores는 사용자가 싫어하는 요소가 아니다.
-     * D+30에서도 selectedWebtoons 쪽 avoidance는 비워둔다.
+     * D+32에서도 selectedWebtoons 쪽 avoidance는 비워둔다.
      */
     userAvoidanceScores: {},
   };
@@ -480,16 +567,21 @@ export function createSimilarWorkSelectionResult(params: {
       title: webtoon.title,
       platform: webtoon.platform,
       mainGenre: webtoon.mainGenre,
+      sourceDb: webtoon.sourceDb,
+      sourceWeight: webtoon.sourceWeight,
+      primaryContentAxisKey: webtoon.primaryContentAxisKey,
+      displayAxisLabel: webtoon.displayAxisLabel,
       genreScores: webtoon.recommendation.genreScores,
       typeScores: webtoon.recommendation.typeScores,
       tagScores: webtoon.recommendation.tagScores,
       avoidanceTagScores: webtoon.recommendation.avoidanceTagScores,
+      contentAxisScores: webtoon.recommendation.contentAxisScores,
     })),
     similarWorkSessionVector,
 
     /**
      * 기존 D+24~D+29 debug 호환용 alias.
-     * D+30에서는 stage1 세션 벡터를 가리킨다.
+     * D+30부터는 stage1 세션 벡터를 가리킨다.
      */
     userSimilarWorkProfile: similarWorkSessionVector,
     storedUserTasteProfile,
@@ -634,6 +726,8 @@ function createRecommendationFromBreakdowns(params: {
   const candidateTagScores = candidate.recommendation.tagScores ?? {};
   const candidateAvoidanceTagScores =
     candidate.recommendation.avoidanceTagScores ?? {};
+  const candidateContentAxisScores =
+    candidate.recommendation.contentAxisScores ?? {};
 
   return {
     rank: 0,
@@ -649,6 +743,10 @@ function createRecommendationFromBreakdowns(params: {
       recommendationReason:
         candidate.recommendation.recommendationReason ??
         "선택한 작품의 취향 신호와 비슷한 점이 있는 후보입니다.",
+      sourceDb: candidate.sourceDb,
+      sourceWeight: candidate.sourceWeight,
+      primaryContentAxisKey: candidate.primaryContentAxisKey,
+      displayAxisLabel: candidate.displayAxisLabel,
     },
     stage1Score: stage1Breakdown.score,
     longTermScore: longTermBreakdown?.score ?? null,
@@ -666,6 +764,10 @@ function createRecommendationFromBreakdowns(params: {
       candidateTypeScores,
       candidateTagScores,
       candidateAvoidanceTagScores,
+      candidateContentAxisScores,
+      candidateSourceDb: candidate.sourceDb,
+      candidateSourceWeight: candidate.sourceWeight,
+      candidateDisplayAxisLabel: candidate.displayAxisLabel,
       stage1Breakdown,
       longTermBreakdown,
     },

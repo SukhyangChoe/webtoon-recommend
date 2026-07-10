@@ -1,14 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+} from "react";
 
 import { FindRecommendationResult } from "@/components/find/FindRecommendationResult";
 import webtoonSeedData from "@/data/webtoons/webtoons_seed_current.json";
 import {
   createSimilarWorkSelectionResult,
-  getGenreLabel,
   getStatusLabel,
+  getWebtoonDisplayAxisLabel,
   matchesSearchQuery,
   normalizeSearchText,
   normalizeWebtoonSeedData,
@@ -26,7 +31,10 @@ import type {
 } from "@/lib/recommendation/similarWorkRecommendation";
 import type { FindPrimarySession } from "@/lib/storage/findPrimarySessionStorage";
 
-type FindMode = "entry" | "similar_work" | "scene_pick" | "recent_primary_session";
+type FindMode =
+  | "entry"
+  | "similar_work"
+  | "recent_primary_session";
 
 const WEBTOONS = normalizeWebtoonSeedData(webtoonSeedData);
 
@@ -71,7 +79,8 @@ const descriptionStyle: CSSProperties = {
 const cardGridStyle: CSSProperties = {
   marginTop: 34,
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+  gridTemplateColumns:
+    "repeat(auto-fit, minmax(260px, 1fr))",
   gap: 16,
 };
 
@@ -82,14 +91,22 @@ const cardButtonStyle: CSSProperties = {
   borderRadius: 24,
   border: "1px solid #e5e7eb",
   background: "#f8fafc",
+  color: "#0f172a",
   padding: 24,
   cursor: "pointer",
+  boxSizing: "border-box",
 };
 
 const primaryCardButtonStyle: CSSProperties = {
   ...cardButtonStyle,
   background: "#eef2ff",
   border: "1px solid #c7d2fe",
+};
+
+const secondaryCardLinkStyle: CSSProperties = {
+  ...cardButtonStyle,
+  display: "block",
+  textDecoration: "none",
 };
 
 const cardBadgeStyle: CSSProperties = {
@@ -185,35 +202,42 @@ function formatSessionDate(value: string) {
 
 export default function FindPage() {
   const [mode, setMode] = useState<FindMode>("entry");
-  const [recentSession, setRecentSession] = useState<FindPrimarySession | null>(
-    null
-  );
+
+  const [recentSession, setRecentSession] =
+    useState<FindPrimarySession | null>(null);
 
   useEffect(() => {
     const timerId = window.setTimeout(() => {
       setRecentSession(loadFindPrimarySession());
     }, 0);
-  
+
     return () => {
       window.clearTimeout(timerId);
     };
   }, []);
 
-  function handleSessionSaved(session: FindPrimarySession) {
+  function handleSessionSaved(
+    session: FindPrimarySession
+  ) {
     setRecentSession(session);
   }
 
   return (
     <main style={pageStyle}>
       <section style={shellStyle}>
-        <p style={eyebrowStyle}>지금 볼 웹툰 찾기</p>
+        <p style={eyebrowStyle}>
+          지금 볼 웹툰 찾기
+        </p>
 
         {mode === "entry" ? (
           <FindEntryScreen
             recentSession={recentSession}
-            onSelectSimilarWork={() => setMode("similar_work")}
-            onSelectScenePick={() => setMode("scene_pick")}
-            onRestoreRecentSession={() => setMode("recent_primary_session")}
+            onSelectSimilarWork={() =>
+              setMode("similar_work")
+            }
+            onRestoreRecentSession={() =>
+              setMode("recent_primary_session")
+            }
           />
         ) : null}
 
@@ -224,16 +248,15 @@ export default function FindPage() {
           />
         ) : null}
 
-        {mode === "recent_primary_session" && recentSession ? (
+        {mode === "recent_primary_session" &&
+        recentSession ? (
           <RestoredPrimarySessionScreen
             session={recentSession}
             onBack={() => setMode("entry")}
-            onStartFresh={() => setMode("similar_work")}
+            onStartFresh={() =>
+              setMode("similar_work")
+            }
           />
-        ) : null}
-
-        {mode === "scene_pick" ? (
-          <ScenePickReadyScreen onBack={() => setMode("entry")} />
         ) : null}
       </section>
     </main>
@@ -243,12 +266,10 @@ export default function FindPage() {
 function FindEntryScreen({
   recentSession,
   onSelectSimilarWork,
-  onSelectScenePick,
   onRestoreRecentSession,
 }: {
   recentSession: FindPrimarySession | null;
   onSelectSimilarWork: () => void;
-  onSelectScenePick: () => void;
   onRestoreRecentSession: () => void;
 }) {
   return (
@@ -262,9 +283,11 @@ function FindEntryScreen({
       <p style={descriptionStyle}>
         재밌게 본 작품이 있다면 먼저 골라주세요.
         <br />
-        비슷한 취향 포인트를 가진 작품을 추천해드려요.
+        비슷한 취향 포인트를 가진 작품을
+        추천해드려요.
         <br />
-        작품명이 바로 안 떠오르면, 몇 가지만 골라서 후보를 좁혀볼게요.
+        저장된 테스트 결과가 있다면 테스트 기준
+        추천으로도 이어갈 수 있어요.
       </p>
 
       {recentSession ? (
@@ -288,7 +311,10 @@ function FindEntryScreen({
                 fontWeight: 900,
               }}
             >
-              최근 추천 결과 · {formatSessionDate(recentSession.createdAt)}
+              최근 추천 결과 ·{" "}
+              {formatSessionDate(
+                recentSession.createdAt
+              )}
             </p>
 
             <h2
@@ -311,14 +337,16 @@ function FindEntryScreen({
                 lineHeight: 1.7,
               }}
             >
-              지난번에 고른 작품과 비슷한 결로 다시 볼 수 있어요.
+              지난번에 고른 작품과 비슷한 결로
+              다시 볼 수 있어요.
             </p>
           </div>
 
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gridTemplateColumns:
+                "repeat(auto-fit, minmax(220px, 1fr))",
               gap: 10,
             }}
           >
@@ -367,7 +395,9 @@ function FindEntryScreen({
           onClick={onSelectSimilarWork}
           style={primaryCardButtonStyle}
         >
-          <span style={cardBadgeStyle}>Primary</span>
+          <span style={cardBadgeStyle}>
+            Primary
+          </span>
 
           <h2
             style={{
@@ -388,7 +418,8 @@ function FindEntryScreen({
               lineHeight: 1.7,
             }}
           >
-            최근 재밌게 본 웹툰을 기준으로 비슷하거나 잘 맞는 작품을 찾아요.
+            최근 재밌게 본 웹툰을 기준으로
+            비슷하거나 잘 맞는 작품을 찾아요.
           </p>
 
           <p
@@ -403,12 +434,13 @@ function FindEntryScreen({
           </p>
         </button>
 
-        <button
-          type="button"
-          onClick={onSelectScenePick}
-          style={cardButtonStyle}
+        <Link
+          href="/find/results?mode=test_result"
+          style={secondaryCardLinkStyle}
         >
-          <span style={cardBadgeStyle}>Secondary</span>
+          <span style={cardBadgeStyle}>
+            Secondary
+          </span>
 
           <h2
             style={{
@@ -418,7 +450,7 @@ function FindEntryScreen({
               letterSpacing: "-0.03em",
             }}
           >
-            지금 끌리는 분위기 고르기
+            최근 테스트 결과로 바로 추천받기
           </h2>
 
           <p
@@ -429,8 +461,9 @@ function FindEntryScreen({
               lineHeight: 1.7,
             }}
           >
-            작품명이 바로 안 떠오르면, 분위기와 장면을 몇 가지만 골라 오늘
-            볼 후보를 좁혀요.
+            장르 취향 테스트와 세부취향 테스트의
+            저장 결과를 기준으로 추천 후보를
+            준비해요.
           </p>
 
           <p
@@ -441,9 +474,9 @@ function FindEntryScreen({
               fontWeight: 900,
             }}
           >
-            분위기 → 장면 → 감상 리듬 3단계
+            테스트 결과 기반 추천 준비
           </p>
-        </button>
+        </Link>
       </div>
 
       <p
@@ -454,8 +487,10 @@ function FindEntryScreen({
           lineHeight: 1.7,
         }}
       >
-        D+31에서는 최근 Primary 추천 세션 1개를 localStorage에 저장하고
-        복원합니다. Secondary는 기존 후보 좁히기 준비 화면을 유지합니다.
+        D+32에서는 기존 scene_pick 진입을 기본
+        플로우에서 내리고, test_result 결과 route를
+        준비합니다. 실제 테스트 결과 기반 추천
+        계산은 후속 작업에서 연결합니다.
       </p>
 
       <div
@@ -488,7 +523,9 @@ function RestoredPrimarySessionScreen({
   onStartFresh: () => void;
 }) {
   const selectionResult = useMemo(() => {
-    return restoreSimilarWorkSelectionResultFromSession(session);
+    return restoreSimilarWorkSelectionResultFromSession(
+      session
+    );
   }, [session]);
 
   return (
@@ -500,11 +537,19 @@ function RestoredPrimarySessionScreen({
           flexWrap: "wrap",
         }}
       >
-        <button type="button" onClick={onBack} style={backButtonStyle}>
+        <button
+          type="button"
+          onClick={onBack}
+          style={backButtonStyle}
+        >
           ← 찾기 방식 다시 고르기
         </button>
 
-        <button type="button" onClick={onStartFresh} style={backButtonStyle}>
+        <button
+          type="button"
+          onClick={onStartFresh}
+          style={backButtonStyle}
+        >
           다른 작품으로 다시 찾아보기
         </button>
       </div>
@@ -524,7 +569,8 @@ function RestoredPrimarySessionScreen({
             fontWeight: 900,
           }}
         >
-          최근 추천 결과 복원 · {formatSessionDate(session.createdAt)}
+          최근 추천 결과 복원 ·{" "}
+          {formatSessionDate(session.createdAt)}
         </p>
 
         <h1
@@ -539,15 +585,18 @@ function RestoredPrimarySessionScreen({
         </h1>
 
         <p style={descriptionStyle}>
-          저장 당시의 추천 결과와 점수 snapshot을 기준으로 복원했어요.
-          <br />
-          새 추천을 받으면 최근 Primary 추천 세션이 새 결과로 덮어써집니다.
+          저장 당시의 추천 결과와 점수 snapshot을
+          기준으로 복원했어요.
+          <br />새 추천을 받으면 최근 Primary 추천
+          세션이 새 결과로 덮어써집니다.
         </p>
       </section>
 
       <FindRecommendationResult
         selectionResult={selectionResult}
-        initialActionStates={session.actionStateByWebtoonId}
+        initialActionStates={
+          session.actionStateByWebtoonId
+        }
         restoredSession={session}
       />
     </>
@@ -559,52 +608,78 @@ function SimilarWorkSearchScreen({
   onSessionSaved,
 }: {
   onBack: () => void;
-  onSessionSaved: (session: FindPrimarySession) => void;
+  onSessionSaved: (
+    session: FindPrimarySession
+  ) => void;
 }) {
   const [query, setQuery] = useState("");
-  const [selectedWebtoons, setSelectedWebtoons] = useState<WebtoonSeedItem[]>(
-    []
-  );
+
+  const [selectedWebtoons, setSelectedWebtoons] =
+    useState<WebtoonSeedItem[]>([]);
+
   const [selectionResult, setSelectionResult] =
     useState<SimilarWorkSelectionResult | null>(null);
-  const [savedSession, setSavedSession] = useState<FindPrimarySession | null>(
-    null
-  );
+
+  const [savedSession, setSavedSession] =
+    useState<FindPrimarySession | null>(null);
 
   const searchResults = useMemo(() => {
     if (!normalizeSearchText(query)) return [];
 
-    return WEBTOONS.filter((webtoon) => matchesSearchQuery(webtoon, query)).slice(
-      0,
-      10
-    );
+    return WEBTOONS.filter((webtoon) =>
+      matchesSearchQuery(webtoon, query)
+    ).slice(0, 10);
   }, [query]);
 
   const selectedIdSet = useMemo(() => {
     return new Set(
-      selectedWebtoons.map((webtoon) => webtoon.canonicalWebtoonId)
+      selectedWebtoons.map(
+        (webtoon) =>
+          webtoon.canonicalWebtoonId
+      )
     );
   }, [selectedWebtoons]);
 
-  const canSubmit = selectedWebtoons.length >= 1 && selectedWebtoons.length <= 3;
+  const canSubmit =
+    selectedWebtoons.length >= 1 &&
+    selectedWebtoons.length <= 3;
 
-  function handleSelectWebtoon(webtoon: WebtoonSeedItem) {
+  function handleSelectWebtoon(
+    webtoon: WebtoonSeedItem
+  ) {
     setSelectionResult(null);
     setSavedSession(null);
 
-    if (selectedIdSet.has(webtoon.canonicalWebtoonId)) return;
-    if (selectedWebtoons.length >= 3) return;
+    if (
+      selectedIdSet.has(
+        webtoon.canonicalWebtoonId
+      )
+    ) {
+      return;
+    }
 
-    setSelectedWebtoons((current) => [...current, webtoon]);
+    if (selectedWebtoons.length >= 3) {
+      return;
+    }
+
+    setSelectedWebtoons((current) => [
+      ...current,
+      webtoon,
+    ]);
   }
 
-  function handleRemoveWebtoon(canonicalWebtoonId: string) {
+  function handleRemoveWebtoon(
+    canonicalWebtoonId: string
+  ) {
     setSelectionResult(null);
     setSavedSession(null);
 
     setSelectedWebtoons((current) =>
       current.filter((webtoon) => {
-        return webtoon.canonicalWebtoonId !== canonicalWebtoonId;
+        return (
+          webtoon.canonicalWebtoonId !==
+          canonicalWebtoonId
+        );
       })
     );
   }
@@ -612,30 +687,42 @@ function SimilarWorkSearchScreen({
   function handleSubmitSelection() {
     if (!canSubmit) return;
 
-    const nextSelectionResult = createSimilarWorkSelectionResult({
-      selectedWebtoons,
-      allWebtoons: WEBTOONS,
-      limit: 10,
-    });
-    const nextSession = createFindPrimarySession({
-      selectionResult: nextSelectionResult,
-      selectedSourceWebtoons: selectedWebtoons,
-    });
+    const nextSelectionResult =
+      createSimilarWorkSelectionResult({
+        selectedWebtoons,
+        allWebtoons: WEBTOONS,
+        limit: 10,
+      });
+
+    const nextSession =
+      createFindPrimarySession({
+        selectionResult: nextSelectionResult,
+        selectedSourceWebtoons:
+          selectedWebtoons,
+      });
 
     saveFindPrimarySession(nextSession);
+
     setSelectionResult(nextSelectionResult);
     setSavedSession(nextSession);
+
     onSessionSaved(nextSession);
   }
 
   return (
     <>
-      <button type="button" onClick={onBack} style={backButtonStyle}>
+      <button
+        type="button"
+        onClick={onBack}
+        style={backButtonStyle}
+      >
         ← 찾기 방식 다시 고르기
       </button>
 
       <section style={modePanelStyle}>
-        <p style={eyebrowStyle}>Primary · similar_work</p>
+        <p style={eyebrowStyle}>
+          Primary · similar_work
+        </p>
 
         <h1 style={titleStyle}>
           재밌게 본 작품으로
@@ -644,10 +731,11 @@ function SimilarWorkSearchScreen({
         </h1>
 
         <p style={descriptionStyle}>
-          최근 재밌게 본 웹툰을 1~3개 골라주세요.
+          최근 재밌게 본 웹툰을 1~3개
+          골라주세요.
           <br />
-          선택한 작품의 장르, 세부 취향, 태그를 기준으로 비슷한 작품을
-          찾아볼게요.
+          선택한 작품의 추천 신호를 기준으로
+          비슷한 후보를 찾아볼게요.
         </p>
 
         <div
@@ -703,28 +791,42 @@ function SimilarWorkSearchScreen({
               lineHeight: 1.6,
             }}
           >
-            작품명, 플랫폼, 대표 장르로 검색할 수 있어요. 쉼표나 특수문자가
-            있어도 단어 기준으로 찾아요. 초성 검색은 이후 단계에서 연결합니다.
+            작품명, 별칭, 플랫폼, 대표 소재
+            라벨로 검색할 수 있어요. 쉼표나
+            띄어쓰기가 달라도 단어 기준으로
+            찾아요.
           </p>
 
           <SearchResultList
             query={query}
             searchResults={searchResults}
             selectedIdSet={selectedIdSet}
-            selectedCount={selectedWebtoons.length}
-            onSelectWebtoon={handleSelectWebtoon}
+            selectedCount={
+              selectedWebtoons.length
+            }
+            onSelectWebtoon={
+              handleSelectWebtoon
+            }
           />
 
           <SelectedWebtoonList
-            selectedWebtoons={selectedWebtoons}
-            onRemoveWebtoon={handleRemoveWebtoon}
+            selectedWebtoons={
+              selectedWebtoons
+            }
+            onRemoveWebtoon={
+              handleRemoveWebtoon
+            }
           />
 
           <button
             type="button"
             onClick={handleSubmitSelection}
             disabled={!canSubmit}
-            style={canSubmit ? enabledButtonStyle : disabledButtonStyle}
+            style={
+              canSubmit
+                ? enabledButtonStyle
+                : disabledButtonStyle
+            }
           >
             이 작품들로 추천받기
           </button>
@@ -752,7 +854,9 @@ function SearchResultList({
   searchResults: WebtoonSeedItem[];
   selectedIdSet: Set<string>;
   selectedCount: number;
-  onSelectWebtoon: (webtoon: WebtoonSeedItem) => void;
+  onSelectWebtoon: (
+    webtoon: WebtoonSeedItem
+  ) => void;
 }) {
   const trimmedQuery = query.trim();
 
@@ -766,7 +870,8 @@ function SearchResultList({
           lineHeight: 1.6,
         }}
       >
-        작품명을 1글자 이상 입력하면 DB seed에 있는 작품을 검색합니다.
+        작품명을 1글자 이상 입력하면 DB
+        seed에 있는 작품을 검색합니다.
       </p>
     );
   }
@@ -781,7 +886,8 @@ function SearchResultList({
           lineHeight: 1.6,
         }}
       >
-        검색 결과가 없어요. 현재는 DB seed에 있는 작품명 기준으로만 검색합니다.
+        검색 결과가 없어요. 현재 DB seed에
+        있는 작품과 별칭 기준으로 검색합니다.
       </p>
     );
   }
@@ -805,9 +911,15 @@ function SearchResultList({
       </h2>
 
       {searchResults.map((webtoon) => {
-        const isSelected = selectedIdSet.has(webtoon.canonicalWebtoonId);
-        const isMaxSelected = selectedCount >= 3;
-        const isDisabled = isSelected || isMaxSelected;
+        const isSelected = selectedIdSet.has(
+          webtoon.canonicalWebtoonId
+        );
+
+        const isMaxSelected =
+          selectedCount >= 3;
+
+        const isDisabled =
+          isSelected || isMaxSelected;
 
         return (
           <div
@@ -843,32 +955,66 @@ function SearchResultList({
                   lineHeight: 1.5,
                 }}
               >
-                {webtoon.platform} · {getGenreLabel(webtoon.mainGenre)} ·{" "}
-                {getStatusLabel(webtoon.metadata.status)}
+                {webtoon.platform} ·{" "}
+                {getWebtoonDisplayAxisLabel(
+                  webtoon
+                )}{" "}
+                ·{" "}
+                {getStatusLabel(
+                  webtoon.metadata.status
+                )}
               </p>
+
+              {process.env.NODE_ENV ===
+              "development" ? (
+                <p
+                  style={{
+                    margin: "5px 0 0",
+                    color: "#166534",
+                    fontSize: 11,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  sourceDb: {webtoon.sourceDb} /
+                  sourceWeight:{" "}
+                  {webtoon.sourceWeight}
+                </p>
+              ) : null}
             </div>
 
             <button
               type="button"
               disabled={isDisabled}
-              onClick={() => onSelectWebtoon(webtoon)}
+              onClick={() =>
+                onSelectWebtoon(webtoon)
+              }
               style={{
                 minHeight: 42,
                 borderRadius: 12,
-                border: isSelected ? "1px solid #bbf7d0" : "none",
+                border: isSelected
+                  ? "1px solid #bbf7d0"
+                  : "none",
                 background: isSelected
                   ? "#dcfce7"
                   : isMaxSelected
                     ? "#cbd5e1"
                     : "#4f46e5",
-                color: isSelected ? "#15803d" : "#ffffff",
+                color: isSelected
+                  ? "#15803d"
+                  : "#ffffff",
                 padding: "10px 14px",
                 fontSize: 14,
                 fontWeight: 900,
-                cursor: isDisabled ? "not-allowed" : "pointer",
+                cursor: isDisabled
+                  ? "not-allowed"
+                  : "pointer",
               }}
             >
-              {isSelected ? "선택됨" : isMaxSelected ? "최대 3개 선택" : "선택"}
+              {isSelected
+                ? "선택됨"
+                : isMaxSelected
+                  ? "최대 3개 선택"
+                  : "선택"}
             </button>
           </div>
         );
@@ -882,7 +1028,9 @@ function SelectedWebtoonList({
   onRemoveWebtoon,
 }: {
   selectedWebtoons: WebtoonSeedItem[];
-  onRemoveWebtoon: (canonicalWebtoonId: string) => void;
+  onRemoveWebtoon: (
+    canonicalWebtoonId: string
+  ) => void;
 }) {
   return (
     <div
@@ -911,7 +1059,8 @@ function SelectedWebtoonList({
             lineHeight: 1.6,
           }}
         >
-          아직 선택한 작품이 없어요. 최소 1개를 선택하면 추천 준비를 할 수
+          아직 선택한 작품이 없어요. 최소
+          1개를 선택하면 추천 준비를 할 수
           있어요.
         </p>
       ) : (
@@ -922,7 +1071,10 @@ function SelectedWebtoonList({
           }}
         >
           {selectedWebtoons.map((webtoon) => (
-            <div key={webtoon.canonicalWebtoonId} style={selectedChipStyle}>
+            <div
+              key={webtoon.canonicalWebtoonId}
+              style={selectedChipStyle}
+            >
               <div>
                 <strong
                   style={{
@@ -941,19 +1093,30 @@ function SelectedWebtoonList({
                     lineHeight: 1.5,
                   }}
                 >
-                  {webtoon.platform} · {getGenreLabel(webtoon.mainGenre)} ·{" "}
-                  {getStatusLabel(webtoon.metadata.status)}
+                  {webtoon.platform} ·{" "}
+                  {getWebtoonDisplayAxisLabel(
+                    webtoon
+                  )}{" "}
+                  ·{" "}
+                  {getStatusLabel(
+                    webtoon.metadata.status
+                  )}
                 </p>
               </div>
 
               <button
                 type="button"
-                onClick={() => onRemoveWebtoon(webtoon.canonicalWebtoonId)}
+                onClick={() =>
+                  onRemoveWebtoon(
+                    webtoon.canonicalWebtoonId
+                  )
+                }
                 style={{
                   width: "fit-content",
                   minHeight: 36,
                   borderRadius: 999,
-                  border: "1px solid #c7d2fe",
+                  border:
+                    "1px solid #c7d2fe",
                   background: "#ffffff",
                   color: "#4338ca",
                   padding: "8px 12px",
@@ -969,164 +1132,5 @@ function SelectedWebtoonList({
         </div>
       )}
     </div>
-  );
-}
-
-function ScenePickReadyScreen({ onBack }: { onBack: () => void }) {
-  return (
-    <>
-      <button type="button" onClick={onBack} style={backButtonStyle}>
-        ← 찾기 방식 다시 고르기
-      </button>
-
-      <section style={modePanelStyle}>
-        <p style={eyebrowStyle}>Secondary · scene_pick</p>
-
-        <h1 style={titleStyle}>
-          웹툰 후보를
-          <br />
-          좁히는 중
-        </h1>
-
-        <p style={descriptionStyle}>
-          작품명을 몰라도 괜찮아요.
-          <br />
-          몇 가지만 고르면 지금 볼 만한 후보가 정리돼요.
-        </p>
-
-        <p
-          style={{
-            margin: "22px 0 0",
-            color: "#64748b",
-            fontSize: 15,
-            lineHeight: 1.7,
-          }}
-        >
-          D+31에서는 Secondary 문항 선택과 추천 결과를 아직 구현하지 않습니다.
-          다음 단계에서 기존 scene_pick answers 구조를 유지하면서 후보 좁히기
-          UX를 연결합니다. 실제 후보 수 숫자와 4단계 회피 문항은 MVP 즉시
-          반영이 아니라 후속 검토 항목입니다.
-        </p>
-
-        <div
-          style={{
-            marginTop: 26,
-            display: "grid",
-            gap: 12,
-          }}
-        >
-          <NarrowingStepCard
-            progress="1 / 3"
-            title="분위기 좁히기"
-            legacyCategory="마음의 날씨"
-            description="오늘 보고 싶은 감정의 온도를 먼저 좁혀요."
-            questionExample="지금은 어떤 분위기의 웹툰이 더 끌리나요?"
-            optionExample="가볍게 보기 / 몰입해서 보기 / 긴장감 있게 보기"
-            feedbackText="지금은 편하게 볼 수 있는 후보부터 좁혀볼게요."
-          />
-
-          <NarrowingStepCard
-            progress="2 / 3"
-            title="장면 좁히기"
-            legacyCategory="들어가고 싶은 장면"
-            description="머릿속에 먼저 떠오르는 장면으로 후보를 더 줄여요."
-            questionExample="어떤 장면으로 시작하는 웹툰이 더 보고 싶나요?"
-            optionExample="전투 / 관계 변화 / 사건 단서 / 일상 장면"
-            feedbackText="이 장면이 잘 살아나는 작품 위주로 정리할게요."
-          />
-
-          <NarrowingStepCard
-            progress="3 / 3"
-            title="감상 리듬 좁히기"
-            legacyCategory="머무는 방식"
-            description="빠르게 넘길지, 오래 머물지 감상 리듬을 맞춰요."
-            questionExample="오늘은 어떤 속도로 읽고 싶나요?"
-            optionExample="빠른 전개 / 차근차근 쌓이는 이야기 / 여운 있는 흐름"
-            feedbackText="지금 읽기 좋은 리듬의 후보로 마무리할게요."
-          />
-        </div>
-
-        <button type="button" disabled style={disabledButtonStyle}>
-          방금 고른 조건으로 추천 후보 정리하기
-        </button>
-      </section>
-    </>
-  );
-}
-
-function NarrowingStepCard({
-  progress,
-  title,
-  legacyCategory,
-  description,
-  questionExample,
-  optionExample,
-  feedbackText,
-}: {
-  progress: string;
-  title: string;
-  legacyCategory: string;
-  description: string;
-  questionExample: string;
-  optionExample: string;
-  feedbackText: string;
-}) {
-  return (
-    <article
-      style={{
-        borderRadius: 18,
-        border: "1px solid #e2e8f0",
-        background: "#ffffff",
-        padding: 16,
-      }}
-    >
-      <p
-        style={{
-          margin: 0,
-          color: "#4f46e5",
-          fontSize: 13,
-          fontWeight: 900,
-        }}
-      >
-        {progress} · {title}
-      </p>
-
-      <h2
-        style={{
-          margin: "8px 0 0",
-          color: "#0f172a",
-          fontSize: 18,
-          lineHeight: 1.35,
-        }}
-      >
-        {questionExample}
-      </h2>
-
-      <p
-        style={{
-          margin: "8px 0 0",
-          color: "#475569",
-          fontSize: 14,
-          lineHeight: 1.6,
-        }}
-      >
-        {description}
-      </p>
-
-      <p
-        style={{
-          margin: "10px 0 0",
-          color: "#64748b",
-          fontSize: 13,
-          lineHeight: 1.6,
-        }}
-      >
-        기존 카테고리: <strong>{legacyCategory}</strong>
-        <br />
-        선택지 예시: <strong>{optionExample}</strong>
-        <br />
-        단계 피드백: <strong>{feedbackText}</strong>
-      </p>
-    </article>
   );
 }

@@ -4,8 +4,8 @@ import { useState } from "react";
 
 import { getTagLabels } from "@/data/tags/tagLabels";
 import {
-  getGenreLabel,
   getStatusLabel,
+  getWebtoonDisplayAxisLabel,
 } from "@/lib/recommendation/similarWorkRecommendation";
 
 import type {
@@ -29,7 +29,9 @@ function getFeedbackMessage(feedbackAction?: RecommendationFeedbackAction) {
   return null;
 }
 
-function getFeedbackDescription(feedbackAction?: RecommendationFeedbackAction) {
+function getFeedbackDescription(
+  feedbackAction?: RecommendationFeedbackAction
+) {
   if (feedbackAction === "already_read") {
     return "취향이 맞을 수 있지만, 이번 추천 세션에서는 이미 본 작품으로만 표시합니다.";
   }
@@ -71,11 +73,18 @@ export function RecommendationCard({
   onMarkOfficialOpened: (canonicalWebtoonId: string) => void;
 }) {
   const [isFeedbackMenuOpen, setIsFeedbackMenuOpen] = useState(false);
+
   const canonicalWebtoonId = recommendation.candidate.canonicalWebtoonId;
   const tagLabels = getTagLabels(recommendation.matchedTagKeys, 4);
   const feedbackMessage = getFeedbackMessage(actionState.feedbackAction);
-  const feedbackDescription = getFeedbackDescription(actionState.feedbackAction);
+  const feedbackDescription = getFeedbackDescription(
+    actionState.feedbackAction
+  );
   const isExcludedInSession = Boolean(actionState.feedbackAction);
+
+  const displayAxisLabel = getWebtoonDisplayAxisLabel(
+    recommendation.candidate
+  );
 
   function handleFeedbackAction(feedbackAction: RecommendationFeedbackAction) {
     onSetFeedbackAction(canonicalWebtoonId, feedbackAction);
@@ -139,7 +148,9 @@ export function RecommendationCard({
                 fontWeight: 900,
               }}
             >
-              {getRecommendationTypeLabel(recommendation.recommendationType)}
+              {getRecommendationTypeLabel(
+                recommendation.recommendationType
+              )}
             </span>
           </div>
 
@@ -191,8 +202,7 @@ export function RecommendationCard({
               lineHeight: 1.6,
             }}
           >
-            {recommendation.candidate.platform} ·{" "}
-            {getGenreLabel(recommendation.candidate.mainGenre)} ·{" "}
+            {recommendation.candidate.platform} · {displayAxisLabel} ·{" "}
             {getStatusLabel(recommendation.candidate.status)}
           </p>
         </div>
@@ -210,6 +220,7 @@ export function RecommendationCard({
           }}
         >
           <strong>{feedbackMessage}</strong>
+
           {feedbackDescription ? (
             <>
               <br />
@@ -399,13 +410,13 @@ export function RecommendationCard({
               fontWeight: 900,
             }}
           >
-            계산 상세 / 카드 action state
+            계산 상세 / DB 출처 / 카드 action state
           </summary>
 
           <pre
             style={{
               margin: "10px 0 0",
-              maxHeight: 360,
+              maxHeight: 420,
               overflow: "auto",
               whiteSpace: "pre-wrap",
               wordBreak: "break-word",
@@ -418,7 +429,16 @@ export function RecommendationCard({
                 actionState,
                 rank: recommendation.rank,
                 effectiveRank: recommendation.effectiveRank,
-                recommendationType: recommendation.recommendationType,
+                recommendationType:
+                  recommendation.recommendationType,
+                sourceDb: recommendation.candidate.sourceDb,
+                sourceWeight: recommendation.candidate.sourceWeight,
+                primaryContentAxisKey:
+                  recommendation.candidate.primaryContentAxisKey,
+                displayAxisLabel:
+                  recommendation.candidate.displayAxisLabel,
+                contentAxisScores:
+                  recommendation.debug.candidateContentAxisScores,
                 stage1Score: recommendation.stage1Score,
                 longTermScore: recommendation.longTermScore,
                 effectiveScore: recommendation.effectiveScore,
