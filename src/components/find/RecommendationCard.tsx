@@ -241,7 +241,7 @@ export function RecommendationCard({
           fontWeight: 900,
         }}
       >
-        임시 매칭 점수 {recommendation.matchScore}
+        취향 맞음도 {recommendation.matchScore}%
       </div>
 
       <p
@@ -428,6 +428,9 @@ export function RecommendationCard({
               {
                 actionState,
                 rank: recommendation.rank,
+                sourceTasteRank: recommendation.sourceTasteRank,
+                effectiveTasteRank:
+                  recommendation.effectiveTasteRank,
                 effectiveRank: recommendation.effectiveRank,
                 recommendationType:
                   recommendation.recommendationType,
@@ -439,17 +442,34 @@ export function RecommendationCard({
                   recommendation.candidate.displayAxisLabel,
                 contentAxisScores:
                   recommendation.debug.candidateContentAxisScores,
-                stage1Score: recommendation.stage1Score,
-                longTermScore: recommendation.longTermScore,
-                effectiveScore: recommendation.effectiveScore,
-                finalRecommendationScore:
-                  recommendation.finalRecommendationScore,
                 genreMatch: recommendation.genreMatch,
                 typeMatch: recommendation.typeMatch,
                 tagMatch: recommendation.tagMatch,
-                qualityBoost: recommendation.qualityBoost,
-                avoidancePenalty: recommendation.avoidancePenalty,
+                contentAxisMatch: recommendation.contentAxisMatch,
+                userAvoidancePenalty:
+                  recommendation.userAvoidancePenalty,
+                selectedWorkTasteScore:
+                  recommendation.selectedWorkTasteScore,
+                profileTasteScore:
+                  recommendation.profileTasteScore,
+                effectiveTasteScore:
+                  recommendation.effectiveTasteScore,
+                riskSafetyScore:
+                  recommendation.riskSafetyScore,
+                normalizedQualityScore:
+                  recommendation.normalizedQualityScore,
+                successConfidenceScore:
+                  recommendation.successConfidenceScore,
+                displayRecommendationScore:
+                  recommendation.displayRecommendationScore,
                 matchedTagKeys: recommendation.matchedTagKeys,
+                legacyAliases: {
+                  stage1Score: recommendation.stage1Score,
+                  longTermScore: recommendation.longTermScore,
+                  effectiveScore: recommendation.effectiveScore,
+                  finalRecommendationScore:
+                    recommendation.finalRecommendationScore,
+                },
                 debug: recommendation.debug,
               },
               null,

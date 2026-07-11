@@ -81,6 +81,23 @@ function roundScore(value: number) {
   return Math.round(value * 10000) / 10000;
 }
 
+export function hasAnyTasteScore(
+  profile: StoredUserTasteProfile | null | undefined
+): boolean {
+  if (!profile) return false;
+
+  return [
+    profile.userGenreScores,
+    profile.userTypeScores,
+    profile.userTagScores,
+    profile.userAvoidanceScores,
+  ].some((scoreMap) => {
+    return Object.values(scoreMap).some((score) => {
+      return Number.isFinite(score) && score > 0;
+    });
+  });
+}
+
 function normalizePercentageToGenreScore(value: number) {
   if (value > 5) {
     return roundScore(value / 20);

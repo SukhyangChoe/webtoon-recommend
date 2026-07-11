@@ -20,6 +20,7 @@ import {
 } from "@/lib/recommendation/similarWorkRecommendation";
 import {
   createFindPrimarySession,
+  getExcludedIdsFromActionStates,
   loadFindPrimarySession,
   restoreSimilarWorkSelectionResultFromSession,
   saveFindPrimarySession,
@@ -245,6 +246,9 @@ export default function FindPage() {
           <SimilarWorkSearchScreen
             onBack={() => setMode("entry")}
             onSessionSaved={handleSessionSaved}
+            previousActionStates={
+              recentSession?.actionStateByWebtoonId ?? {}
+            }
           />
         ) : null}
 
@@ -286,8 +290,8 @@ function FindEntryScreen({
         비슷한 취향 포인트를 가진 작품을
         추천해드려요.
         <br />
-        저장된 테스트 결과가 있다면 테스트 기준
-        추천으로도 이어갈 수 있어요.
+        저장된 테스트 결과 기반 즉시 추천은
+        다음 개발 단계에서 연결할 예정이에요.
       </p>
 
       {recentSession ? (
@@ -434,9 +438,13 @@ function FindEntryScreen({
           </p>
         </button>
 
-        <Link
-          href="/find/results?mode=test_result"
-          style={secondaryCardLinkStyle}
+        <div
+          aria-disabled="true"
+          style={{
+            ...secondaryCardLinkStyle,
+            cursor: "not-allowed",
+            opacity: 0.66,
+          }}
         >
           <span style={cardBadgeStyle}>
             Secondary
@@ -450,7 +458,7 @@ function FindEntryScreen({
               letterSpacing: "-0.03em",
             }}
           >
-            최근 테스트 결과로 바로 추천받기
+            내 취향으로 바로 추천받기
           </h2>
 
           <p
@@ -461,9 +469,8 @@ function FindEntryScreen({
               lineHeight: 1.7,
             }}
           >
-            장르 취향 테스트와 세부취향 테스트의
-            저장 결과를 기준으로 추천 후보를
-            준비해요.
+            저장된 userTasteProfile을 기준으로
+            바로 추천받는 방식이에요.
           </p>
 
           <p
@@ -474,9 +481,9 @@ function FindEntryScreen({
               fontWeight: 900,
             }}
           >
-            테스트 결과 기반 추천 준비
+            D+33에서는 아직 연결하지 않아요
           </p>
-        </Link>
+        </div>
       </div>
 
       <p
@@ -487,10 +494,9 @@ function FindEntryScreen({
           lineHeight: 1.7,
         }}
       >
-        D+32에서는 기존 scene_pick 진입을 기본
-        플로우에서 내리고, test_result 결과 route를
-        준비합니다. 실제 테스트 결과 기반 추천
-        계산은 후속 작업에서 연결합니다.
+        D+33에서는 Primary v2.1.1 점수 파이프라인과
+        세션 저장만 반영합니다. Secondary 계산과 UI는
+        다음 작업 범위로 남겨둡니다.
       </p>
 
       <div
@@ -606,11 +612,13 @@ function RestoredPrimarySessionScreen({
 function SimilarWorkSearchScreen({
   onBack,
   onSessionSaved,
+  previousActionStates,
 }: {
   onBack: () => void;
   onSessionSaved: (
     session: FindPrimarySession
   ) => void;
+  previousActionStates: FindPrimarySession["actionStateByWebtoonId"];
 }) {
   const [query, setQuery] = useState("");
 
@@ -687,11 +695,22 @@ function SimilarWorkSearchScreen({
   function handleSubmitSelection() {
     if (!canSubmit) return;
 
+    const {
+      alreadySeenWebtoonIds,
+      excludedWebtoonIds,
+    } = getExcludedIdsFromActionStates(
+      previousActionStates
+    );
+
     const nextSelectionResult =
       createSimilarWorkSelectionResult({
         selectedWebtoons,
         allWebtoons: WEBTOONS,
         limit: 10,
+        filterContext: {
+          alreadySeenWebtoonIds,
+          excludedWebtoonIds,
+        },
       });
 
     const nextSession =
@@ -699,6 +718,8 @@ function SimilarWorkSearchScreen({
         selectionResult: nextSelectionResult,
         selectedSourceWebtoons:
           selectedWebtoons,
+        actionStateByWebtoonId:
+          previousActionStates,
       });
 
     saveFindPrimarySession(nextSession);
@@ -836,6 +857,9 @@ function SimilarWorkSearchScreen({
       {selectionResult ? (
         <FindRecommendationResult
           selectionResult={selectionResult}
+          initialActionStates={
+            savedSession?.actionStateByWebtoonId ?? {}
+          }
           restoredSession={savedSession}
         />
       ) : null}

@@ -158,8 +158,8 @@ export function FindRecommendationResult({
             lineHeight: 1.7,
           }}
         >
-          먼저 선택한 작품의 취향 결을 기준으로 후보를 만들고, 저장된 테스트 결과가
-          있으면 그 후보 안에서 약하게 다시 정렬했어요.
+          먼저 선택한 작품의 취향 결로 후보를 만들고, 저장된 테스트 결과가 있으면
+          상위 후보 안에서만 8:2로 다시 정렬했어요.
         </p>
       </div>
 
@@ -252,7 +252,7 @@ export function FindRecommendationResult({
               fontWeight: 900,
             }}
           >
-            개발 확인용 two-stage rerank / session snapshot / actionStates
+            개발 확인용 v2.1.1 scoring pipeline / session snapshot / actionStates
           </summary>
 
           <pre
@@ -268,17 +268,28 @@ export function FindRecommendationResult({
           >
             {JSON.stringify(
               {
-                scoringVersion: selectionResult.scoringVersion,
-                hasLongTermProfile: selectionResult.hasLongTermProfile,
+                scoreVersion: selectionResult.scoreVersion,
+                recommendationMode:
+                  selectionResult.recommendationMode,
+                vectorSource: selectionResult.vectorSource,
+                hasLongTermProfile:
+                  selectionResult.hasLongTermProfile,
                 blendingWeights: selectionResult.blendingWeights,
+                activeRecommendationVector:
+                  selectionResult.activeRecommendationVector,
+                profileSnapshot: selectionResult.profileSnapshot,
                 candidatePoolSize: selectionResult.candidatePoolSize,
-                similarWorkSessionVector:
-                  selectionResult.similarWorkSessionVector,
-                storedUserTasteProfile: selectionResult.storedUserTasteProfile,
+                candidatePoolIds: selectionResult.candidatePoolIds,
+                hardFilterExcludedItems:
+                  selectionResult.hardFilterExcludedItems,
                 mainDisplayItems: selectionResult.mainDisplayItems,
                 mainReservePool: selectionResult.mainReservePool,
-                expansionCandidatePool: selectionResult.expansionCandidatePool,
-                expansionDisplayItems: selectionResult.expansionDisplayItems,
+                expansionCandidatePool:
+                  selectionResult.expansionCandidatePool,
+                expansionDisplayItems:
+                  selectionResult.expansionDisplayItems,
+                expandReservePool:
+                  selectionResult.expandReservePool,
                 restoredSession,
                 actionStates,
               },

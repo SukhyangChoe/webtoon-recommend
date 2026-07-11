@@ -1,3 +1,12 @@
+export type RecommendationMode =
+  | "similar_work"
+  | "instant_recommendation";
+
+export type RecommendationVectorSource =
+  | "selected_webtoons"
+  | "user_taste_profile"
+  | "detail_test_result";
+
 export type RecommendationFeedbackAction = "already_read" | "not_my_taste";
 
 export type RecommendationItemActionState = {

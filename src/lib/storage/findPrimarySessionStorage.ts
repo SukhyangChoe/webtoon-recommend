@@ -1,4 +1,7 @@
 import {
+    FIND_RECOMMENDATION_SCORE_VERSION,
+    calculateRiskSafetyScore,
+    calculateSuccessConfidenceScore,
     getGenreLabel,
     getStatusLabel,
   } from "@/lib/recommendation/similarWorkRecommendation";
@@ -6,87 +9,96 @@ import {
     getSourceWeight,
     normalizeSourceDb,
   } from "@/lib/recommendation/sourceWeight";
-  import { flattenTypeScores } from "@/lib/recommendation/vector";
-  
+  import {
+    clamp,
+    flattenTypeScores,
+    roundScore,
+  } from "@/lib/recommendation/vector";
+
   import type {
+    HardFilterExcludedItem,
+    HardFilterExclusionReason,
     RecommendationType,
+    RecommendationVector,
     SimilarWorkProfile,
     SimilarWorkRecommendation,
     SimilarWorkSelectionResult,
     SimilarWorkSelectedWebtoon,
     WebtoonSeedItem,
   } from "@/lib/recommendation/similarWorkRecommendation";
-  import type {
-    StoredUserTasteProfile,
-  } from "@/lib/recommendation/storedUserTasteProfile";
-  import type {
-    SourceDb,
-  } from "@/lib/recommendation/sourceWeight";
-  import type {
-    ScoreMap,
-  } from "@/lib/recommendation/vector";
+  import type { StoredUserTasteProfile } from "@/lib/recommendation/storedUserTasteProfile";
+  import type { SourceDb } from "@/lib/recommendation/sourceWeight";
+  import type { ScoreMap } from "@/lib/recommendation/vector";
   import type {
     RecommendationItemActionState,
     RecommendationItemActionStateMap,
+    RecommendationMode,
+    RecommendationVectorSource,
   } from "@/types/find";
-  
+
   export const FIND_PRIMARY_SESSION_STORAGE_KEY =
     "webtoon_find_primary_session";
-  
-  export const FIND_PRIMARY_SESSION_SCHEMA_VERSION = "0.1";
-  
+
+  export const FIND_PRIMARY_SESSION_SCHEMA_VERSION = "2.1.1" as const;
+
   export const FIND_PRIMARY_SESSION_SEED_VERSION =
     "webtoons_seed_v0_6_similarity_balanced_final";
-  
-  export type FindPrimarySession = {
-    schemaVersion: "0.1";
-    mode: "similar_work";
-    sessionId: string;
-    createdAt: string;
-    updatedAt: string;
-  
-    seedVersion: string;
-  
-    rerankPolicy: {
-      version: "v1.8_two_stage_rerank";
-      stage1CandidatePoolSize: 100;
-      primaryWeights: {
-        stage1Score: number;
-        longTermScore: number;
-      };
-    };
-  
-    selectedWebtoons: SelectedSourceWebtoonSnapshot[];
-  
-    similarWorkSessionVector: {
-      userGenreScores: ScoreMap;
-      userTypeScores: ScoreMap;
-      userTagScores: ScoreMap;
-      userAvoidanceScores: ScoreMap;
-    };
-  
-    storedUserTasteProfileSnapshot?: StoredUserTasteProfile;
-  
-    candidatePoolSize: number;
-  
-    mainDisplayItems: RecommendationItemSnapshot[];
-    mainReservePool: RecommendationItemSnapshot[];
-    expansionDisplayItems: RecommendationItemSnapshot[];
-  
-    /**
-     * v2.0.1 이후 새 명칭.
-     */
-    expandReservePool: RecommendationItemSnapshot[];
-  
-    /**
-     * D+31 기존 세션 호환용 legacy field.
-     * 새 세션 저장 시에는 사용하지 않는다.
-     */
-    expansionReservePool?: RecommendationItemSnapshot[];
-  
-    actionStateByWebtoonId: RecommendationItemActionStateMap;
+
+  export type SelectedWorkSourceSnapshot = {
+    canonicalWebtoonId: string;
+    sourceDbType: SourceDb;
+    sourceWeight: number;
   };
-  
+
+  export type ReplacementHistoryItem = {
+    canonicalWebtoonId: string;
+    replacementCanonicalWebtoonId?: string;
+    section?: "main" | "expansion";
+    slot?: number;
+    reason?: string;
+    createdAt: string;
+  };
+
+  export type SessionExcludedItem = HardFilterExcludedItem & {
+    excludedAt?: string;
+  };
+
+  export type RecommendationSessionV211 = {
+    schemaVersion: typeof FIND_PRIMARY_SESSION_SCHEMA_VERSION;
+    sessionId: string;
+    scoreVersion: typeof FIND_RECOMMENDATION_SCORE_VERSION;
+    recommendationMode: RecommendationMode;
+    vectorSource: RecommendationVectorSource;
+
+    selectedWebtoonIds: string[];
+    selectedWorkSources: SelectedWorkSourceSnapshot[];
+
+    activeRecommendationVector: RecommendationVector;
+    profileSnapshot: RecommendationVector | null;
+    inputSnapshotAtSave: RecommendationVector;
+
+    candidatePoolIds: string[];
+    displayedItems: RecommendationItemSnapshot[];
+    mainReserveItems: RecommendationItemSnapshot[];
+    expandReserveItems: RecommendationItemSnapshot[];
+    excludedItems: SessionExcludedItem[];
+    replacementHistory: ReplacementHistoryItem[];
+    createdAt: string;
+
+    /** localStorage 복원과 현재 UI 유지를 위한 추가 snapshot */
+    updatedAt: string;
+    seedVersion: string;
+    candidatePoolSize: number;
+    selectedWebtoons: SelectedSourceWebtoonSnapshot[];
+    storedUserTasteProfileSnapshot?: StoredUserTasteProfile;
+    actionStateByWebtoonId: RecommendationItemActionStateMap;
+
+    /** D+31/D+32 세션을 v2.1.1 shape로 읽은 경우에만 존재 */
+    legacySourceVersion?: string;
+  };
+
+  export type FindPrimarySession = RecommendationSessionV211;
+
   export type SelectedSourceWebtoonSnapshot = {
     canonicalWebtoonId: string;
     title: string;
@@ -97,169 +109,328 @@ import {
     statusLabel: string;
     scoreSnapshotAtSave: WebtoonScoreSnapshotAtSave;
   };
-  
+
   export type RecommendationItemSnapshot = {
     canonicalWebtoonId: string;
-  
     section:
       | "main_display"
       | "main_reserve"
       | "expansion_display"
       | "expand_reserve";
-  
     slot: number;
     originalRank: number;
     currentRank: number;
-    stage1Rank: number;
+    sourceTasteRank: number;
+    /** TOP100 안에서 profile 20% 반영 후의 순위 */
+    effectiveTasteRank?: number;
+    /** D+33 초기 세션 호환용 alias. effectiveTasteRank와 동일 */
     candidatePoolRank: number;
-  
     reservePoolType?: "main_reserve" | "expand_reserve";
     reserveRank?: number;
-  
     badgeType: RecommendationType;
     status: "active" | "feedback_excluded";
-  
+
     matchedTagKeys: string[];
     matchScore: number;
-  
+
+    genreMatch: number;
+    typeMatch: number;
+    tagMatch: number;
+    contentAxisMatch: number;
+    userAvoidancePenalty: number;
+    selectedWorkTasteScore: number;
+    profileTasteScore: number | null;
+    profileAvoidancePenalty: number | null;
+    effectiveTasteScore: number;
+    riskSafetyScore: number;
+    normalizedQualityScore: number;
+    successConfidenceScore: number;
+    displayRecommendationScore: number;
+
+    /** 개발 상세를 정확히 복원하기 위한 profile 하위값 */
+    selectedPositiveRaw?: number;
+    profileGenreMatch?: number;
+    profileTypeMatch?: number;
+    profileTagMatch?: number;
+    profilePositiveRaw?: number;
+
+    /** D+30~D+32 명칭 호환용 alias */
     stage1Score: number;
     longTermScore: number | null;
     effectiveScore: number;
     finalRecommendationScore: number;
-  
-    genreMatch: number;
-    typeMatch: number;
-    tagMatch: number;
-    qualityBoost: number;
-    avoidancePenalty: number;
-  
+
     recommendationReason: string;
-  
     scoreSnapshotAtSave: WebtoonScoreSnapshotAtSave;
   };
-  
+
   export type WebtoonScoreSnapshotAtSave = {
     scoreVersion?: string;
-  
     canonicalWebtoonId: string;
     title: string;
     platform: string;
     mainGenre: string;
     officialUrl: string;
-  
     sourceDb?: SourceDb;
     sourceWeight?: number;
     primaryContentAxisKey?: string | null;
     displayAxisLabel?: string;
-  
     status?: string;
     ageRating?: string;
     isAdult?: boolean;
     qualityScore?: number;
-  
     genreScores: ScoreMap;
     typeScores: ScoreMap;
     tagScores: ScoreMap;
     avoidanceTagScores: ScoreMap;
     contentAxisScores: ScoreMap;
-  
     recommendationReason?: string;
   };
-  
+
   type RawRecord = Record<string, unknown>;
-  
+
+  type LegacyRecommendationItemSnapshot = {
+    canonicalWebtoonId?: string;
+    section?: string;
+    slot?: number;
+    originalRank?: number;
+    currentRank?: number;
+    stage1Rank?: number;
+    effectiveTasteRank?: number;
+    candidatePoolRank?: number;
+    reservePoolType?: string;
+    reserveRank?: number;
+    badgeType?: RecommendationType;
+    status?: string;
+    matchedTagKeys?: string[];
+    matchScore?: number;
+    stage1Score?: number;
+    longTermScore?: number | null;
+    effectiveScore?: number;
+    finalRecommendationScore?: number;
+    genreMatch?: number;
+    typeMatch?: number;
+    tagMatch?: number;
+    qualityBoost?: number;
+    avoidancePenalty?: number;
+    recommendationReason?: string;
+    scoreSnapshotAtSave?: WebtoonScoreSnapshotAtSave;
+  };
+
   function isRecord(value: unknown): value is RawRecord {
-    return (
-      typeof value === "object" &&
-      value !== null &&
-      !Array.isArray(value)
-    );
+    return typeof value === "object" && value !== null && !Array.isArray(value);
   }
-  
+
   function canUseLocalStorage() {
-    return (
-      typeof window !== "undefined" &&
-      Boolean(window.localStorage)
-    );
+    return typeof window !== "undefined" && Boolean(window.localStorage);
   }
-  
+
   function createSessionId() {
-    if (
-      typeof crypto !== "undefined" &&
-      "randomUUID" in crypto
-    ) {
+    if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
       return crypto.randomUUID();
     }
-  
+
     return `find_primary_${Date.now()}_${Math.random()
       .toString(36)
       .slice(2, 10)}`;
   }
-  
-  function getSnapshotArray(
+
+  function getStringValue(record: RawRecord | undefined, key: string) {
+    const value = record?.[key];
+    return typeof value === "string" ? value : undefined;
+  }
+
+  function getNumberValue(record: RawRecord | undefined, key: string) {
+    const value = record?.[key];
+    return typeof value === "number" && Number.isFinite(value)
+      ? value
+      : undefined;
+  }
+
+  function toScoreMap(value: unknown): ScoreMap {
+    if (!isRecord(value)) return {};
+
+    return Object.fromEntries(
+      Object.entries(value).filter(([, score]) => {
+        return typeof score === "number" && Number.isFinite(score);
+      })
+    ) as ScoreMap;
+  }
+
+  function normalizeRecommendationVector(value: unknown): RecommendationVector {
+    if (!isRecord(value)) {
+      return emptyRecommendationVector();
+    }
+
+    return {
+      genreScores: toScoreMap(value.genreScores),
+      typeScores: toScoreMap(value.typeScores),
+      tagScores: toScoreMap(value.tagScores),
+      avoidanceTagScores: toScoreMap(value.avoidanceTagScores),
+      contentAxisScores: toScoreMap(value.contentAxisScores),
+    };
+  }
+
+  function emptyRecommendationVector(): RecommendationVector {
+    return {
+      genreScores: {},
+      typeScores: {},
+      tagScores: {},
+      avoidanceTagScores: {},
+      contentAxisScores: {},
+    };
+  }
+
+  function recommendationVectorFromLegacySessionVector(
     value: unknown
-  ): RecommendationItemSnapshot[] {
+  ): RecommendationVector {
+    if (!isRecord(value)) return emptyRecommendationVector();
+
+    return {
+      genreScores: toScoreMap(value.userGenreScores),
+      typeScores: toScoreMap(value.userTypeScores),
+      tagScores: toScoreMap(value.userTagScores),
+      avoidanceTagScores: toScoreMap(value.userAvoidanceScores),
+      contentAxisScores: toScoreMap(value.userContentAxisScores),
+    };
+  }
+
+  function recommendationVectorFromStoredProfile(
+    value: unknown
+  ): RecommendationVector | undefined {
+    if (!isRecord(value)) return undefined;
+
+    const vector: RecommendationVector = {
+      genreScores: toScoreMap(value.userGenreScores),
+      typeScores: toScoreMap(value.userTypeScores),
+      tagScores: toScoreMap(value.userTagScores),
+      avoidanceTagScores: toScoreMap(value.userAvoidanceScores),
+      contentAxisScores: {},
+    };
+
+    const hasPositiveScore = Object.values(vector).some((scoreMap) => {
+      return Object.values(scoreMap).some((score) => score > 0);
+    });
+
+    return hasPositiveScore ? vector : undefined;
+  }
+
+  function getSnapshotArray(value: unknown): RecommendationItemSnapshot[] {
     return Array.isArray(value)
-      ? (value as RecommendationItemSnapshot[])
+      ? (value.filter(isRecord) as unknown as RecommendationItemSnapshot[])
       : [];
   }
-  
-  function safeParseSession(
-    value: string | null
-  ): FindPrimarySession | null {
+
+  function getSelectedSnapshotArray(value: unknown) {
+    return Array.isArray(value)
+      ? (value.filter(isRecord) as unknown as SelectedSourceWebtoonSnapshot[])
+      : [];
+  }
+
+  function getActionStateMap(value: unknown): RecommendationItemActionStateMap {
+    return isRecord(value)
+      ? (value as RecommendationItemActionStateMap)
+      : {};
+  }
+
+  function normalizeCurrentSession(parsed: RawRecord): RecommendationSessionV211 | null {
+    if (
+      parsed.schemaVersion !== FIND_PRIMARY_SESSION_SCHEMA_VERSION ||
+      parsed.scoreVersion !== FIND_RECOMMENDATION_SCORE_VERSION ||
+      parsed.recommendationMode !== "similar_work" ||
+      parsed.vectorSource !== "selected_webtoons" ||
+      typeof parsed.sessionId !== "string"
+    ) {
+      return null;
+    }
+
+    const createdAt = getStringValue(parsed, "createdAt") ?? new Date().toISOString();
+
+    return {
+      schemaVersion: FIND_PRIMARY_SESSION_SCHEMA_VERSION,
+      sessionId: parsed.sessionId,
+      scoreVersion: FIND_RECOMMENDATION_SCORE_VERSION,
+      recommendationMode: "similar_work",
+      vectorSource: "selected_webtoons",
+      selectedWebtoonIds: Array.isArray(parsed.selectedWebtoonIds)
+        ? parsed.selectedWebtoonIds.filter(
+            (value): value is string => typeof value === "string"
+          )
+        : [],
+      selectedWorkSources: Array.isArray(parsed.selectedWorkSources)
+        ? (parsed.selectedWorkSources.filter(
+            isRecord
+          ) as unknown as SelectedWorkSourceSnapshot[])
+        : [],
+      activeRecommendationVector: normalizeRecommendationVector(
+        parsed.activeRecommendationVector
+      ),
+      profileSnapshot: isRecord(parsed.profileSnapshot)
+        ? normalizeRecommendationVector(parsed.profileSnapshot)
+        : null,
+      inputSnapshotAtSave: normalizeRecommendationVector(
+        parsed.inputSnapshotAtSave
+      ),
+      candidatePoolIds: Array.isArray(parsed.candidatePoolIds)
+        ? parsed.candidatePoolIds.filter(
+            (value): value is string => typeof value === "string"
+          )
+        : [],
+      displayedItems: getSnapshotArray(parsed.displayedItems),
+      mainReserveItems: getSnapshotArray(parsed.mainReserveItems),
+      expandReserveItems: getSnapshotArray(parsed.expandReserveItems),
+      excludedItems: Array.isArray(parsed.excludedItems)
+        ? (parsed.excludedItems.filter(isRecord) as unknown as SessionExcludedItem[])
+        : [],
+      replacementHistory: Array.isArray(parsed.replacementHistory)
+        ? (parsed.replacementHistory.filter(
+            isRecord
+          ) as unknown as ReplacementHistoryItem[])
+        : [],
+      createdAt,
+      updatedAt: getStringValue(parsed, "updatedAt") ?? createdAt,
+      seedVersion:
+        getStringValue(parsed, "seedVersion") ?? FIND_PRIMARY_SESSION_SEED_VERSION,
+      candidatePoolSize:
+        getNumberValue(parsed, "candidatePoolSize") ??
+        (Array.isArray(parsed.candidatePoolIds)
+          ? parsed.candidatePoolIds.length
+          : 0),
+      selectedWebtoons: getSelectedSnapshotArray(parsed.selectedWebtoons),
+      storedUserTasteProfileSnapshot: isRecord(
+        parsed.storedUserTasteProfileSnapshot
+      )
+        ? (parsed.storedUserTasteProfileSnapshot as StoredUserTasteProfile)
+        : undefined,
+      actionStateByWebtoonId: getActionStateMap(
+        parsed.actionStateByWebtoonId
+      ),
+      legacySourceVersion: getStringValue(parsed, "legacySourceVersion"),
+    };
+  }
+
+  function safeParseSession(value: string | null): FindPrimarySession | null {
     if (!value) return null;
-  
+
     try {
       const parsed: unknown = JSON.parse(value);
-  
-      if (!isRecord(parsed)) {
-        return null;
+
+      if (!isRecord(parsed)) return null;
+
+      const currentSession = normalizeCurrentSession(parsed);
+
+      if (currentSession) return currentSession;
+
+      if (parsed.schemaVersion === "0.1" && parsed.mode === "similar_work") {
+        return adaptLegacySession(parsed);
       }
-  
-      if (
-        parsed.schemaVersion !==
-          FIND_PRIMARY_SESSION_SCHEMA_VERSION ||
-        parsed.mode !== "similar_work" ||
-        typeof parsed.sessionId !== "string"
-      ) {
-        return null;
-      }
-  
-      const expandReservePool =
-        getSnapshotArray(parsed.expandReservePool).length > 0
-          ? getSnapshotArray(parsed.expandReservePool)
-          : getSnapshotArray(parsed.expansionReservePool);
-  
-      return {
-        ...(parsed as unknown as FindPrimarySession),
-        selectedWebtoons: Array.isArray(parsed.selectedWebtoons)
-          ? (parsed.selectedWebtoons as SelectedSourceWebtoonSnapshot[])
-          : [],
-        mainDisplayItems: getSnapshotArray(
-          parsed.mainDisplayItems
-        ),
-        mainReservePool: getSnapshotArray(
-          parsed.mainReservePool
-        ),
-        expansionDisplayItems: getSnapshotArray(
-          parsed.expansionDisplayItems
-        ),
-        expandReservePool,
-        actionStateByWebtoonId: isRecord(
-          parsed.actionStateByWebtoonId
-        )
-          ? (parsed.actionStateByWebtoonId as RecommendationItemActionStateMap)
-          : {},
-      };
+
+      return null;
     } catch {
       return null;
     }
   }
-  
-  function getQualityScoreFromBoost(qualityBoost: number) {
-    return Math.round(qualityBoost * 5 * 10000) / 10000;
-  }
-  
+
   function createSelectedScoreSnapshot(
     webtoon: WebtoonSeedItem
   ): WebtoonScoreSnapshotAtSave {
@@ -270,73 +441,52 @@ import {
       platform: webtoon.platform,
       mainGenre: webtoon.mainGenre,
       officialUrl: webtoon.officialUrl,
-  
       sourceDb: webtoon.sourceDb,
       sourceWeight: webtoon.sourceWeight,
-      primaryContentAxisKey:
-        webtoon.primaryContentAxisKey,
+      primaryContentAxisKey: webtoon.primaryContentAxisKey,
       displayAxisLabel: webtoon.displayAxisLabel,
-  
       status: webtoon.metadata.status,
       ageRating: webtoon.metadata.ageRating,
       isAdult: webtoon.metadata.isAdult,
       qualityScore: webtoon.metadata.qualityScore,
-  
       genreScores: webtoon.recommendation.genreScores,
-      typeScores: flattenTypeScores(
-        webtoon.recommendation.typeScores
-      ),
+      typeScores: flattenTypeScores(webtoon.recommendation.typeScores),
       tagScores: webtoon.recommendation.tagScores ?? {},
-      avoidanceTagScores:
-        webtoon.recommendation.avoidanceTagScores ?? {},
-      contentAxisScores:
-        webtoon.recommendation.contentAxisScores ?? {},
-  
-      recommendationReason:
-        webtoon.recommendation.recommendationReason,
+      avoidanceTagScores: webtoon.recommendation.avoidanceTagScores ?? {},
+      contentAxisScores: webtoon.recommendation.contentAxisScores ?? {},
+      recommendationReason: webtoon.recommendation.recommendationReason,
     };
   }
-  
+
   function createRecommendationScoreSnapshot(
     recommendation: SimilarWorkRecommendation
   ): WebtoonScoreSnapshotAtSave {
     return {
-      canonicalWebtoonId:
-        recommendation.candidate.canonicalWebtoonId,
+      scoreVersion: FIND_RECOMMENDATION_SCORE_VERSION,
+      canonicalWebtoonId: recommendation.candidate.canonicalWebtoonId,
       title: recommendation.candidate.title,
       platform: recommendation.candidate.platform,
       mainGenre: recommendation.candidate.mainGenre,
       officialUrl: recommendation.candidate.officialUrl,
-  
       sourceDb: recommendation.candidate.sourceDb,
       sourceWeight: recommendation.candidate.sourceWeight,
       primaryContentAxisKey:
         recommendation.candidate.primaryContentAxisKey,
-      displayAxisLabel:
-        recommendation.candidate.displayAxisLabel,
-  
+      displayAxisLabel: recommendation.candidate.displayAxisLabel,
       status: recommendation.candidate.status,
-  
-      qualityScore: getQualityScoreFromBoost(
-        recommendation.qualityBoost
-      ),
-  
-      genreScores:
-        recommendation.debug.candidateGenreScores,
-      typeScores:
-        recommendation.debug.candidateTypeScores,
-      tagScores:
-        recommendation.debug.candidateTagScores,
+      qualityScore: roundScore(recommendation.normalizedQualityScore * 5),
+      genreScores: recommendation.debug.candidateGenreScores,
+      typeScores: recommendation.debug.candidateTypeScores,
+      tagScores: recommendation.debug.candidateTagScores,
       avoidanceTagScores:
         recommendation.debug.candidateAvoidanceTagScores,
       contentAxisScores:
         recommendation.debug.candidateContentAxisScores,
-  
       recommendationReason:
         recommendation.candidate.recommendationReason,
     };
   }
-  
+
   function createSelectedSnapshot(
     webtoon: WebtoonSeedItem
   ): SelectedSourceWebtoonSnapshot {
@@ -347,14 +497,11 @@ import {
       mainGenre: webtoon.mainGenre,
       mainGenreLabel: getGenreLabel(webtoon.mainGenre),
       displayAxisLabel: webtoon.displayAxisLabel,
-      statusLabel: getStatusLabel(
-        webtoon.metadata.status
-      ),
-      scoreSnapshotAtSave:
-        createSelectedScoreSnapshot(webtoon),
+      statusLabel: getStatusLabel(webtoon.metadata.status),
+      scoreSnapshotAtSave: createSelectedScoreSnapshot(webtoon),
     };
   }
-  
+
   function createRecommendationSnapshot(params: {
     recommendation: SimilarWorkRecommendation;
     section: RecommendationItemSnapshot["section"];
@@ -371,52 +518,57 @@ import {
       reserveRank,
       actionState,
     } = params;
-  
+    const profileBreakdown = recommendation.debug.profileBreakdown;
+
     return {
-      canonicalWebtoonId:
-        recommendation.candidate.canonicalWebtoonId,
-  
+      canonicalWebtoonId: recommendation.candidate.canonicalWebtoonId,
       section,
       slot,
-  
       originalRank: recommendation.rank,
       currentRank: recommendation.rank,
-      stage1Rank: recommendation.rank,
-      candidatePoolRank: recommendation.effectiveRank,
-  
+      sourceTasteRank: recommendation.sourceTasteRank,
+      effectiveTasteRank: recommendation.effectiveTasteRank,
+      candidatePoolRank: recommendation.effectiveTasteRank,
       reservePoolType,
       reserveRank,
-  
       badgeType: recommendation.recommendationType,
-  
       status: actionState?.feedbackAction
         ? "feedback_excluded"
         : "active",
-  
       matchedTagKeys: recommendation.matchedTagKeys,
       matchScore: recommendation.matchScore,
-  
-      stage1Score: recommendation.stage1Score,
-      longTermScore: recommendation.longTermScore,
-      effectiveScore: recommendation.effectiveScore,
-      finalRecommendationScore:
-        recommendation.finalRecommendationScore,
-  
       genreMatch: recommendation.genreMatch,
       typeMatch: recommendation.typeMatch,
       tagMatch: recommendation.tagMatch,
-      qualityBoost: recommendation.qualityBoost,
-      avoidancePenalty:
-        recommendation.avoidancePenalty,
-  
+      contentAxisMatch: recommendation.contentAxisMatch,
+      userAvoidancePenalty: recommendation.userAvoidancePenalty,
+      selectedWorkTasteScore: recommendation.selectedWorkTasteScore,
+      profileTasteScore: recommendation.profileTasteScore,
+      profileAvoidancePenalty: recommendation.profileAvoidancePenalty,
+      effectiveTasteScore: recommendation.effectiveTasteScore,
+      riskSafetyScore: recommendation.riskSafetyScore,
+      normalizedQualityScore: recommendation.normalizedQualityScore,
+      successConfidenceScore: recommendation.successConfidenceScore,
+      displayRecommendationScore:
+        recommendation.displayRecommendationScore,
+      selectedPositiveRaw:
+        recommendation.debug.selectedWorkBreakdown.positiveRaw,
+      profileGenreMatch: profileBreakdown?.genreMatch,
+      profileTypeMatch: profileBreakdown?.typeMatch,
+      profileTagMatch: profileBreakdown?.tagMatch,
+      profilePositiveRaw: profileBreakdown?.positiveRaw,
+      stage1Score: recommendation.selectedWorkTasteScore,
+      longTermScore: recommendation.profileTasteScore,
+      effectiveScore: recommendation.effectiveTasteScore,
+      finalRecommendationScore:
+        recommendation.displayRecommendationScore,
       recommendationReason:
         recommendation.candidate.recommendationReason,
-  
       scoreSnapshotAtSave:
         createRecommendationScoreSnapshot(recommendation),
     };
   }
-  
+
   function snapshotRecommendationList(params: {
     recommendations: SimilarWorkRecommendation[];
     section: RecommendationItemSnapshot["section"];
@@ -429,481 +581,646 @@ import {
       actionStateByWebtoonId,
       reservePoolType,
     } = params;
-  
-    return recommendations.map((recommendation, index) =>
-      createRecommendationSnapshot({
+
+    return recommendations.map((recommendation, index) => {
+      return createRecommendationSnapshot({
         recommendation,
         section,
         slot: index + 1,
         reservePoolType,
-        reserveRank: reservePoolType
-          ? index + 1
-          : undefined,
+        reserveRank: reservePoolType ? index + 1 : undefined,
         actionState:
           actionStateByWebtoonId[
             recommendation.candidate.canonicalWebtoonId
           ],
-      })
-    );
+      });
+    });
   }
-  
+
+  function createFeedbackExcludedItems(
+    actionStateByWebtoonId: RecommendationItemActionStateMap
+  ): SessionExcludedItem[] {
+    return Object.values(actionStateByWebtoonId).flatMap((actionState) => {
+      if (!actionState.feedbackAction) return [];
+
+      return [
+        {
+          canonicalWebtoonId: actionState.canonicalWebtoonId,
+          reason:
+            actionState.feedbackAction === "already_read"
+              ? ("already_seen" as const)
+              : ("session_excluded" as const),
+          excludedAt: actionState.feedbackCreatedAt,
+        },
+      ];
+    });
+  }
+
+  function mergeExcludedItems(
+    hardFilterItems: HardFilterExcludedItem[],
+    feedbackItems: SessionExcludedItem[]
+  ) {
+    const merged = new Map<string, SessionExcludedItem>();
+
+    [...hardFilterItems, ...feedbackItems].forEach((item) => {
+      const key = `${item.canonicalWebtoonId}:${item.reason}`;
+      merged.set(key, item);
+    });
+
+    return [...merged.values()];
+  }
+
   export function createFindPrimarySession(params: {
     selectionResult: SimilarWorkSelectionResult;
     selectedSourceWebtoons: WebtoonSeedItem[];
     actionStateByWebtoonId?: RecommendationItemActionStateMap;
     previousSessionId?: string;
-  }): FindPrimarySession {
+  }): RecommendationSessionV211 {
     const {
       selectionResult,
       selectedSourceWebtoons,
       actionStateByWebtoonId = {},
       previousSessionId,
     } = params;
-  
     const now = new Date().toISOString();
-  
-    return {
-      schemaVersion:
-        FIND_PRIMARY_SESSION_SCHEMA_VERSION,
-      mode: "similar_work",
-      sessionId: previousSessionId ?? createSessionId(),
-      createdAt: now,
-      updatedAt: now,
-  
-      seedVersion: FIND_PRIMARY_SESSION_SEED_VERSION,
-  
-      rerankPolicy: {
-        version: "v1.8_two_stage_rerank",
-        stage1CandidatePoolSize: 100,
-        primaryWeights: {
-          stage1Score:
-            selectionResult.blendingWeights.stage1Weight,
-          longTermScore:
-            selectionResult.blendingWeights.longTermWeight,
-        },
-      },
-  
-      selectedWebtoons:
-        selectedSourceWebtoons.map(createSelectedSnapshot),
-  
-      similarWorkSessionVector: {
-        userGenreScores:
-          selectionResult.similarWorkSessionVector
-            .userGenreScores,
-        userTypeScores:
-          selectionResult.similarWorkSessionVector
-            .userTypeScores,
-        userTagScores:
-          selectionResult.similarWorkSessionVector
-            .userTagScores,
-        userAvoidanceScores:
-          selectionResult.similarWorkSessionVector
-            .userAvoidanceScores,
-      },
-  
-      storedUserTasteProfileSnapshot:
-        selectionResult.storedUserTasteProfile ??
-        undefined,
-  
-      candidatePoolSize:
-        selectionResult.candidatePoolSize,
-  
-      mainDisplayItems: snapshotRecommendationList({
-        recommendations:
-          selectionResult.mainDisplayItems,
+    const displayedItems = [
+      ...snapshotRecommendationList({
+        recommendations: selectionResult.mainDisplayItems,
         section: "main_display",
         actionStateByWebtoonId,
       }),
-  
-      mainReservePool: snapshotRecommendationList({
-        recommendations:
-          selectionResult.mainReservePool,
+      ...snapshotRecommendationList({
+        recommendations: selectionResult.expansionDisplayItems,
+        section: "expansion_display",
+        actionStateByWebtoonId,
+      }),
+    ];
+
+    return {
+      schemaVersion: FIND_PRIMARY_SESSION_SCHEMA_VERSION,
+      sessionId: previousSessionId ?? createSessionId(),
+      scoreVersion: FIND_RECOMMENDATION_SCORE_VERSION,
+      recommendationMode: "similar_work",
+      vectorSource: "selected_webtoons",
+      selectedWebtoonIds: selectedSourceWebtoons.map(
+        (webtoon) => webtoon.canonicalWebtoonId
+      ),
+      selectedWorkSources: selectedSourceWebtoons.map((webtoon) => ({
+        canonicalWebtoonId: webtoon.canonicalWebtoonId,
+        sourceDbType: webtoon.sourceDb,
+        sourceWeight: webtoon.sourceWeight,
+      })),
+      activeRecommendationVector:
+        selectionResult.activeRecommendationVector,
+      profileSnapshot: selectionResult.profileSnapshot,
+      inputSnapshotAtSave: selectionResult.inputSnapshotAtSave,
+      candidatePoolIds: selectionResult.candidatePoolIds,
+      displayedItems,
+      mainReserveItems: snapshotRecommendationList({
+        recommendations: selectionResult.mainReservePool,
         section: "main_reserve",
         reservePoolType: "main_reserve",
         actionStateByWebtoonId,
       }),
-  
-      expansionDisplayItems:
-        snapshotRecommendationList({
-          recommendations:
-            selectionResult.expansionDisplayItems,
-          section: "expansion_display",
-          actionStateByWebtoonId,
-        }),
-  
-      expandReservePool: snapshotRecommendationList({
-        recommendations:
-          selectionResult.expansionCandidatePool,
+      expandReserveItems: snapshotRecommendationList({
+        recommendations: selectionResult.expandReservePool,
         section: "expand_reserve",
         reservePoolType: "expand_reserve",
         actionStateByWebtoonId,
       }),
-  
+      excludedItems: mergeExcludedItems(
+        selectionResult.hardFilterExcludedItems,
+        createFeedbackExcludedItems(actionStateByWebtoonId)
+      ),
+      replacementHistory: [],
+      createdAt: now,
+      updatedAt: now,
+      seedVersion: FIND_PRIMARY_SESSION_SEED_VERSION,
+      candidatePoolSize: selectionResult.candidatePoolSize,
+      selectedWebtoons:
+        selectedSourceWebtoons.map(createSelectedSnapshot),
+      storedUserTasteProfileSnapshot:
+        selectionResult.storedUserTasteProfile ?? undefined,
       actionStateByWebtoonId,
     };
   }
-  
-  export function saveFindPrimarySession(
-    session: FindPrimarySession
-  ) {
+
+  export function saveFindPrimarySession(session: FindPrimarySession) {
     if (!canUseLocalStorage()) return;
-  
+
     const normalizedSession: FindPrimarySession = {
       ...session,
       updatedAt: new Date().toISOString(),
     };
-  
-    delete normalizedSession.expansionReservePool;
-  
+
     window.localStorage.setItem(
       FIND_PRIMARY_SESSION_STORAGE_KEY,
       JSON.stringify(normalizedSession)
     );
   }
-  
-  export function loadFindPrimarySession():
-    | FindPrimarySession
-    | null {
+
+  export function loadFindPrimarySession(): FindPrimarySession | null {
     if (!canUseLocalStorage()) return null;
-  
+
     return safeParseSession(
-      window.localStorage.getItem(
-        FIND_PRIMARY_SESSION_STORAGE_KEY
-      )
+      window.localStorage.getItem(FIND_PRIMARY_SESSION_STORAGE_KEY)
     );
   }
-  
+
   export function updateFindPrimarySessionActionStates(
     actionStateByWebtoonId: RecommendationItemActionStateMap
   ) {
     const currentSession = loadFindPrimarySession();
-  
+
     if (!currentSession) return;
-  
+
     saveFindPrimarySession({
       ...currentSession,
       actionStateByWebtoonId,
-  
-      mainDisplayItems: applyActionStatesToSnapshots(
-        currentSession.mainDisplayItems,
+      displayedItems: applyActionStatesToSnapshots(
+        currentSession.displayedItems,
         actionStateByWebtoonId
       ),
-  
-      mainReservePool: applyActionStatesToSnapshots(
-        currentSession.mainReservePool,
+      mainReserveItems: applyActionStatesToSnapshots(
+        currentSession.mainReserveItems,
         actionStateByWebtoonId
       ),
-  
-      expansionDisplayItems:
-        applyActionStatesToSnapshots(
-          currentSession.expansionDisplayItems,
-          actionStateByWebtoonId
-        ),
-  
-      expandReservePool:
-        applyActionStatesToSnapshots(
-          currentSession.expandReservePool,
-          actionStateByWebtoonId
-        ),
+      expandReserveItems: applyActionStatesToSnapshots(
+        currentSession.expandReserveItems,
+        actionStateByWebtoonId
+      ),
+      excludedItems: mergeExcludedItems(
+        currentSession.excludedItems,
+        createFeedbackExcludedItems(actionStateByWebtoonId)
+      ),
     });
   }
-  
+
   function applyActionStatesToSnapshots(
     snapshots: RecommendationItemSnapshot[],
     actionStateByWebtoonId: RecommendationItemActionStateMap
   ): RecommendationItemSnapshot[] {
     return snapshots.map((snapshot) => {
-      const actionState =
-        actionStateByWebtoonId[
-          snapshot.canonicalWebtoonId
-        ];
-  
-      const status: RecommendationItemSnapshot["status"] =
-        actionState?.feedbackAction
-          ? "feedback_excluded"
-          : "active";
-  
+      const actionState = actionStateByWebtoonId[snapshot.canonicalWebtoonId];
+
       return {
         ...snapshot,
-        status,
+        status: actionState?.feedbackAction
+          ? "feedback_excluded"
+          : "active",
       };
     });
   }
-  
-  function getSnapshotSourceDb(
-    snapshot: WebtoonScoreSnapshotAtSave
-  ) {
+
+  function getSnapshotSourceDb(snapshot: WebtoonScoreSnapshotAtSave) {
     return normalizeSourceDb(snapshot.sourceDb);
   }
-  
+
   function getSnapshotDisplayAxisLabel(
     snapshot: WebtoonScoreSnapshotAtSave
   ) {
-    return (
-      snapshot.displayAxisLabel ??
-      getGenreLabel(snapshot.mainGenre)
-    );
+    return snapshot.displayAxisLabel ?? getGenreLabel(snapshot.mainGenre);
   }
-  
+
   function restoreSelectedWebtoon(
     snapshot: SelectedSourceWebtoonSnapshot
   ): SimilarWorkSelectedWebtoon {
     const scoreSnapshot = snapshot.scoreSnapshotAtSave;
     const sourceDb = getSnapshotSourceDb(scoreSnapshot);
-  
+
     return {
       canonicalWebtoonId: snapshot.canonicalWebtoonId,
       title: snapshot.title,
       platform: snapshot.platform,
       mainGenre: snapshot.mainGenre,
-  
       sourceDb,
       sourceWeight:
-        scoreSnapshot.sourceWeight ??
-        getSourceWeight(sourceDb),
-  
+        scoreSnapshot.sourceWeight ?? getSourceWeight(sourceDb),
       primaryContentAxisKey:
         scoreSnapshot.primaryContentAxisKey ?? null,
-  
       displayAxisLabel:
         scoreSnapshot.displayAxisLabel ??
         snapshot.displayAxisLabel ??
         snapshot.mainGenreLabel,
-  
       genreScores: scoreSnapshot.genreScores,
-  
       typeScores: {
-        [snapshot.mainGenre]:
-          scoreSnapshot.typeScores,
+        [snapshot.mainGenre]: scoreSnapshot.typeScores,
       },
-  
       tagScores: scoreSnapshot.tagScores,
-  
-      avoidanceTagScores:
-        scoreSnapshot.avoidanceTagScores,
-  
-      contentAxisScores:
-        scoreSnapshot.contentAxisScores ?? {},
+      avoidanceTagScores: scoreSnapshot.avoidanceTagScores,
+      contentAxisScores: scoreSnapshot.contentAxisScores ?? {},
     };
   }
-  
+
   function restoreRecommendation(
     snapshot: RecommendationItemSnapshot
   ): SimilarWorkRecommendation {
     const scoreSnapshot = snapshot.scoreSnapshotAtSave;
-  
     const sourceDb = getSnapshotSourceDb(scoreSnapshot);
-  
     const sourceWeight =
-      scoreSnapshot.sourceWeight ??
-      getSourceWeight(sourceDb);
-  
-    const displayAxisLabel =
-      getSnapshotDisplayAxisLabel(scoreSnapshot);
-  
-    const contentAxisScores =
-      scoreSnapshot.contentAxisScores ?? {};
-  
+      scoreSnapshot.sourceWeight ?? getSourceWeight(sourceDb);
+    const displayAxisLabel = getSnapshotDisplayAxisLabel(scoreSnapshot);
+    const contentAxisScores = scoreSnapshot.contentAxisScores ?? {};
+    const effectiveTasteRank =
+      snapshot.effectiveTasteRank ??
+      snapshot.candidatePoolRank ??
+      snapshot.currentRank;
+
     return {
       rank: snapshot.currentRank,
-      effectiveRank: snapshot.candidatePoolRank,
+      sourceTasteRank: snapshot.sourceTasteRank,
+      effectiveTasteRank,
+      effectiveRank: effectiveTasteRank,
       recommendationType: snapshot.badgeType,
-  
       candidate: {
-        canonicalWebtoonId:
-          snapshot.canonicalWebtoonId,
+        canonicalWebtoonId: snapshot.canonicalWebtoonId,
         title: scoreSnapshot.title,
         platform: scoreSnapshot.platform,
         officialUrl: scoreSnapshot.officialUrl,
         mainGenre: scoreSnapshot.mainGenre,
         status: scoreSnapshot.status ?? "unknown",
-  
         recommendationReason:
-          scoreSnapshot.recommendationReason ??
-          snapshot.recommendationReason,
-  
+          scoreSnapshot.recommendationReason ?? snapshot.recommendationReason,
         sourceDb,
         sourceWeight,
-  
         primaryContentAxisKey:
-          scoreSnapshot.primaryContentAxisKey ??
-          null,
-  
+          scoreSnapshot.primaryContentAxisKey ?? null,
         displayAxisLabel,
       },
-  
-      finalRecommendationScore:
-        snapshot.finalRecommendationScore,
-  
-      stage1Score: snapshot.stage1Score,
-      longTermScore: snapshot.longTermScore,
-      effectiveScore: snapshot.effectiveScore,
-  
-      matchScore: snapshot.matchScore,
-  
       genreMatch: snapshot.genreMatch,
       typeMatch: snapshot.typeMatch,
       tagMatch: snapshot.tagMatch,
-      qualityBoost: snapshot.qualityBoost,
-      avoidancePenalty: snapshot.avoidancePenalty,
-  
+      contentAxisMatch: snapshot.contentAxisMatch,
+      userAvoidancePenalty: snapshot.userAvoidancePenalty,
+      selectedWorkTasteScore: snapshot.selectedWorkTasteScore,
+      profileTasteScore: snapshot.profileTasteScore,
+      profileAvoidancePenalty: snapshot.profileAvoidancePenalty,
+      effectiveTasteScore: snapshot.effectiveTasteScore,
+      riskSafetyScore: snapshot.riskSafetyScore,
+      normalizedQualityScore: snapshot.normalizedQualityScore,
+      successConfidenceScore: snapshot.successConfidenceScore,
+      displayRecommendationScore: snapshot.displayRecommendationScore,
       matchedTagKeys: snapshot.matchedTagKeys,
-  
+      matchScore: snapshot.matchScore,
+      sourceTasteScore: snapshot.selectedWorkTasteScore,
+      stage1Score: snapshot.selectedWorkTasteScore,
+      longTermScore: snapshot.profileTasteScore,
+      effectiveScore: snapshot.effectiveTasteScore,
+      finalRecommendationScore: snapshot.displayRecommendationScore,
+      qualityBoost: snapshot.normalizedQualityScore,
+      avoidancePenalty: snapshot.userAvoidancePenalty,
       debug: {
-        candidateGenreScores:
-          scoreSnapshot.genreScores,
-        candidateTypeScores:
-          scoreSnapshot.typeScores,
-        candidateTagScores:
-          scoreSnapshot.tagScores,
-        candidateAvoidanceTagScores:
-          scoreSnapshot.avoidanceTagScores,
-        candidateContentAxisScores:
-          contentAxisScores,
-  
+        candidateGenreScores: scoreSnapshot.genreScores,
+        candidateTypeScores: scoreSnapshot.typeScores,
+        candidateTagScores: scoreSnapshot.tagScores,
+        candidateAvoidanceTagScores: scoreSnapshot.avoidanceTagScores,
+        candidateContentAxisScores: contentAxisScores,
         candidateSourceDb: sourceDb,
         candidateSourceWeight: sourceWeight,
-        candidateDisplayAxisLabel:
-          displayAxisLabel,
-  
-        stage1Breakdown: {
-          score: snapshot.stage1Score,
+        candidateDisplayAxisLabel: displayAxisLabel,
+        selectedWorkBreakdown: {
           genreMatch: snapshot.genreMatch,
           typeMatch: snapshot.typeMatch,
           tagMatch: snapshot.tagMatch,
-          qualityBoost: snapshot.qualityBoost,
-          avoidancePenalty:
-            snapshot.avoidancePenalty,
+          contentAxisMatch: snapshot.contentAxisMatch,
+          positiveRaw: snapshot.selectedPositiveRaw ?? 0,
+          userAvoidancePenalty: snapshot.userAvoidancePenalty,
+          selectedWorkTasteScore: snapshot.selectedWorkTasteScore,
           matchedTagKeys: snapshot.matchedTagKeys,
         },
-  
-        longTermBreakdown:
-          typeof snapshot.longTermScore === "number"
+        profileBreakdown:
+          typeof snapshot.profileTasteScore === "number"
             ? {
-                score: snapshot.longTermScore,
-                genreMatch: snapshot.genreMatch,
-                typeMatch: snapshot.typeMatch,
-                tagMatch: snapshot.tagMatch,
-                qualityBoost:
-                  snapshot.qualityBoost,
-                avoidancePenalty:
-                  snapshot.avoidancePenalty,
-                matchedTagKeys:
-                  snapshot.matchedTagKeys,
+                genreMatch: snapshot.profileGenreMatch ?? 0,
+                typeMatch: snapshot.profileTypeMatch ?? 0,
+                tagMatch: snapshot.profileTagMatch ?? 0,
+                positiveRaw: snapshot.profilePositiveRaw ?? 0,
+                profileAvoidancePenalty:
+                  snapshot.profileAvoidancePenalty ?? 0,
+                profileTasteScore: snapshot.profileTasteScore,
+                matchedTagKeys: snapshot.matchedTagKeys,
               }
             : null,
       },
     };
   }
-  
+
   function createRestoredSessionProfile(
-    session: FindPrimarySession,
-    selectedWebtoons: SimilarWorkSelectedWebtoon[]
+    session: FindPrimarySession
   ): SimilarWorkProfile {
+    const vector = session.activeRecommendationVector;
+
     return {
       mode: "similar_work",
-  
-      sourceWebtoonIds:
-        selectedWebtoons.map(
-          (webtoon) =>
-            webtoon.canonicalWebtoonId
-        ),
-  
-      userGenreScores:
-        session.similarWorkSessionVector
-          .userGenreScores,
-  
-      userTypeScores:
-        session.similarWorkSessionVector
-          .userTypeScores,
-  
-      userTagScores:
-        session.similarWorkSessionVector
-          .userTagScores,
-  
-      userAvoidanceScores:
-        session.similarWorkSessionVector
-          .userAvoidanceScores,
+      sourceWebtoonIds: session.selectedWebtoonIds,
+      sourceWeightSum: roundScore(
+        session.selectedWorkSources.reduce((sum, source) => {
+          return sum + Math.max(source.sourceWeight, 0);
+        }, 0)
+      ),
+      userGenreScores: vector.genreScores,
+      userTypeScores: vector.typeScores,
+      userTagScores: vector.tagScores,
+      userAvoidanceScores: vector.avoidanceTagScores,
+      userContentAxisScores: vector.contentAxisScores,
     };
   }
-  
+
   export function restoreSimilarWorkSelectionResultFromSession(
     session: FindPrimarySession
   ): SimilarWorkSelectionResult {
-    const selectedWebtoons =
-      session.selectedWebtoons.map(
-        restoreSelectedWebtoon
-      );
-  
-    const restoredSessionProfile =
-      createRestoredSessionProfile(
-        session,
-        selectedWebtoons
-      );
-  
-    const mainDisplayItems =
-      session.mainDisplayItems.map(
-        restoreRecommendation
-      );
-  
-    const mainReservePool =
-      session.mainReservePool.map(
-        restoreRecommendation
-      );
-  
-    const expansionCandidatePool =
-      session.expandReservePool.map(
-        restoreRecommendation
-      );
-  
-    const expansionDisplayItems =
-      session.expansionDisplayItems.map(
-        restoreRecommendation
-      );
-  
+    const selectedWebtoons = session.selectedWebtoons.map(
+      restoreSelectedWebtoon
+    );
+    const restoredSessionProfile = createRestoredSessionProfile(session);
+    const mainDisplayItems = session.displayedItems
+      .filter((item) => item.section === "main_display")
+      .map(restoreRecommendation);
+    const expansionDisplayItems = session.displayedItems
+      .filter((item) => item.section === "expansion_display")
+      .map(restoreRecommendation);
+    const mainReservePool = session.mainReserveItems.map(
+      restoreRecommendation
+    );
+    const expandReservePool = session.expandReserveItems.map(
+      restoreRecommendation
+    );
+    const expansionCandidatePool = [
+      ...expansionDisplayItems,
+      ...expandReservePool,
+    ].sort((a, b) => a.rank - b.rank);
+
     return {
       mode: "similar_work",
-  
+      recommendationMode: "similar_work",
+      vectorSource: "selected_webtoons",
+      scoreVersion: FIND_RECOMMENDATION_SCORE_VERSION,
       selectedWebtoons,
-  
-      similarWorkSessionVector:
-        restoredSessionProfile,
-  
-      userSimilarWorkProfile:
-        restoredSessionProfile,
-  
+      activeRecommendationVector: session.activeRecommendationVector,
+      inputSnapshotAtSave: session.inputSnapshotAtSave,
+      profileSnapshot: session.profileSnapshot,
+      similarWorkSessionVector: restoredSessionProfile,
+      userSimilarWorkProfile: restoredSessionProfile,
       storedUserTasteProfile:
-        session.storedUserTasteProfileSnapshot ??
-        null,
-  
-      hasLongTermProfile: Boolean(
-        session.storedUserTasteProfileSnapshot
-      ),
-  
-      scoringVersion:
-        "two_stage_rerank_v1_8_primary",
-  
-      candidatePoolSize:
-        session.candidatePoolSize,
-  
+        session.storedUserTasteProfileSnapshot ?? null,
+      hasLongTermProfile: Boolean(session.profileSnapshot),
+      scoringVersion: FIND_RECOMMENDATION_SCORE_VERSION,
+      candidatePoolSize: session.candidatePoolSize,
+      candidatePoolIds: session.candidatePoolIds,
+      hardFilterExcludedItems: session.excludedItems.map((item) => ({
+        canonicalWebtoonId: item.canonicalWebtoonId,
+        reason: item.reason,
+      })),
       blendingWeights: {
-        stage1Weight:
-          session.rerankPolicy.primaryWeights
-            .stage1Score,
-  
-        longTermWeight:
-          session.rerankPolicy.primaryWeights
-            .longTermScore,
+        selectedWorkTasteScore: session.profileSnapshot ? 0.8 : 1,
+        profileTasteScore: session.profileSnapshot ? 0.2 : 0,
+        stage1Weight: session.profileSnapshot ? 0.8 : 1,
+        longTermWeight: session.profileSnapshot ? 0.2 : 0,
       },
-  
       mainDisplayItems,
       mainReservePool,
       expansionCandidatePool,
       expansionDisplayItems,
-  
-      recommendations: [
-        ...mainDisplayItems,
-        ...expansionDisplayItems,
-      ],
+      expandReservePool,
+      recommendations: [...mainDisplayItems, ...expansionDisplayItems],
     };
   }
+
+  function adaptLegacySession(parsed: RawRecord): RecommendationSessionV211 | null {
+    const sessionId = getStringValue(parsed, "sessionId");
+
+    if (!sessionId) return null;
+
+    const createdAt = getStringValue(parsed, "createdAt") ?? new Date().toISOString();
+    const selectedWebtoons = getSelectedSnapshotArray(parsed.selectedWebtoons);
+    const legacyActionStates = getActionStateMap(parsed.actionStateByWebtoonId);
+    const activeRecommendationVector =
+      recommendationVectorFromLegacySessionVector(
+        parsed.similarWorkSessionVector
+      );
+    const storedProfile = isRecord(parsed.storedUserTasteProfileSnapshot)
+      ? (parsed.storedUserTasteProfileSnapshot as StoredUserTasteProfile)
+      : undefined;
+    const profileSnapshot = recommendationVectorFromStoredProfile(
+      parsed.storedUserTasteProfileSnapshot
+    );
+    const legacyMainDisplay = adaptLegacySnapshotList(
+      parsed.mainDisplayItems,
+      "main_display"
+    );
+    const legacyMainReserve = adaptLegacySnapshotList(
+      parsed.mainReservePool,
+      "main_reserve"
+    );
+    const legacyExpansionDisplay = adaptLegacySnapshotList(
+      parsed.expansionDisplayItems,
+      "expansion_display"
+    );
+    const legacyExpandReserveSource = Array.isArray(parsed.expandReservePool)
+      ? parsed.expandReservePool
+      : parsed.expansionReservePool;
+    const displayedIdSet = new Set(
+      legacyExpansionDisplay.map((item) => item.canonicalWebtoonId)
+    );
+    const legacyExpandReserve = adaptLegacySnapshotList(
+      legacyExpandReserveSource,
+      "expand_reserve"
+    ).filter((item) => !displayedIdSet.has(item.canonicalWebtoonId));
+    const allCandidateSnapshots = [
+      ...legacyMainDisplay,
+      ...legacyMainReserve,
+      ...legacyExpansionDisplay,
+      ...legacyExpandReserve,
+    ];
+    const selectedWorkSources = selectedWebtoons.map((snapshot) => {
+      const scoreSnapshot = snapshot.scoreSnapshotAtSave;
+      const sourceDbType = normalizeSourceDb(scoreSnapshot.sourceDb);
+
+      return {
+        canonicalWebtoonId: snapshot.canonicalWebtoonId,
+        sourceDbType,
+        sourceWeight:
+          scoreSnapshot.sourceWeight ?? getSourceWeight(sourceDbType),
+      };
+    });
+
+    return {
+      schemaVersion: FIND_PRIMARY_SESSION_SCHEMA_VERSION,
+      sessionId,
+      scoreVersion: FIND_RECOMMENDATION_SCORE_VERSION,
+      recommendationMode: "similar_work",
+      vectorSource: "selected_webtoons",
+      selectedWebtoonIds: selectedWebtoons.map(
+        (snapshot) => snapshot.canonicalWebtoonId
+      ),
+      selectedWorkSources,
+      activeRecommendationVector,
+      profileSnapshot: profileSnapshot ?? null,
+      inputSnapshotAtSave: activeRecommendationVector,
+      candidatePoolIds: [...new Set(
+        allCandidateSnapshots
+          .sort((a, b) => a.currentRank - b.currentRank)
+          .map((item) => item.canonicalWebtoonId)
+      )],
+      displayedItems: [
+        ...legacyMainDisplay,
+        ...legacyExpansionDisplay,
+      ],
+      mainReserveItems: legacyMainReserve,
+      expandReserveItems: legacyExpandReserve,
+      excludedItems: createFeedbackExcludedItems(legacyActionStates),
+      replacementHistory: [],
+      createdAt,
+      updatedAt: getStringValue(parsed, "updatedAt") ?? createdAt,
+      seedVersion:
+        getStringValue(parsed, "seedVersion") ?? FIND_PRIMARY_SESSION_SEED_VERSION,
+      candidatePoolSize:
+        getNumberValue(parsed, "candidatePoolSize") ??
+        allCandidateSnapshots.length,
+      selectedWebtoons,
+      storedUserTasteProfileSnapshot: storedProfile,
+      actionStateByWebtoonId: legacyActionStates,
+      legacySourceVersion: "schema_0.1_two_stage_rerank_v1_8_primary",
+    };
+  }
+
+  function adaptLegacySnapshotList(
+    value: unknown,
+    section: RecommendationItemSnapshot["section"]
+  ): RecommendationItemSnapshot[] {
+    if (!Array.isArray(value)) return [];
+
+    return value.flatMap((rawItem, index) => {
+      if (!isRecord(rawItem)) return [];
+
+      const item = rawItem as LegacyRecommendationItemSnapshot;
+      const canonicalWebtoonId = item.canonicalWebtoonId;
+      const scoreSnapshot = item.scoreSnapshotAtSave;
+
+      if (!canonicalWebtoonId || !scoreSnapshot) return [];
+
+      const selectedWorkTasteScore = roundScore(item.stage1Score ?? 0);
+      const profileTasteScore =
+        typeof item.longTermScore === "number"
+          ? roundScore(item.longTermScore)
+          : null;
+      const effectiveTasteScore = roundScore(
+        item.effectiveScore ?? selectedWorkTasteScore
+      );
+      const displayRecommendationScore = roundScore(
+        clamp(
+          item.finalRecommendationScore ?? effectiveTasteScore,
+          0,
+          1
+        )
+      );
+      const normalizedQualityScore = roundScore(
+        clamp(
+          item.qualityBoost ??
+            (scoreSnapshot.qualityScore ?? 0) / 5,
+          0,
+          1
+        )
+      );
+      const riskSafetyScore = calculateRiskSafetyScore(
+        scoreSnapshot.avoidanceTagScores ?? {}
+      );
+      const successConfidenceScore =
+        calculateSuccessConfidenceScore({
+          qualityScore: scoreSnapshot.qualityScore,
+          riskSafetyScore,
+        }).successConfidenceScore;
+
+      return [
+        {
+          canonicalWebtoonId,
+          section,
+          slot: item.slot ?? index + 1,
+          originalRank: item.originalRank ?? index + 1,
+          currentRank: item.currentRank ?? item.originalRank ?? index + 1,
+          sourceTasteRank: item.stage1Rank ?? item.originalRank ?? index + 1,
+          effectiveTasteRank:
+            item.effectiveTasteRank ??
+            item.candidatePoolRank ??
+            item.currentRank ??
+            index + 1,
+          candidatePoolRank:
+            item.effectiveTasteRank ??
+            item.candidatePoolRank ??
+            item.currentRank ??
+            index + 1,
+          reservePoolType:
+            section === "main_reserve"
+              ? "main_reserve"
+              : section === "expand_reserve"
+                ? "expand_reserve"
+                : undefined,
+          reserveRank: item.reserveRank,
+          badgeType: item.badgeType ?? "stable_match",
+          status:
+            item.status === "feedback_excluded"
+              ? "feedback_excluded"
+              : "active",
+          matchedTagKeys: Array.isArray(item.matchedTagKeys)
+            ? item.matchedTagKeys
+            : [],
+          matchScore:
+            item.matchScore ?? Math.round(displayRecommendationScore * 100),
+          genreMatch: roundScore(item.genreMatch ?? 0),
+          typeMatch: roundScore(item.typeMatch ?? 0),
+          tagMatch: roundScore(item.tagMatch ?? 0),
+          contentAxisMatch: 0,
+          userAvoidancePenalty: roundScore(item.avoidancePenalty ?? 0),
+          selectedWorkTasteScore,
+          profileTasteScore,
+          profileAvoidancePenalty: profileTasteScore === null ? null : 0,
+          effectiveTasteScore,
+          riskSafetyScore,
+          normalizedQualityScore,
+          successConfidenceScore,
+          displayRecommendationScore,
+          stage1Score: selectedWorkTasteScore,
+          longTermScore: profileTasteScore,
+          effectiveScore: effectiveTasteScore,
+          finalRecommendationScore: displayRecommendationScore,
+          recommendationReason:
+            item.recommendationReason ??
+            scoreSnapshot.recommendationReason ??
+            "이전 추천 세션에서 복원한 후보입니다.",
+          scoreSnapshotAtSave: {
+            ...scoreSnapshot,
+            genreScores: scoreSnapshot.genreScores ?? {},
+            typeScores: scoreSnapshot.typeScores ?? {},
+            tagScores: scoreSnapshot.tagScores ?? {},
+            avoidanceTagScores:
+              scoreSnapshot.avoidanceTagScores ?? {},
+            contentAxisScores: scoreSnapshot.contentAxisScores ?? {},
+          },
+        },
+      ];
+    });
+  }
+
+  export function getExcludedIdsFromActionStates(
+    actionStateByWebtoonId: RecommendationItemActionStateMap
+  ) {
+    const alreadySeenWebtoonIds: string[] = [];
+    const excludedWebtoonIds: string[] = [];
+
+    Object.values(actionStateByWebtoonId).forEach((actionState) => {
+      if (actionState.feedbackAction === "already_read") {
+        alreadySeenWebtoonIds.push(actionState.canonicalWebtoonId);
+      }
+
+      if (actionState.feedbackAction === "not_my_taste") {
+        excludedWebtoonIds.push(actionState.canonicalWebtoonId);
+      }
+    });
+
+    return {
+      alreadySeenWebtoonIds,
+      excludedWebtoonIds,
+    };
+  }
+
+  export type { HardFilterExclusionReason };
