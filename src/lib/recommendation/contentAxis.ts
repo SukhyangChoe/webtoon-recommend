@@ -10,11 +10,17 @@ const GENRE_LABELS: Record<string, string> = {
   drama_daily: "드라마·일상",
 };
 
+function getFallbackGenreLabel(fallbackGenreKey?: string) {
+  if (!fallbackGenreKey) return "장르별";
+
+  return GENRE_LABELS[fallbackGenreKey] ?? fallbackGenreKey;
+}
+
 export function getPrimaryContentAxisKey(
   contentAxisScores: ScoreMap
 ): string | null {
   const entries = Object.entries(contentAxisScores).filter(([, score]) => {
-    return typeof score === "number" && score > 0;
+    return typeof score === "number" && Number.isFinite(score) && score > 0;
   });
 
   if (entries.length === 0) return null;
@@ -32,10 +38,13 @@ export function getDisplayAxisLabel(
   const primaryContentAxisKey = getPrimaryContentAxisKey(contentAxisScores);
 
   if (!primaryContentAxisKey) {
-    return fallbackGenreKey ? GENRE_LABELS[fallbackGenreKey] ?? fallbackGenreKey : "장르별";
+    return getFallbackGenreLabel(fallbackGenreKey);
   }
 
-  return getContentAxisLabel(primaryContentAxisKey) ?? "소재 라벨 준비 중";
+  return (
+    getContentAxisLabel(primaryContentAxisKey) ??
+    getFallbackGenreLabel(fallbackGenreKey)
+  );
 }
 
 export function getContentAxisSearchLabels(contentAxisScores: ScoreMap) {

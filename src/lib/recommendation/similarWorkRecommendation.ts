@@ -74,8 +74,10 @@ import {
     officialUrl: string;
     mainGenre: string;
     sourceDb: SourceDb;
-    sourceType?: SourceDb;
+    sourceType: SourceDb;
     sourceWeight: number;
+    recommendationEligible?: boolean;
+    qualityEvidenceGateDecision?: string;
     primaryContentAxisKey: string | null;
     displayAxisLabel: string;
     metadata: {
@@ -83,6 +85,7 @@ import {
       ageRating?: string;
       urlStatus?: string;
       qualityScore?: number;
+      qualityFactors?: ScoreMap;
       inputStatus?: string;
       isAdult?: boolean;
       completionType?: string;
@@ -157,6 +160,10 @@ import {
     | "invalid_url"
     | "non_recommendable_input_status"
     | "recommendation_ineligible"
+    | "coverage_result_ineligible"
+    | "quality_gate_hold"
+    | "quality_gate_move_to_coverage"
+    | "quality_gate_ineligible"
     | "official_view_unavailable"
     | "sale_or_availability_unavailable"
     | "webnovel_only"
@@ -192,7 +199,10 @@ import {
       status: string;
       recommendationReason: string;
       sourceDb?: SourceDb;
+      sourceType?: SourceDb;
       sourceWeight?: number;
+      recommendationEligible?: boolean;
+      qualityEvidenceGateDecision?: string;
       primaryContentAxisKey?: string | null;
       displayAxisLabel?: string;
     };
@@ -234,7 +244,11 @@ import {
       candidateArtStyleScores: ScoreMap;
       candidateVisualStyleMigrationStatus: VisualStyleMigrationStatus;
       candidateSourceDb: SourceDb;
+      candidateSourceType: SourceDb;
       candidateSourceWeight: number;
+      candidateRecommendationEligible: boolean | null;
+      candidateQualityEvidenceGateDecision: string | null;
+      candidateQualityFactors: ScoreMap | null;
       candidateDisplayAxisLabel: string;
       selectedWorkBreakdown: SelectedWorkTasteBreakdown;
       profileBreakdown: ProfileTasteBreakdown | null;
@@ -499,9 +513,18 @@ import {
   function getRawSourceDb(rawItem: RawRecord, sourceRecord?: RawRecord) {
     return (
       getStringValue(rawItem, "sourceDb") ??
-      getStringValue(rawItem, "sourceType") ??
       getStringValue(sourceRecord, "sourceDb") ??
+      getStringValue(rawItem, "sourceType") ??
       getStringValue(sourceRecord, "sourceType")
+    );
+  }
+  
+  function getRawSourceType(rawItem: RawRecord, sourceRecord?: RawRecord) {
+    return (
+      getStringValue(rawItem, "sourceType") ??
+      getStringValue(sourceRecord, "sourceType") ??
+      getStringValue(rawItem, "sourceDb") ??
+      getStringValue(sourceRecord, "sourceDb")
     );
   }
   
@@ -532,7 +555,16 @@ import {
     }
   
     const sourceDb = normalizeSourceDb(getRawSourceDb(rawItem, source));
+    const sourceType = normalizeSourceDb(getRawSourceType(rawItem, source));
     const sourceWeight = getSourceWeight(sourceDb);
+    const recommendationEligible = getFirstBooleanValue(
+      [rawItem, metadata],
+      ["recommendationEligible"]
+    );
+    const qualityEvidenceGateDecision = getFirstStringValue(
+      [rawItem, metadata],
+      ["qualityEvidenceGateDecision"]
+    );
   
     const normalizedMetadata: WebtoonSeedItem["metadata"] = {
       status: getStringValue(metadata, "status") ?? "unknown",
@@ -561,16 +593,20 @@ import {
     });
   
     const qualityScore = getNumberValue(metadata, "qualityScore");
+    const qualityFactors = toScoreMap(metadata?.qualityFactors);
   
     if (typeof qualityScore === "number") {
       normalizedMetadata.qualityScore = qualityScore;
+    }
+  
+    if (Object.keys(qualityFactors).length > 0) {
+      normalizedMetadata.qualityFactors = qualityFactors;
     }
   
     const optionalBooleanFields: Array<
       [keyof WebtoonSeedItem["metadata"], string[]]
     > = [
       ["isAdult", ["isAdult"]],
-      ["recommendationEligible", ["recommendationEligible"]],
       ["officialViewAvailable", ["officialViewAvailable", "isOfficiallyViewable"]],
       ["sexualCore", ["sexualCore", "isSexualCore"]],
       ["isWebNovelOnly", ["isWebNovelOnly", "webNovelOnly"]],
@@ -584,6 +620,10 @@ import {
         (normalizedMetadata as Record<string, unknown>)[targetKey] = value;
       }
     });
+  
+    if (typeof recommendationEligible === "boolean") {
+      normalizedMetadata.recommendationEligible = recommendationEligible;
+    }
   
     const contentAxisScores = toScoreMap(recommendation?.contentAxisScores);
     const primaryContentAxisKey =
@@ -648,8 +688,14 @@ import {
       officialUrl,
       mainGenre,
       sourceDb,
-      sourceType: sourceDb,
+      sourceType,
       sourceWeight,
+      ...(typeof recommendationEligible === "boolean"
+        ? { recommendationEligible }
+        : {}),
+      ...(qualityEvidenceGateDecision
+        ? { qualityEvidenceGateDecision }
+        : {}),
       primaryContentAxisKey,
       displayAxisLabel,
       metadata: normalizedMetadata,
@@ -1773,8 +1819,23 @@ import {
       return "invalid_url";
     }
   
-    if (metadata.recommendationEligible === false) {
+    if (candidate.sourceDb === "coverage") {
+      return "coverage_result_ineligible";
+    }
+  
+    if (
+      candidate.recommendationEligible === false ||
+      metadata.recommendationEligible === false
+    ) {
       return "recommendation_ineligible";
+    }
+  
+    const qualityGateReason = getQualityGateExclusionReason(
+      candidate.qualityEvidenceGateDecision
+    );
+  
+    if (qualityGateReason) {
+      return qualityGateReason;
     }
   
     if (isNonRecommendableInputStatus(metadata.inputStatus)) {
@@ -1837,6 +1898,40 @@ import {
       ])
     ) {
       return "sexual_core_concept";
+    }
+  
+    return null;
+  }
+  
+  
+  function getQualityGateExclusionReason(
+    qualityEvidenceGateDecision?: string
+  ): HardFilterExclusionReason | null {
+    const normalizedGate = normalizePolicyValue(
+      qualityEvidenceGateDecision
+    );
+  
+    if (!normalizedGate || normalizedGate === "verified_precision") {
+      return null;
+    }
+  
+    if (normalizedGate === "hold_for_quality_evidence") {
+      return "quality_gate_hold";
+    }
+  
+    if (
+      normalizedGate === "move_to_coverage_candidate" ||
+      normalizedGate.includes("move_to_coverage")
+    ) {
+      return "quality_gate_move_to_coverage";
+    }
+  
+    if (
+      normalizedGate.startsWith("move_to_") ||
+      normalizedGate.startsWith("exclude") ||
+      normalizedGate.includes("recommendation_ineligible")
+    ) {
+      return "quality_gate_ineligible";
     }
   
     return null;
@@ -1924,7 +2019,11 @@ import {
               ? "방금 확인한 세부취향과 맞닿는 점이 있는 후보입니다."
               : "선택한 작품의 취향 신호와 비슷한 점이 있는 후보입니다."),
         sourceDb: candidate.sourceDb,
+        sourceType: candidate.sourceType,
         sourceWeight: candidate.sourceWeight,
+        recommendationEligible: candidate.recommendationEligible,
+        qualityEvidenceGateDecision:
+          candidate.qualityEvidenceGateDecision,
         primaryContentAxisKey: candidate.primaryContentAxisKey,
         displayAxisLabel: candidate.displayAxisLabel,
       },
@@ -1964,7 +2063,16 @@ import {
         candidateArtStyleScores,
         candidateVisualStyleMigrationStatus,
         candidateSourceDb: candidate.sourceDb,
+        candidateSourceType: candidate.sourceType,
         candidateSourceWeight: candidate.sourceWeight,
+        candidateRecommendationEligible:
+          typeof candidate.recommendationEligible === "boolean"
+            ? candidate.recommendationEligible
+            : null,
+        candidateQualityEvidenceGateDecision:
+          candidate.qualityEvidenceGateDecision ?? null,
+        candidateQualityFactors:
+          candidate.metadata.qualityFactors ?? null,
         candidateDisplayAxisLabel: candidate.displayAxisLabel,
         selectedWorkBreakdown,
         profileBreakdown,

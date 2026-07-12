@@ -424,7 +424,12 @@ export function RecommendationCard({
                 tasteScoreSource:
                   recommendation.tasteScoreSource,
                 sourceDb: recommendation.candidate.sourceDb,
+                sourceType: recommendation.candidate.sourceType,
                 sourceWeight: recommendation.candidate.sourceWeight,
+                recommendationEligible:
+                  recommendation.candidate.recommendationEligible,
+                qualityEvidenceGateDecision:
+                  recommendation.candidate.qualityEvidenceGateDecision,
                 primaryContentAxisKey:
                   recommendation.candidate.primaryContentAxisKey,
                 displayAxisLabel:

@@ -51,7 +51,7 @@ import {
   export const FIND_PRIMARY_SESSION_SCHEMA_VERSION = "2.1.1" as const;
   
   export const FIND_PRIMARY_SESSION_SEED_VERSION =
-    "webtoons_seed_v0_6_similarity_balanced_final";
+    "webtoons_seed_v1_1_all_genres_integrated_v0_46";
   
   export type SelectedWorkSourceSnapshot = {
     canonicalWebtoonId: string;
@@ -191,13 +191,17 @@ import {
     mainGenre: string;
     officialUrl: string;
     sourceDb?: SourceDb;
+    sourceType?: SourceDb;
     sourceWeight?: number;
+    recommendationEligible?: boolean;
+    qualityEvidenceGateDecision?: string;
     primaryContentAxisKey?: string | null;
     displayAxisLabel?: string;
     status?: string;
     ageRating?: string;
     isAdult?: boolean;
     qualityScore?: number;
+    qualityFactors?: ScoreMap;
     genreScores: ScoreMap;
     typeScores: ScoreMap;
     tagScores: ScoreMap;
@@ -563,13 +567,18 @@ import {
       mainGenre: webtoon.mainGenre,
       officialUrl: webtoon.officialUrl,
       sourceDb: webtoon.sourceDb,
+      sourceType: webtoon.sourceType,
       sourceWeight: webtoon.sourceWeight,
+      recommendationEligible: webtoon.recommendationEligible,
+      qualityEvidenceGateDecision:
+        webtoon.qualityEvidenceGateDecision,
       primaryContentAxisKey: webtoon.primaryContentAxisKey,
       displayAxisLabel: webtoon.displayAxisLabel,
       status: webtoon.metadata.status,
       ageRating: webtoon.metadata.ageRating,
       isAdult: webtoon.metadata.isAdult,
       qualityScore: webtoon.metadata.qualityScore,
+      qualityFactors: webtoon.metadata.qualityFactors,
       genreScores: webtoon.recommendation.genreScores,
       typeScores: flattenTypeScores(webtoon.recommendation.typeScores),
       tagScores: webtoon.recommendation.tagScores ?? {},
@@ -593,12 +602,19 @@ import {
       mainGenre: recommendation.candidate.mainGenre,
       officialUrl: recommendation.candidate.officialUrl,
       sourceDb: recommendation.candidate.sourceDb,
+      sourceType: recommendation.candidate.sourceType,
       sourceWeight: recommendation.candidate.sourceWeight,
+      recommendationEligible:
+        recommendation.candidate.recommendationEligible,
+      qualityEvidenceGateDecision:
+        recommendation.candidate.qualityEvidenceGateDecision,
       primaryContentAxisKey:
         recommendation.candidate.primaryContentAxisKey,
       displayAxisLabel: recommendation.candidate.displayAxisLabel,
       status: recommendation.candidate.status,
       qualityScore: roundScore(recommendation.normalizedQualityScore * 5),
+      qualityFactors:
+        recommendation.debug.candidateQualityFactors ?? undefined,
       genreScores: recommendation.debug.candidateGenreScores,
       typeScores: recommendation.debug.candidateTypeScores,
       tagScores: recommendation.debug.candidateTagScores,
@@ -1027,7 +1043,12 @@ import {
         recommendationReason:
           scoreSnapshot.recommendationReason ?? snapshot.recommendationReason,
         sourceDb,
+        sourceType: scoreSnapshot.sourceType ?? sourceDb,
         sourceWeight,
+        recommendationEligible:
+          scoreSnapshot.recommendationEligible,
+        qualityEvidenceGateDecision:
+          scoreSnapshot.qualityEvidenceGateDecision,
         primaryContentAxisKey:
           scoreSnapshot.primaryContentAxisKey ?? null,
         displayAxisLabel,
@@ -1066,7 +1087,15 @@ import {
           scoreSnapshot.visualStyleMigrationStatus ??
           "legacy_visual_appeal",
         candidateSourceDb: sourceDb,
+        candidateSourceType: scoreSnapshot.sourceType ?? sourceDb,
         candidateSourceWeight: sourceWeight,
+        candidateRecommendationEligible:
+          typeof scoreSnapshot.recommendationEligible === "boolean"
+            ? scoreSnapshot.recommendationEligible
+            : null,
+        candidateQualityEvidenceGateDecision:
+          scoreSnapshot.qualityEvidenceGateDecision ?? null,
+        candidateQualityFactors: scoreSnapshot.qualityFactors ?? null,
         candidateDisplayAxisLabel: displayAxisLabel,
         selectedWorkBreakdown: {
           genreMatch: snapshot.genreMatch,
