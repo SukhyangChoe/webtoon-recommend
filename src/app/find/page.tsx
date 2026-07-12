@@ -11,6 +11,7 @@ import {
 import { FindRecommendationResult } from "@/components/find/FindRecommendationResult";
 import webtoonSeedData from "@/data/webtoons/webtoons_seed_current.json";
 import {
+  createInstantRecommendationSelectionResult,
   createSimilarWorkSelectionResult,
   getStatusLabel,
   getWebtoonDisplayAxisLabel,
@@ -19,23 +20,31 @@ import {
   normalizeWebtoonSeedData,
 } from "@/lib/recommendation/similarWorkRecommendation";
 import {
+  buildStoredUserTasteProfile,
+  hasAnyTasteScore,
+} from "@/lib/recommendation/storedUserTasteProfile";
+import {
   createFindPrimarySession,
+  createFindSecondarySession,
   getExcludedIdsFromActionStates,
   loadFindPrimarySession,
-  restoreSimilarWorkSelectionResultFromSession,
+  restoreRecommendationSelectionResultFromSession,
   saveFindPrimarySession,
 } from "@/lib/storage/findPrimarySessionStorage";
 
 import type {
+  InstantRecommendationSelectionResult,
   SimilarWorkSelectionResult,
   WebtoonSeedItem,
 } from "@/lib/recommendation/similarWorkRecommendation";
+import type { StoredUserTasteProfile } from "@/lib/recommendation/storedUserTasteProfile";
 import type { FindPrimarySession } from "@/lib/storage/findPrimarySessionStorage";
 
 type FindMode =
   | "entry"
   | "similar_work"
-  | "recent_primary_session";
+  | "instant_recommendation"
+  | "recent_session";
 
 const WEBTOONS = normalizeWebtoonSeedData(webtoonSeedData);
 
@@ -203,42 +212,91 @@ function formatSessionDate(value: string) {
 
 export default function FindPage() {
   const [mode, setMode] = useState<FindMode>("entry");
-
   const [recentSession, setRecentSession] =
+    useState<FindPrimarySession | null>(null);
+  const [currentTasteProfile, setCurrentTasteProfile] =
+    useState<StoredUserTasteProfile | null>(null);
+  const [instantSelectionResult, setInstantSelectionResult] =
+    useState<InstantRecommendationSelectionResult | null>(null);
+  const [instantSession, setInstantSession] =
     useState<FindPrimarySession | null>(null);
 
   useEffect(() => {
-    const timerId = window.setTimeout(() => {
+    function refreshStoredState() {
       setRecentSession(loadFindPrimarySession());
-    }, 0);
+      setCurrentTasteProfile(buildStoredUserTasteProfile());
+    }
+
+    const timerId = window.setTimeout(refreshStoredState, 0);
+
+    window.addEventListener("focus", refreshStoredState);
+    window.addEventListener("storage", refreshStoredState);
 
     return () => {
       window.clearTimeout(timerId);
+      window.removeEventListener("focus", refreshStoredState);
+      window.removeEventListener("storage", refreshStoredState);
     };
   }, []);
 
-  function handleSessionSaved(
-    session: FindPrimarySession
-  ) {
+  const canUseSecondary = hasAnyTasteScore(currentTasteProfile);
+
+  function handleSessionSaved(session: FindPrimarySession) {
     setRecentSession(session);
+  }
+
+  function handleStartInstantRecommendation() {
+    const latestProfile = buildStoredUserTasteProfile();
+
+    setCurrentTasteProfile(latestProfile);
+
+    if (!hasAnyTasteScore(latestProfile) || !latestProfile) {
+      return;
+    }
+
+    const {
+      alreadySeenWebtoonIds,
+      excludedWebtoonIds,
+    } = getExcludedIdsFromActionStates(
+      recentSession?.actionStateByWebtoonId ?? {}
+    );
+    const nextSelectionResult =
+      createInstantRecommendationSelectionResult({
+        allWebtoons: WEBTOONS,
+        storedUserTasteProfile: latestProfile,
+        filterContext: {
+          alreadySeenWebtoonIds,
+          excludedWebtoonIds,
+        },
+      });
+    const nextSession = createFindSecondarySession({
+      selectionResult: nextSelectionResult,
+      actionStateByWebtoonId:
+        recentSession?.actionStateByWebtoonId ?? {},
+    });
+
+    saveFindPrimarySession(nextSession);
+
+    setInstantSelectionResult(nextSelectionResult);
+    setInstantSession(nextSession);
+    setRecentSession(nextSession);
+    setMode("instant_recommendation");
   }
 
   return (
     <main style={pageStyle}>
       <section style={shellStyle}>
-        <p style={eyebrowStyle}>
-          지금 볼 웹툰 찾기
-        </p>
+        <p style={eyebrowStyle}>지금 볼 웹툰 찾기</p>
 
         {mode === "entry" ? (
           <FindEntryScreen
             recentSession={recentSession}
-            onSelectSimilarWork={() =>
-              setMode("similar_work")
+            canUseSecondary={canUseSecondary}
+            onSelectSimilarWork={() => setMode("similar_work")}
+            onSelectInstantRecommendation={
+              handleStartInstantRecommendation
             }
-            onRestoreRecentSession={() =>
-              setMode("recent_primary_session")
-            }
+            onRestoreRecentSession={() => setMode("recent_session")}
           />
         ) : null}
 
@@ -252,14 +310,28 @@ export default function FindPage() {
           />
         ) : null}
 
-        {mode === "recent_primary_session" &&
-        recentSession ? (
-          <RestoredPrimarySessionScreen
+        {mode === "instant_recommendation" &&
+        instantSelectionResult &&
+        instantSession ? (
+          <InstantRecommendationScreen
+            selectionResult={instantSelectionResult}
+            session={instantSession}
+            onBack={() => setMode("entry")}
+          />
+        ) : null}
+
+        {mode === "recent_session" && recentSession ? (
+          <RestoredRecommendationSessionScreen
             session={recentSession}
             onBack={() => setMode("entry")}
-            onStartFresh={() =>
-              setMode("similar_work")
-            }
+            onStartFresh={() => {
+              if (recentSession.recommendationMode === "similar_work") {
+                setMode("similar_work");
+                return;
+              }
+
+              handleStartInstantRecommendation();
+            }}
           />
         ) : null}
       </section>
@@ -269,29 +341,34 @@ export default function FindPage() {
 
 function FindEntryScreen({
   recentSession,
+  canUseSecondary,
   onSelectSimilarWork,
+  onSelectInstantRecommendation,
   onRestoreRecentSession,
 }: {
   recentSession: FindPrimarySession | null;
+  canUseSecondary: boolean;
   onSelectSimilarWork: () => void;
+  onSelectInstantRecommendation: () => void;
   onRestoreRecentSession: () => void;
 }) {
+  const recentModeLabel =
+    recentSession?.recommendationMode === "instant_recommendation"
+      ? "내 취향 기반 추천"
+      : "선택 작품 기반 추천";
+
   return (
     <>
       <h1 style={titleStyle}>
-        비슷하게 볼 웹툰을
+        지금 보기 좋은 웹툰을
         <br />
         찾아볼게요.
       </h1>
 
       <p style={descriptionStyle}>
-        재밌게 본 작품이 있다면 먼저 골라주세요.
+        재밌게 본 작품을 직접 고르거나,
         <br />
-        비슷한 취향 포인트를 가진 작품을
-        추천해드려요.
-        <br />
-        저장된 테스트 결과 기반 즉시 추천은
-        다음 개발 단계에서 연결할 예정이에요.
+        저장된 취향으로 바로 추천받을 수 있어요.
       </p>
 
       {recentSession ? (
@@ -315,10 +392,8 @@ function FindEntryScreen({
                 fontWeight: 900,
               }}
             >
-              최근 추천 결과 ·{" "}
-              {formatSessionDate(
-                recentSession.createdAt
-              )}
+              최근 추천 결과 · {recentModeLabel} ·{" "}
+              {formatSessionDate(recentSession.createdAt)}
             </p>
 
             <h2
@@ -341,8 +416,8 @@ function FindEntryScreen({
                 lineHeight: 1.7,
               }}
             >
-              지난번에 고른 작품과 비슷한 결로
-              다시 볼 수 있어요.
+              저장 당시의 추천 결과와 점수 snapshot을 그대로 다시 볼 수
+              있어요.
             </p>
           </div>
 
@@ -399,9 +474,7 @@ function FindEntryScreen({
           onClick={onSelectSimilarWork}
           style={primaryCardButtonStyle}
         >
-          <span style={cardBadgeStyle}>
-            Primary
-          </span>
+          <span style={cardBadgeStyle}>Primary</span>
 
           <h2
             style={{
@@ -422,8 +495,8 @@ function FindEntryScreen({
               lineHeight: 1.7,
             }}
           >
-            최근 재밌게 본 웹툰을 기준으로
-            비슷하거나 잘 맞는 작품을 찾아요.
+            최근 재밌게 본 웹툰을 기준으로 비슷하거나 잘 맞는 작품을
+            찾아요.
           </p>
 
           <p
@@ -438,17 +511,22 @@ function FindEntryScreen({
           </p>
         </button>
 
-        <div
-          aria-disabled="true"
+        <button
+          type="button"
+          onClick={onSelectInstantRecommendation}
+          disabled={!canUseSecondary}
+          aria-disabled={!canUseSecondary}
           style={{
             ...secondaryCardLinkStyle,
-            cursor: "not-allowed",
-            opacity: 0.66,
+            cursor: canUseSecondary ? "pointer" : "not-allowed",
+            opacity: canUseSecondary ? 1 : 0.66,
+            border: canUseSecondary
+              ? "1px solid #c7d2fe"
+              : "1px solid #e5e7eb",
+            background: canUseSecondary ? "#f5f3ff" : "#f8fafc",
           }}
         >
-          <span style={cardBadgeStyle}>
-            Secondary
-          </span>
+          <span style={cardBadgeStyle}>Secondary</span>
 
           <h2
             style={{
@@ -469,35 +547,25 @@ function FindEntryScreen({
               lineHeight: 1.7,
             }}
           >
-            저장된 userTasteProfile을 기준으로
-            바로 추천받는 방식이에요.
+            저장된 userTasteProfile을 기준으로 추가 질문 없이 바로
+            추천받아요.
           </p>
 
           <p
             style={{
               margin: "16px 0 0",
-              color: "#64748b",
+              color: canUseSecondary ? "#4338ca" : "#64748b",
               fontSize: 14,
               fontWeight: 900,
+              whiteSpace: "pre-line",
             }}
           >
-            D+33에서는 아직 연결하지 않아요
+            {canUseSecondary
+              ? "바로 추천받기"
+              : "취향 테스트를 하나 이상 완료하면\n내 취향으로 바로 추천받을 수 있어요."}
           </p>
-        </div>
+        </button>
       </div>
-
-      <p
-        style={{
-          margin: "28px 0 0",
-          color: "#64748b",
-          fontSize: 14,
-          lineHeight: 1.7,
-        }}
-      >
-        D+33에서는 Primary v2.1.1 점수 파이프라인과
-        세션 저장만 반영합니다. Secondary 계산과 UI는
-        다음 작업 범위로 남겨둡니다.
-      </p>
 
       <div
         style={{
@@ -519,7 +587,7 @@ function FindEntryScreen({
   );
 }
 
-function RestoredPrimarySessionScreen({
+function RestoredRecommendationSessionScreen({
   session,
   onBack,
   onStartFresh,
@@ -529,10 +597,10 @@ function RestoredPrimarySessionScreen({
   onStartFresh: () => void;
 }) {
   const selectionResult = useMemo(() => {
-    return restoreSimilarWorkSelectionResultFromSession(
-      session
-    );
+    return restoreRecommendationSelectionResultFromSession(session);
   }, [session]);
+  const isSecondary =
+    selectionResult.recommendationMode === "instant_recommendation";
 
   return (
     <>
@@ -543,20 +611,14 @@ function RestoredPrimarySessionScreen({
           flexWrap: "wrap",
         }}
       >
-        <button
-          type="button"
-          onClick={onBack}
-          style={backButtonStyle}
-        >
+        <button type="button" onClick={onBack} style={backButtonStyle}>
           ← 찾기 방식 다시 고르기
         </button>
 
-        <button
-          type="button"
-          onClick={onStartFresh}
-          style={backButtonStyle}
-        >
-          다른 작품으로 다시 찾아보기
+        <button type="button" onClick={onStartFresh} style={backButtonStyle}>
+          {isSecondary
+            ? "현재 취향으로 새 추천받기"
+            : "다른 작품으로 다시 찾아보기"}
         </button>
       </div>
 
@@ -575,8 +637,7 @@ function RestoredPrimarySessionScreen({
             fontWeight: 900,
           }}
         >
-          최근 추천 결과 복원 ·{" "}
-          {formatSessionDate(session.createdAt)}
+          최근 추천 결과 복원 · {formatSessionDate(session.createdAt)}
         </p>
 
         <h1
@@ -591,18 +652,59 @@ function RestoredPrimarySessionScreen({
         </h1>
 
         <p style={descriptionStyle}>
-          저장 당시의 추천 결과와 점수 snapshot을
-          기준으로 복원했어요.
-          <br />새 추천을 받으면 최근 Primary 추천
-          세션이 새 결과로 덮어써집니다.
+          저장 당시의 추천 결과와 점수 snapshot을 기준으로 복원했어요.
+          <br />새 추천을 받으면 최근 추천 세션이 새 결과로 덮어써집니다.
         </p>
       </section>
 
       <FindRecommendationResult
         selectionResult={selectionResult}
-        initialActionStates={
-          session.actionStateByWebtoonId
-        }
+        initialActionStates={session.actionStateByWebtoonId}
+        restoredSession={session}
+      />
+    </>
+  );
+}
+
+function InstantRecommendationScreen({
+  selectionResult,
+  session,
+  onBack,
+}: {
+  selectionResult: InstantRecommendationSelectionResult;
+  session: FindPrimarySession;
+  onBack: () => void;
+}) {
+  return (
+    <>
+      <button type="button" onClick={onBack} style={backButtonStyle}>
+        ← 찾기 방식 다시 고르기
+      </button>
+
+      <section
+        style={{
+          ...modePanelStyle,
+          background: "#f5f3ff",
+          border: "1px solid #c4b5fd",
+        }}
+      >
+        <p style={eyebrowStyle}>Secondary · instant_recommendation</p>
+
+        <h1 style={titleStyle}>
+          내 취향으로
+          <br />
+          바로 골라봤어요.
+        </h1>
+
+        <p style={descriptionStyle}>
+          추천을 시작한 순간의 userTasteProfile을 snapshot으로 고정했어요.
+          <br />추가 질문 없이 현재 누적 취향만으로 계산했습니다.
+        </p>
+      </section>
+
+      <FindRecommendationResult
+        selectionResult={selectionResult}
+        initialActionStates={session.actionStateByWebtoonId}
         restoredSession={session}
       />
     </>

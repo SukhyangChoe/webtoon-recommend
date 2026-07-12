@@ -1,6 +1,38 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+
+import { FindRecommendationResult } from "@/components/find/FindRecommendationResult";
+import {
+  loadFindPrimarySession,
+  restoreRecommendationSelectionResultFromSession,
+} from "@/lib/storage/findPrimarySessionStorage";
+
+import type { FindRecommendationSession } from "@/lib/storage/findPrimarySessionStorage";
 
 export default function FindResultsPage() {
+  const [session, setSession] =
+    useState<FindRecommendationSession | null>(null);
+  const [hasLoaded, setHasLoaded] = useState(false);
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      setSession(loadFindPrimarySession());
+      setHasLoaded(true);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, []);
+
+  const selectionResult = useMemo(() => {
+    if (!session) return null;
+
+    return restoreRecommendationSelectionResultFromSession(session);
+  }, [session]);
+
   return (
     <main
       style={{
@@ -13,7 +45,7 @@ export default function FindResultsPage() {
       <section
         style={{
           width: "100%",
-          maxWidth: 820,
+          maxWidth: 980,
           margin: "0 auto",
           borderRadius: 32,
           background: "#ffffff",
@@ -32,128 +64,132 @@ export default function FindResultsPage() {
           지금 볼 웹툰 찾기
         </p>
 
-        <h1
-          style={{
-            margin: 0,
-            color: "#0f172a",
-            fontSize: "clamp(36px, 7vw, 60px)",
-            lineHeight: 1.08,
-            letterSpacing: "-0.05em",
-          }}
-        >
-          Secondary 추천은
-          <br />
-          다음 작업에서 연결해요.
-        </h1>
+        {!hasLoaded ? (
+          <LoadingState />
+        ) : selectionResult && session ? (
+          <>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 10,
+              }}
+            >
+              <Link href="/find" style={linkButtonStyle}>
+                ← 찾기 방식 다시 고르기
+              </Link>
 
-        <p
-          style={{
-            margin: "22px 0 0",
-            color: "#334155",
-            fontSize: 18,
-            lineHeight: 1.75,
-          }}
-        >
-          D+33에서는 Primary의 v2.1.1 점수 파이프라인과 추천 세션 저장을
-          우선 적용했습니다.
-          <br />
-          userTasteProfile 또는 세부취향 결과를 이용한 즉시 추천 UI와 계산은
-          아직 실행하지 않습니다.
-        </p>
+              <Link href="/tests" style={linkButtonStyle}>
+                취향 테스트 보기
+              </Link>
+            </div>
 
-        <section
-          style={{
-            marginTop: 30,
-            borderRadius: 22,
-            border: "1px solid #c7d2fe",
-            background: "#eef2ff",
-            padding: 22,
-          }}
-        >
-          <p
-            style={{
-              margin: 0,
-              color: "#4338ca",
-              fontSize: 14,
-              fontWeight: 900,
-            }}
-          >
-            D+33 범위
-          </p>
-
-          <h2
-            style={{
-              margin: "8px 0 0",
-              color: "#0f172a",
-              fontSize: 23,
-              lineHeight: 1.4,
-              letterSpacing: "-0.03em",
-            }}
-          >
-            Primary 추천 결과는 /find에서 확인할 수 있어요.
-          </h2>
-
-          <p
-            style={{
-              margin: "10px 0 0",
-              color: "#475569",
-              fontSize: 15,
-              lineHeight: 1.7,
-            }}
-          >
-            재밌게 본 작품을 1~3개 선택하면 selected_webtoons 벡터로 추천을
-            생성합니다.
-          </p>
-        </section>
-
-        <div
-          style={{
-            marginTop: 28,
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 10,
-          }}
-        >
-          <Link
-            href="/find"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              minHeight: 48,
-              borderRadius: 14,
-              background: "#4f46e5",
-              color: "#ffffff",
-              padding: "12px 18px",
-              fontSize: 15,
-              fontWeight: 900,
-              textDecoration: "none",
-            }}
-          >
-            지금 볼 웹툰 찾기로 돌아가기
-          </Link>
-
-          <Link
-            href="/tests"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              minHeight: 48,
-              borderRadius: 14,
-              border: "1px solid #c7d2fe",
-              background: "#ffffff",
-              color: "#4338ca",
-              padding: "12px 18px",
-              fontSize: 15,
-              fontWeight: 900,
-              textDecoration: "none",
-            }}
-          >
-            테스트 목록 보기
-          </Link>
-        </div>
+            <FindRecommendationResult
+              selectionResult={selectionResult}
+              initialActionStates={session.actionStateByWebtoonId}
+              restoredSession={session}
+            />
+          </>
+        ) : (
+          <EmptyState />
+        )}
       </section>
     </main>
   );
 }
+
+function LoadingState() {
+  return (
+    <section
+      style={{
+        marginTop: 24,
+        borderRadius: 22,
+        border: "1px solid #e2e8f0",
+        background: "#f8fafc",
+        padding: 22,
+      }}
+    >
+      <h1
+        style={{
+          margin: 0,
+          color: "#0f172a",
+          fontSize: "clamp(30px, 6vw, 48px)",
+          lineHeight: 1.15,
+          letterSpacing: "-0.04em",
+        }}
+      >
+        추천 결과를 불러오고 있어요.
+      </h1>
+    </section>
+  );
+}
+
+function EmptyState() {
+  return (
+    <>
+      <h1
+        style={{
+          margin: 0,
+          color: "#0f172a",
+          fontSize: "clamp(36px, 7vw, 60px)",
+          lineHeight: 1.08,
+          letterSpacing: "-0.05em",
+        }}
+      >
+        아직 저장된 추천 결과가 없어요.
+      </h1>
+
+      <p
+        style={{
+          margin: "22px 0 0",
+          color: "#334155",
+          fontSize: 18,
+          lineHeight: 1.75,
+        }}
+      >
+        /find에서 재밌게 본 작품을 고르거나, 저장된 취향으로 바로
+        추천받아주세요.
+      </p>
+
+      <div
+        style={{
+          marginTop: 28,
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 10,
+        }}
+      >
+        <Link
+          href="/find"
+          style={{
+            ...linkButtonStyle,
+            border: "none",
+            background: "#4f46e5",
+            color: "#ffffff",
+          }}
+        >
+          지금 볼 웹툰 찾기
+        </Link>
+
+        <Link href="/tests" style={linkButtonStyle}>
+          취향 테스트 보기
+        </Link>
+      </div>
+    </>
+  );
+}
+
+const linkButtonStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  minHeight: 48,
+  borderRadius: 14,
+  border: "1px solid #c7d2fe",
+  background: "#ffffff",
+  color: "#4338ca",
+  padding: "12px 18px",
+  fontSize: 15,
+  fontWeight: 900,
+  textDecoration: "none",
+} as const;

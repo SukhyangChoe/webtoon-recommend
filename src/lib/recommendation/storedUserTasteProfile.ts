@@ -63,7 +63,9 @@ function toScoreMap(value: unknown): ScoreMap {
   if (!isRecord(value)) return {};
 
   return Object.fromEntries(
-    Object.entries(value).filter(([, score]) => typeof score === "number")
+    Object.entries(value).filter(([, score]) => {
+      return typeof score === "number" && Number.isFinite(score);
+    })
   ) as ScoreMap;
 }
 
@@ -73,12 +75,32 @@ function hasScores(scoreMap: ScoreMap) {
 
 function addScores(target: ScoreMap, source: ScoreMap): void {
   Object.entries(source).forEach(([key, value]) => {
+    if (!Number.isFinite(value)) return;
+
     target[key] = roundScore((target[key] ?? 0) + value);
   });
 }
 
 function roundScore(value: number) {
+  if (!Number.isFinite(value)) return 0;
+
   return Math.round(value * 10000) / 10000;
+}
+
+function hasPositiveFiniteNumber(value: unknown): boolean {
+  if (typeof value === "number") {
+    return Number.isFinite(value) && value > 0;
+  }
+
+  if (Array.isArray(value)) {
+    return value.some(hasPositiveFiniteNumber);
+  }
+
+  if (isRecord(value)) {
+    return Object.values(value).some(hasPositiveFiniteNumber);
+  }
+
+  return false;
 }
 
 export function hasAnyTasteScore(
@@ -91,14 +113,12 @@ export function hasAnyTasteScore(
     profile.userTypeScores,
     profile.userTagScores,
     profile.userAvoidanceScores,
-  ].some((scoreMap) => {
-    return Object.values(scoreMap).some((score) => {
-      return Number.isFinite(score) && score > 0;
-    });
-  });
+  ].some(hasPositiveFiniteNumber);
 }
 
 function normalizePercentageToGenreScore(value: number) {
+  if (!Number.isFinite(value)) return 0;
+
   if (value > 5) {
     return roundScore(value / 20);
   }
@@ -115,7 +135,9 @@ function scoreMapFromPercentObject(value: unknown): ScoreMap {
 
   return Object.fromEntries(
     Object.entries(value)
-      .filter(([, score]) => typeof score === "number")
+      .filter(([, score]) => {
+        return typeof score === "number" && Number.isFinite(score);
+      })
       .map(([key, score]) => [
         key,
         normalizePercentageToGenreScore(score as number),
@@ -136,11 +158,12 @@ function scoreMapFromPercentArray(value: unknown): ScoreMap {
       getStringValue(item, "genre");
 
     const rawScore =
-      typeof item.percentage === "number"
+      typeof item.percentage === "number" && Number.isFinite(item.percentage)
         ? item.percentage
-        : typeof item.finalGenrePercentage === "number"
+        : typeof item.finalGenrePercentage === "number" &&
+            Number.isFinite(item.finalGenrePercentage)
           ? item.finalGenrePercentage
-          : typeof item.value === "number"
+          : typeof item.value === "number" && Number.isFinite(item.value)
             ? item.value
             : undefined;
 
@@ -148,7 +171,11 @@ function scoreMapFromPercentArray(value: unknown): ScoreMap {
       return scoreMap;
     }
 
-    scoreMap[genreKey] = normalizePercentageToGenreScore(rawScore);
+    const normalizedScore = normalizePercentageToGenreScore(rawScore);
+
+    if (normalizedScore > 0) {
+      scoreMap[genreKey] = normalizedScore;
+    }
 
     return scoreMap;
   }, {});

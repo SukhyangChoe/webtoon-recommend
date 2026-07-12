@@ -20,9 +20,12 @@ import {
     HardFilterExclusionReason,
     RecommendationType,
     RecommendationVector,
+    FindRecommendationSelectionResult,
+    InstantRecommendationSelectionResult,
     SimilarWorkProfile,
     SimilarWorkRecommendation,
     SimilarWorkSelectionResult,
+    TasteScoreSource,
     SimilarWorkSelectedWebtoon,
     WebtoonSeedItem,
   } from "@/lib/recommendation/similarWorkRecommendation";
@@ -36,8 +39,11 @@ import {
     RecommendationVectorSource,
   } from "@/types/find";
 
-  export const FIND_PRIMARY_SESSION_STORAGE_KEY =
+  export const FIND_RECOMMENDATION_SESSION_STORAGE_KEY =
     "webtoon_find_primary_session";
+
+  export const FIND_PRIMARY_SESSION_STORAGE_KEY =
+    FIND_RECOMMENDATION_SESSION_STORAGE_KEY;
 
   export const FIND_PRIMARY_SESSION_SCHEMA_VERSION = "2.1.1" as const;
 
@@ -97,6 +103,7 @@ import {
     legacySourceVersion?: string;
   };
 
+  export type FindRecommendationSession = RecommendationSessionV211;
   export type FindPrimarySession = RecommendationSessionV211;
 
   export type SelectedSourceWebtoonSnapshot = {
@@ -128,6 +135,7 @@ import {
     reservePoolType?: "main_reserve" | "expand_reserve";
     reserveRank?: number;
     badgeType: RecommendationType;
+    tasteScoreSource: TasteScoreSource;
     status: "active" | "feedback_excluded";
 
     matchedTagKeys: string[];
@@ -201,6 +209,7 @@ import {
     reservePoolType?: string;
     reserveRank?: number;
     badgeType?: RecommendationType;
+    tasteScoreSource?: TasteScoreSource;
     status?: string;
     matchedTagKeys?: string[];
     matchScore?: number;
@@ -333,25 +342,49 @@ import {
       : {};
   }
 
-  function normalizeCurrentSession(parsed: RawRecord): RecommendationSessionV211 | null {
+  function normalizeCurrentSession(
+    parsed: RawRecord
+  ): RecommendationSessionV211 | null {
+    const recommendationMode = parsed.recommendationMode;
+    const vectorSource = parsed.vectorSource;
+    const isPrimarySession =
+      recommendationMode === "similar_work" &&
+      vectorSource === "selected_webtoons";
+    const isSecondarySession =
+      recommendationMode === "instant_recommendation" &&
+      vectorSource === "user_taste_profile";
+
     if (
       parsed.schemaVersion !== FIND_PRIMARY_SESSION_SCHEMA_VERSION ||
       parsed.scoreVersion !== FIND_RECOMMENDATION_SCORE_VERSION ||
-      parsed.recommendationMode !== "similar_work" ||
-      parsed.vectorSource !== "selected_webtoons" ||
+      (!isPrimarySession && !isSecondarySession) ||
       typeof parsed.sessionId !== "string"
     ) {
       return null;
     }
 
-    const createdAt = getStringValue(parsed, "createdAt") ?? new Date().toISOString();
+    const createdAt =
+      getStringValue(parsed, "createdAt") ?? new Date().toISOString();
+    const activeRecommendationVector = normalizeRecommendationVector(
+      parsed.activeRecommendationVector
+    );
+    const parsedProfileSnapshot = isRecord(parsed.profileSnapshot)
+      ? normalizeRecommendationVector(parsed.profileSnapshot)
+      : null;
+    const profileSnapshot = isSecondarySession
+      ? parsedProfileSnapshot ?? activeRecommendationVector
+      : parsedProfileSnapshot;
 
     return {
       schemaVersion: FIND_PRIMARY_SESSION_SCHEMA_VERSION,
       sessionId: parsed.sessionId,
       scoreVersion: FIND_RECOMMENDATION_SCORE_VERSION,
-      recommendationMode: "similar_work",
-      vectorSource: "selected_webtoons",
+      recommendationMode: isPrimarySession
+        ? "similar_work"
+        : "instant_recommendation",
+      vectorSource: isPrimarySession
+        ? "selected_webtoons"
+        : "user_taste_profile",
       selectedWebtoonIds: Array.isArray(parsed.selectedWebtoonIds)
         ? parsed.selectedWebtoonIds.filter(
             (value): value is string => typeof value === "string"
@@ -362,12 +395,8 @@ import {
             isRecord
           ) as unknown as SelectedWorkSourceSnapshot[])
         : [],
-      activeRecommendationVector: normalizeRecommendationVector(
-        parsed.activeRecommendationVector
-      ),
-      profileSnapshot: isRecord(parsed.profileSnapshot)
-        ? normalizeRecommendationVector(parsed.profileSnapshot)
-        : null,
+      activeRecommendationVector,
+      profileSnapshot,
       inputSnapshotAtSave: normalizeRecommendationVector(
         parsed.inputSnapshotAtSave
       ),
@@ -390,7 +419,8 @@ import {
       createdAt,
       updatedAt: getStringValue(parsed, "updatedAt") ?? createdAt,
       seedVersion:
-        getStringValue(parsed, "seedVersion") ?? FIND_PRIMARY_SESSION_SEED_VERSION,
+        getStringValue(parsed, "seedVersion") ??
+        FIND_PRIMARY_SESSION_SEED_VERSION,
       candidatePoolSize:
         getNumberValue(parsed, "candidatePoolSize") ??
         (Array.isArray(parsed.candidatePoolIds)
@@ -532,6 +562,7 @@ import {
       reservePoolType,
       reserveRank,
       badgeType: recommendation.recommendationType,
+      tasteScoreSource: recommendation.tasteScoreSource,
       status: actionState?.feedbackAction
         ? "feedback_excluded"
         : "active",
@@ -630,15 +661,15 @@ import {
     return [...merged.values()];
   }
 
-  export function createFindPrimarySession(params: {
-    selectionResult: SimilarWorkSelectionResult;
-    selectedSourceWebtoons: WebtoonSeedItem[];
+  export function createFindRecommendationSession(params: {
+    selectionResult: FindRecommendationSelectionResult;
+    selectedSourceWebtoons?: WebtoonSeedItem[];
     actionStateByWebtoonId?: RecommendationItemActionStateMap;
     previousSessionId?: string;
   }): RecommendationSessionV211 {
     const {
       selectionResult,
-      selectedSourceWebtoons,
+      selectedSourceWebtoons = [],
       actionStateByWebtoonId = {},
       previousSessionId,
     } = params;
@@ -660,8 +691,8 @@ import {
       schemaVersion: FIND_PRIMARY_SESSION_SCHEMA_VERSION,
       sessionId: previousSessionId ?? createSessionId(),
       scoreVersion: FIND_RECOMMENDATION_SCORE_VERSION,
-      recommendationMode: "similar_work",
-      vectorSource: "selected_webtoons",
+      recommendationMode: selectionResult.recommendationMode,
+      vectorSource: selectionResult.vectorSource,
       selectedWebtoonIds: selectedSourceWebtoons.map(
         (webtoon) => webtoon.canonicalWebtoonId
       ),
@@ -697,12 +728,31 @@ import {
       updatedAt: now,
       seedVersion: FIND_PRIMARY_SESSION_SEED_VERSION,
       candidatePoolSize: selectionResult.candidatePoolSize,
-      selectedWebtoons:
-        selectedSourceWebtoons.map(createSelectedSnapshot),
+      selectedWebtoons: selectedSourceWebtoons.map(createSelectedSnapshot),
       storedUserTasteProfileSnapshot:
         selectionResult.storedUserTasteProfile ?? undefined,
       actionStateByWebtoonId,
     };
+  }
+
+  export function createFindPrimarySession(params: {
+    selectionResult: SimilarWorkSelectionResult;
+    selectedSourceWebtoons: WebtoonSeedItem[];
+    actionStateByWebtoonId?: RecommendationItemActionStateMap;
+    previousSessionId?: string;
+  }): RecommendationSessionV211 {
+    return createFindRecommendationSession(params);
+  }
+
+  export function createFindSecondarySession(params: {
+    selectionResult: InstantRecommendationSelectionResult;
+    actionStateByWebtoonId?: RecommendationItemActionStateMap;
+    previousSessionId?: string;
+  }): RecommendationSessionV211 {
+    return createFindRecommendationSession({
+      ...params,
+      selectedSourceWebtoons: [],
+    });
   }
 
   export function saveFindPrimarySession(session: FindPrimarySession) {
@@ -727,7 +777,7 @@ import {
     );
   }
 
-  export function updateFindPrimarySessionActionStates(
+  export function updateFindRecommendationSessionActionStates(
     actionStateByWebtoonId: RecommendationItemActionStateMap
   ) {
     const currentSession = loadFindPrimarySession();
@@ -754,6 +804,13 @@ import {
         createFeedbackExcludedItems(actionStateByWebtoonId)
       ),
     });
+  }
+
+
+  export function updateFindPrimarySessionActionStates(
+    actionStateByWebtoonId: RecommendationItemActionStateMap
+  ) {
+    updateFindRecommendationSessionActionStates(actionStateByWebtoonId);
   }
 
   function applyActionStatesToSnapshots(
@@ -832,6 +889,8 @@ import {
       effectiveTasteRank,
       effectiveRank: effectiveTasteRank,
       recommendationType: snapshot.badgeType,
+      tasteScoreSource:
+        snapshot.tasteScoreSource ?? "selected_webtoons",
       candidate: {
         canonicalWebtoonId: snapshot.canonicalWebtoonId,
         title: scoreSnapshot.title,
@@ -926,13 +985,9 @@ import {
     };
   }
 
-  export function restoreSimilarWorkSelectionResultFromSession(
-    session: FindPrimarySession
-  ): SimilarWorkSelectionResult {
-    const selectedWebtoons = session.selectedWebtoons.map(
-      restoreSelectedWebtoon
-    );
-    const restoredSessionProfile = createRestoredSessionProfile(session);
+  export function restoreRecommendationSelectionResultFromSession(
+    session: FindRecommendationSession
+  ): FindRecommendationSelectionResult {
     const mainDisplayItems = session.displayedItems
       .filter((item) => item.section === "main_display")
       .map(restoreRecommendation);
@@ -949,21 +1004,10 @@ import {
       ...expansionDisplayItems,
       ...expandReservePool,
     ].sort((a, b) => a.rank - b.rank);
-
-    return {
-      mode: "similar_work",
-      recommendationMode: "similar_work",
-      vectorSource: "selected_webtoons",
+    const commonResult = {
       scoreVersion: FIND_RECOMMENDATION_SCORE_VERSION,
-      selectedWebtoons,
       activeRecommendationVector: session.activeRecommendationVector,
       inputSnapshotAtSave: session.inputSnapshotAtSave,
-      profileSnapshot: session.profileSnapshot,
-      similarWorkSessionVector: restoredSessionProfile,
-      userSimilarWorkProfile: restoredSessionProfile,
-      storedUserTasteProfile:
-        session.storedUserTasteProfileSnapshot ?? null,
-      hasLongTermProfile: Boolean(session.profileSnapshot),
       scoringVersion: FIND_RECOMMENDATION_SCORE_VERSION,
       candidatePoolSize: session.candidatePoolSize,
       candidatePoolIds: session.candidatePoolIds,
@@ -971,18 +1015,89 @@ import {
         canonicalWebtoonId: item.canonicalWebtoonId,
         reason: item.reason,
       })),
-      blendingWeights: {
-        selectedWorkTasteScore: session.profileSnapshot ? 0.8 : 1,
-        profileTasteScore: session.profileSnapshot ? 0.2 : 0,
-        stage1Weight: session.profileSnapshot ? 0.8 : 1,
-        longTermWeight: session.profileSnapshot ? 0.2 : 0,
-      },
       mainDisplayItems,
       mainReservePool,
       expansionCandidatePool,
       expansionDisplayItems,
       expandReservePool,
       recommendations: [...mainDisplayItems, ...expansionDisplayItems],
+    };
+
+    if (
+      session.recommendationMode === "instant_recommendation" &&
+      session.vectorSource === "user_taste_profile"
+    ) {
+      const profileSnapshot =
+        session.profileSnapshot ?? session.activeRecommendationVector;
+      const storedUserTasteProfile =
+        session.storedUserTasteProfileSnapshot ??
+        storedTasteProfileFromVector(profileSnapshot);
+
+      return {
+        ...commonResult,
+        mode: "instant_recommendation",
+        recommendationMode: "instant_recommendation",
+        vectorSource: "user_taste_profile",
+        selectedWebtoons: [],
+        profileSnapshot,
+        storedUserTasteProfile,
+        hasLongTermProfile: true,
+        blendingWeights: {
+          selectedWorkTasteScore: 0,
+          profileTasteScore: 1,
+          stage1Weight: 0,
+          longTermWeight: 1,
+        },
+      };
+    }
+
+    const selectedWebtoons = session.selectedWebtoons.map(
+      restoreSelectedWebtoon
+    );
+    const restoredSessionProfile = createRestoredSessionProfile(session);
+
+    return {
+      ...commonResult,
+      mode: "similar_work",
+      recommendationMode: "similar_work",
+      vectorSource: "selected_webtoons",
+      selectedWebtoons,
+      profileSnapshot: session.profileSnapshot,
+      similarWorkSessionVector: restoredSessionProfile,
+      userSimilarWorkProfile: restoredSessionProfile,
+      storedUserTasteProfile:
+        session.storedUserTasteProfileSnapshot ?? null,
+      hasLongTermProfile: Boolean(session.profileSnapshot),
+      blendingWeights: {
+        selectedWorkTasteScore: session.profileSnapshot ? 0.8 : 1,
+        profileTasteScore: session.profileSnapshot ? 0.2 : 0,
+        stage1Weight: session.profileSnapshot ? 0.8 : 1,
+        longTermWeight: session.profileSnapshot ? 0.2 : 0,
+      },
+    };
+  }
+
+  export function restoreSimilarWorkSelectionResultFromSession(
+    session: FindPrimarySession
+  ): SimilarWorkSelectionResult {
+    const result = restoreRecommendationSelectionResultFromSession(session);
+
+    if (result.recommendationMode !== "similar_work") {
+      throw new Error("FIND_SESSION_IS_NOT_PRIMARY");
+    }
+
+    return result;
+  }
+
+  function storedTasteProfileFromVector(
+    vector: RecommendationVector
+  ): StoredUserTasteProfile {
+    return {
+      sourceKeys: ["session_profile_snapshot"],
+      userGenreScores: vector.genreScores,
+      userTypeScores: vector.typeScores,
+      userTagScores: vector.tagScores,
+      userAvoidanceScores: vector.avoidanceTagScores,
     };
   }
 
@@ -1157,6 +1272,7 @@ import {
                 : undefined,
           reserveRank: item.reserveRank,
           badgeType: item.badgeType ?? "stable_match",
+          tasteScoreSource: item.tasteScoreSource ?? "selected_webtoons",
           status:
             item.status === "feedback_excluded"
               ? "feedback_excluded"

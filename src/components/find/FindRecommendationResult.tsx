@@ -6,10 +6,10 @@ import { RecommendationCard } from "./RecommendationCard";
 import { RecommendationMoreSection } from "./RecommendationMoreSection";
 import { SelectedSourceWorks } from "./SelectedSourceWorks";
 
-import { updateFindPrimarySessionActionStates } from "@/lib/storage/findPrimarySessionStorage";
+import { updateFindRecommendationSessionActionStates } from "@/lib/storage/findPrimarySessionStorage";
 
-import type { FindPrimarySession } from "@/lib/storage/findPrimarySessionStorage";
-import type { SimilarWorkSelectionResult } from "@/lib/recommendation/similarWorkRecommendation";
+import type { FindRecommendationSelectionResult } from "@/lib/recommendation/similarWorkRecommendation";
+import type { FindRecommendationSession } from "@/lib/storage/findPrimarySessionStorage";
 import type {
   RecommendationFeedbackAction,
   RecommendationItemActionState,
@@ -21,18 +21,21 @@ export function FindRecommendationResult({
   initialActionStates = {},
   restoredSession,
 }: {
-  selectionResult: SimilarWorkSelectionResult;
+  selectionResult: FindRecommendationSelectionResult;
   initialActionStates?: RecommendationItemActionStateMap;
-  restoredSession?: FindPrimarySession | null;
+  restoredSession?: FindRecommendationSession | null;
 }) {
   const [actionStates, setActionStates] =
     useState<RecommendationItemActionStateMap>(initialActionStates);
 
   const mainDisplayItems =
-    selectionResult.mainDisplayItems ?? selectionResult.recommendations.slice(0, 5);
+    selectionResult.mainDisplayItems ??
+    selectionResult.recommendations.slice(0, 5);
   const expansionDisplayItems =
     selectionResult.expansionDisplayItems ??
     selectionResult.recommendations.slice(5, 10);
+  const isSecondary =
+    selectionResult.recommendationMode === "instant_recommendation";
 
   function getBaseActionState(
     canonicalWebtoonId: string
@@ -45,8 +48,10 @@ export function FindRecommendationResult({
     );
   }
 
-  function persistActionStates(nextActionStates: RecommendationItemActionStateMap) {
-    updateFindPrimarySessionActionStates(nextActionStates);
+  function persistActionStates(
+    nextActionStates: RecommendationItemActionStateMap
+  ) {
+    updateFindRecommendationSessionActionStates(nextActionStates);
   }
 
   function handleToggleSaved(canonicalWebtoonId: string) {
@@ -135,7 +140,9 @@ export function FindRecommendationResult({
             fontWeight: 900,
           }}
         >
-          Primary · similar_work
+          {isSecondary
+            ? "Secondary · instant_recommendation"
+            : "Primary · similar_work"}
         </p>
 
         <h2
@@ -147,7 +154,9 @@ export function FindRecommendationResult({
             letterSpacing: "-0.04em",
           }}
         >
-          선택한 작품과 비슷한 후보를 골라봤어요.
+          {isSecondary
+            ? "저장된 취향으로 지금 보기 좋은 후보를 골라봤어요."
+            : "선택한 작품과 비슷한 후보를 골라봤어요."}
         </h2>
 
         <p
@@ -158,12 +167,17 @@ export function FindRecommendationResult({
             lineHeight: 1.7,
           }}
         >
-          먼저 선택한 작품의 취향 결로 후보를 만들고, 저장된 테스트 결과가 있으면
-          상위 후보 안에서만 8:2로 다시 정렬했어요.
+          {isSecondary
+            ? "추천 시작 당시의 userTasteProfile snapshot만 사용했어요. 추가 질문이나 7:3 혼합 없이 취향 점수를 계산했습니다."
+            : "먼저 선택한 작품의 취향 결로 후보를 만들고, 저장된 테스트 결과가 있으면 상위 후보 안에서만 8:2로 다시 정렬했어요."}
         </p>
       </div>
 
-      <SelectedSourceWorks selectedWebtoons={selectionResult.selectedWebtoons} />
+      {!isSecondary && selectionResult.selectedWebtoons.length > 0 ? (
+        <SelectedSourceWorks
+          selectedWebtoons={selectionResult.selectedWebtoons}
+        />
+      ) : null}
 
       <div
         style={{
@@ -181,7 +195,7 @@ export function FindRecommendationResult({
               letterSpacing: "-0.03em",
             }}
           >
-            핵심 추천
+            {isSecondary ? "취향 맞춤" : "핵심 추천"}
           </h3>
 
           <p
@@ -192,7 +206,9 @@ export function FindRecommendationResult({
               lineHeight: 1.6,
             }}
           >
-            선택한 작품과 가장 안정적으로 맞는 후보 5개예요.
+            {isSecondary
+              ? "현재 누적 취향과 가장 안정적으로 맞는 후보 5개예요."
+              : "선택한 작품과 가장 안정적으로 맞는 후보 5개예요."}
           </p>
         </div>
 
@@ -252,7 +268,8 @@ export function FindRecommendationResult({
               fontWeight: 900,
             }}
           >
-            개발 확인용 v2.1.1 scoring pipeline / session snapshot / actionStates
+            개발 확인용 v2.1.1 scoring pipeline / session snapshot /
+            actionStates
           </summary>
 
           <pre
@@ -269,11 +286,9 @@ export function FindRecommendationResult({
             {JSON.stringify(
               {
                 scoreVersion: selectionResult.scoreVersion,
-                recommendationMode:
-                  selectionResult.recommendationMode,
+                recommendationMode: selectionResult.recommendationMode,
                 vectorSource: selectionResult.vectorSource,
-                hasLongTermProfile:
-                  selectionResult.hasLongTermProfile,
+                hasLongTermProfile: selectionResult.hasLongTermProfile,
                 blendingWeights: selectionResult.blendingWeights,
                 activeRecommendationVector:
                   selectionResult.activeRecommendationVector,
@@ -288,8 +303,7 @@ export function FindRecommendationResult({
                   selectionResult.expansionCandidatePool,
                 expansionDisplayItems:
                   selectionResult.expansionDisplayItems,
-                expandReservePool:
-                  selectionResult.expandReservePool,
+                expandReservePool: selectionResult.expandReservePool,
                 restoredSession,
                 actionStates,
               },

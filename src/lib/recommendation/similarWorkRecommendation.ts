@@ -32,6 +32,7 @@ import {
   const PRIMARY_SELECTED_WORK_WEIGHT = 0.8;
   const PRIMARY_PROFILE_WEIGHT = 0.2;
   const PRIMARY_CANDIDATE_POOL_SIZE = 100;
+  const SECONDARY_CANDIDATE_POOL_SIZE = 50;
   const MAIN_POOL_SIZE = 15;
   const EXPANSION_POOL_END = 50;
 
@@ -125,6 +126,10 @@ import {
     userContentAxisScores: ScoreMap;
   };
 
+  export type TasteScoreSource =
+    | "selected_webtoons"
+    | "user_taste_profile";
+
   export type RecommendationType =
     | "stable_match"
     | "similar_texture"
@@ -154,13 +159,14 @@ import {
   export type SimilarWorkRecommendation = {
     /** successConfidence까지 반영한 최종 표시 순위 */
     rank: number;
-    /** 선택 작품 취향 점수만으로 정렬한 TOP100 진입 전 순위 */
+    /** Primary는 선택 작품 점수 순위, Secondary는 profileTasteScore 순위 */
     sourceTasteRank: number;
-    /** TOP100 안에서 장기 프로필 20%를 반영한 뒤의 순위 */
+    /** Primary는 8:2 반영 순위, Secondary는 profileTasteScore 순위 */
     effectiveTasteRank: number;
     /** D+33 초기 명칭 호환용 alias. effectiveTasteRank와 동일 */
     effectiveRank: number;
     recommendationType: RecommendationType;
+    tasteScoreSource: TasteScoreSource;
     candidate: {
       canonicalWebtoonId: string;
       title: string;
@@ -216,43 +222,54 @@ import {
     };
   };
 
-  export type SimilarWorkSelectionResult = {
-    mode: "similar_work";
-    recommendationMode: "similar_work";
-    vectorSource: "selected_webtoons";
+  export type RecommendationSelectionResultBase = {
     scoreVersion: typeof FIND_RECOMMENDATION_SCORE_VERSION;
-
     selectedWebtoons: SimilarWorkSelectedWebtoon[];
     activeRecommendationVector: RecommendationVector;
     inputSnapshotAtSave: RecommendationVector;
     profileSnapshot: RecommendationVector | null;
-
-    similarWorkSessionVector: SimilarWorkProfile;
-    userSimilarWorkProfile: SimilarWorkProfile;
     storedUserTasteProfile: StoredUserTasteProfile | null;
     hasLongTermProfile: boolean;
-
     scoringVersion: typeof FIND_RECOMMENDATION_SCORE_VERSION;
     candidatePoolSize: number;
     candidatePoolIds: string[];
     hardFilterExcludedItems: HardFilterExcludedItem[];
-
     blendingWeights: {
       selectedWorkTasteScore: number;
       profileTasteScore: number;
       stage1Weight: number;
       longTermWeight: number;
     };
-
     mainDisplayItems: SimilarWorkRecommendation[];
     mainReservePool: SimilarWorkRecommendation[];
     expansionCandidatePool: SimilarWorkRecommendation[];
     expansionDisplayItems: SimilarWorkRecommendation[];
     expandReservePool: SimilarWorkRecommendation[];
-
-    /** 기존 컴포넌트 호환용 10개 표시 결과 */
     recommendations: SimilarWorkRecommendation[];
   };
+
+  export type SimilarWorkSelectionResult = RecommendationSelectionResultBase & {
+    mode: "similar_work";
+    recommendationMode: "similar_work";
+    vectorSource: "selected_webtoons";
+    similarWorkSessionVector: SimilarWorkProfile;
+    userSimilarWorkProfile: SimilarWorkProfile;
+  };
+
+  export type InstantRecommendationSelectionResult =
+    RecommendationSelectionResultBase & {
+      mode: "instant_recommendation";
+      recommendationMode: "instant_recommendation";
+      vectorSource: "user_taste_profile";
+      selectedWebtoons: [];
+      profileSnapshot: RecommendationVector;
+      storedUserTasteProfile: StoredUserTasteProfile;
+      hasLongTermProfile: true;
+    };
+
+  export type FindRecommendationSelectionResult =
+    | SimilarWorkSelectionResult
+    | InstantRecommendationSelectionResult;
 
   export type SimilarWorkFilterContext = {
     alreadySeenWebtoonIds?: Iterable<string>;
@@ -282,8 +299,9 @@ import {
     matchedTagKeys: string[];
   };
 
-  type PrimaryCandidateDraft = {
+  type RecommendationCandidateDraft = {
     candidate: WebtoonSeedItem;
+    tasteScoreSource: TasteScoreSource;
     selectedWorkBreakdown: SelectedWorkTasteBreakdown;
     sourceTasteRank: number;
     effectiveTasteRank: number;
@@ -709,11 +727,23 @@ import {
     profile: StoredUserTasteProfile
   ): RecommendationVector {
     return {
-      genreScores: profile.userGenreScores,
-      typeScores: profile.userTypeScores,
-      tagScores: profile.userTagScores,
-      avoidanceTagScores: profile.userAvoidanceScores,
+      genreScores: { ...profile.userGenreScores },
+      typeScores: { ...profile.userTypeScores },
+      tagScores: { ...profile.userTagScores },
+      avoidanceTagScores: { ...profile.userAvoidanceScores },
       contentAxisScores: {},
+    };
+  }
+
+  function cloneStoredUserTasteProfile(
+    profile: StoredUserTasteProfile
+  ): StoredUserTasteProfile {
+    return {
+      sourceKeys: [...profile.sourceKeys],
+      userGenreScores: { ...profile.userGenreScores },
+      userTypeScores: { ...profile.userTypeScores },
+      userTagScores: { ...profile.userTagScores },
+      userAvoidanceScores: { ...profile.userAvoidanceScores },
     };
   }
 
@@ -942,7 +972,7 @@ import {
         ? recommendationVectorFromStoredProfile(storedUserTasteProfile)
         : null;
 
-    const hardFilterResult = applyPrimaryHardFilters({
+    const hardFilterResult = applyRecommendationHardFilters({
       selectedWebtoons,
       allWebtoons,
       filterContext,
@@ -985,7 +1015,7 @@ import {
     );
 
     const effectiveTasteRankedDrafts = candidatePool
-      .map<PrimaryCandidateDraft>((item) => {
+      .map<RecommendationCandidateDraft>((item) => {
         const candidate = item.candidate;
         const candidateTypeScores = flattenTypeScores(
           candidate.recommendation.typeScores
@@ -1030,6 +1060,7 @@ import {
 
         return {
           candidate,
+          tasteScoreSource: "selected_webtoons" as const,
           selectedWorkBreakdown: item.selectedWorkBreakdown,
           sourceTasteRank: item.sourceTasteRank,
           effectiveTasteRank: 0,
@@ -1065,36 +1096,13 @@ import {
       }
     );
 
-    const mainPool = effectiveRecommendations.slice(0, MAIN_POOL_SIZE);
-    const mainDisplayItems = mainPool.slice(0, 5).map((recommendation) => ({
-      ...recommendation,
-      recommendationType: "stable_match" as const,
-    }));
-    const mainReservePool = mainPool.slice(5).map((recommendation) => ({
-      ...recommendation,
-      recommendationType: "similar_texture" as const,
-    }));
-
-    const expansionCandidatePool = effectiveRecommendations
-      .slice(MAIN_POOL_SIZE, EXPANSION_POOL_END)
-      .map((recommendation) => ({
-        ...recommendation,
-        recommendationType: "taste_expansion" as const,
-      }));
-    const expansionDisplayItems = pickExpansionDisplayItems({
+    const {
       mainDisplayItems,
+      mainReservePool,
       expansionCandidatePool,
-    });
-    const expansionDisplayIdSet = new Set(
-      expansionDisplayItems.map(
-        (recommendation) => recommendation.candidate.canonicalWebtoonId
-      )
-    );
-    const expandReservePool = expansionCandidatePool.filter((recommendation) => {
-      return !expansionDisplayIdSet.has(
-        recommendation.candidate.canonicalWebtoonId
-      );
-    });
+      expansionDisplayItems,
+      expandReservePool,
+    } = buildRecommendationPools(effectiveRecommendations);
 
     return {
       mode: "similar_work",
@@ -1148,7 +1156,160 @@ import {
     };
   }
 
-  function applyPrimaryHardFilters(params: {
+
+  export function createInstantRecommendationSelectionResult(params: {
+    allWebtoons: WebtoonSeedItem[];
+    storedUserTasteProfile?: StoredUserTasteProfile | null;
+    filterContext?: SimilarWorkFilterContext;
+  }): InstantRecommendationSelectionResult {
+    const { allWebtoons, filterContext } = params;
+    const currentStoredUserTasteProfile =
+      params.storedUserTasteProfile ?? buildStoredUserTasteProfile();
+
+    if (
+      !hasAnyTasteScore(currentStoredUserTasteProfile) ||
+      !currentStoredUserTasteProfile
+    ) {
+      throw new Error("SECONDARY_TASTE_PROFILE_NOT_READY");
+    }
+
+    const storedUserTasteProfile = cloneStoredUserTasteProfile(
+      currentStoredUserTasteProfile
+    );
+    const profileSnapshot = recommendationVectorFromStoredProfile(
+      storedUserTasteProfile
+    );
+    const activeRecommendationVector = profileSnapshot;
+    const hardFilterResult = applyRecommendationHardFilters({
+      selectedWebtoons: [],
+      allWebtoons,
+      filterContext,
+    });
+
+    const profileTasteRankedDrafts = hardFilterResult.candidates
+      .map<RecommendationCandidateDraft>((candidate) => {
+        const candidateTypeScores = flattenTypeScores(
+          candidate.recommendation.typeScores
+        );
+        const candidateTagScores = candidate.recommendation.tagScores ?? {};
+        const candidateAvoidanceTagScores =
+          candidate.recommendation.avoidanceTagScores ?? {};
+        const profileBreakdown = calculateProfileTasteScore({
+          profileSnapshot,
+          candidateGenreScores: candidate.recommendation.genreScores,
+          candidateTypeScores,
+          candidateTagScores,
+          candidateAvoidanceTagScores,
+        });
+        const selectedWorkBreakdown =
+          createSelectedWorkCompatibleBreakdownFromProfile(profileBreakdown);
+        const effectiveTasteScore = profileBreakdown.profileTasteScore;
+        const riskSafetyScore = calculateRiskSafetyScore(
+          candidateAvoidanceTagScores
+        );
+        const {
+          normalizedQualityScore,
+          successConfidenceScore,
+        } = calculateSuccessConfidenceScore({
+          qualityScore: candidate.metadata.qualityScore,
+          riskSafetyScore,
+        });
+        const displayRecommendationScore =
+          calculateDisplayRecommendationScore({
+            effectiveTasteScore,
+            successConfidenceScore,
+          });
+
+        return {
+          candidate,
+          tasteScoreSource: "user_taste_profile",
+          selectedWorkBreakdown,
+          sourceTasteRank: 0,
+          effectiveTasteRank: 0,
+          profileBreakdown,
+          effectiveTasteScore,
+          riskSafetyScore,
+          normalizedQualityScore,
+          successConfidenceScore,
+          displayRecommendationScore,
+          matchedTagKeys: profileBreakdown.matchedTagKeys,
+        };
+      })
+      .sort(sortByProfileTasteScore)
+      .map((draft, index) => ({
+        ...draft,
+        sourceTasteRank: index + 1,
+        effectiveTasteRank: index + 1,
+      }));
+
+    const displayRankedDrafts = [...profileTasteRankedDrafts].sort(
+      sortByDisplayRecommendationScore
+    );
+    const effectiveRecommendations = displayRankedDrafts
+      .map((draft, index) => {
+        return createRecommendationFromDraft({
+          draft,
+          rank: index + 1,
+          recommendationType: "stable_match",
+        });
+      })
+      .slice(0, SECONDARY_CANDIDATE_POOL_SIZE);
+    const {
+      mainDisplayItems,
+      mainReservePool,
+      expansionCandidatePool,
+      expansionDisplayItems,
+      expandReservePool,
+    } = buildRecommendationPools(effectiveRecommendations);
+
+    return {
+      mode: "instant_recommendation",
+      recommendationMode: "instant_recommendation",
+      vectorSource: "user_taste_profile",
+      scoreVersion: FIND_RECOMMENDATION_SCORE_VERSION,
+      selectedWebtoons: [],
+      activeRecommendationVector,
+      inputSnapshotAtSave: activeRecommendationVector,
+      profileSnapshot,
+      storedUserTasteProfile,
+      hasLongTermProfile: true,
+      scoringVersion: FIND_RECOMMENDATION_SCORE_VERSION,
+      candidatePoolSize: effectiveRecommendations.length,
+      candidatePoolIds: effectiveRecommendations.map(
+        (recommendation) => recommendation.candidate.canonicalWebtoonId
+      ),
+      hardFilterExcludedItems: hardFilterResult.excludedItems,
+      blendingWeights: {
+        selectedWorkTasteScore: 0,
+        profileTasteScore: 1,
+        stage1Weight: 0,
+        longTermWeight: 1,
+      },
+      mainDisplayItems,
+      mainReservePool,
+      expansionCandidatePool,
+      expansionDisplayItems,
+      expandReservePool,
+      recommendations: [...mainDisplayItems, ...expansionDisplayItems],
+    };
+  }
+
+  function createSelectedWorkCompatibleBreakdownFromProfile(
+    profileBreakdown: ProfileTasteBreakdown
+  ): SelectedWorkTasteBreakdown {
+    return {
+      genreMatch: profileBreakdown.genreMatch,
+      typeMatch: profileBreakdown.typeMatch,
+      tagMatch: profileBreakdown.tagMatch,
+      contentAxisMatch: 0,
+      positiveRaw: profileBreakdown.positiveRaw,
+      userAvoidancePenalty: profileBreakdown.profileAvoidancePenalty,
+      selectedWorkTasteScore: profileBreakdown.profileTasteScore,
+      matchedTagKeys: profileBreakdown.matchedTagKeys,
+    };
+  }
+
+  function applyRecommendationHardFilters(params: {
     selectedWebtoons: WebtoonSeedItem[];
     allWebtoons: WebtoonSeedItem[];
     filterContext?: SimilarWorkFilterContext;
@@ -1342,7 +1503,7 @@ import {
   }
 
   function createRecommendationFromDraft(params: {
-    draft: PrimaryCandidateDraft;
+    draft: RecommendationCandidateDraft;
     rank: number;
     recommendationType: RecommendationType;
   }): SimilarWorkRecommendation {
@@ -1365,6 +1526,7 @@ import {
       effectiveTasteRank: draft.effectiveTasteRank,
       effectiveRank: draft.effectiveTasteRank,
       recommendationType,
+      tasteScoreSource: draft.tasteScoreSource,
       candidate: {
         canonicalWebtoonId: candidate.canonicalWebtoonId,
         title: candidate.title,
@@ -1374,7 +1536,9 @@ import {
         status: candidate.metadata.status,
         recommendationReason:
           candidate.recommendation.recommendationReason ??
-          "선택한 작품의 취향 신호와 비슷한 점이 있는 후보입니다.",
+          (draft.tasteScoreSource === "user_taste_profile"
+            ? "저장된 취향 프로필과 맞닿는 점이 있는 후보입니다."
+            : "선택한 작품의 취향 신호와 비슷한 점이 있는 후보입니다."),
         sourceDb: candidate.sourceDb,
         sourceWeight: candidate.sourceWeight,
         primaryContentAxisKey: candidate.primaryContentAxisKey,
@@ -1446,9 +1610,27 @@ import {
     );
   }
 
+
+  function sortByProfileTasteScore(
+    a: RecommendationCandidateDraft,
+    b: RecommendationCandidateDraft
+  ) {
+    const aProfileTasteScore = a.profileBreakdown?.profileTasteScore ?? 0;
+    const bProfileTasteScore = b.profileBreakdown?.profileTasteScore ?? 0;
+
+    if (bProfileTasteScore !== aProfileTasteScore) {
+      return bProfileTasteScore - aProfileTasteScore;
+    }
+
+    return a.candidate.canonicalWebtoonId.localeCompare(
+      b.candidate.canonicalWebtoonId,
+      "ko-KR"
+    );
+  }
+
   function sortByEffectiveTasteScore(
-    a: PrimaryCandidateDraft,
-    b: PrimaryCandidateDraft
+    a: RecommendationCandidateDraft,
+    b: RecommendationCandidateDraft
   ) {
     if (b.effectiveTasteScore !== a.effectiveTasteScore) {
       return b.effectiveTasteScore - a.effectiveTasteScore;
@@ -1475,8 +1657,8 @@ import {
   }
 
   function sortByDisplayRecommendationScore(
-    a: PrimaryCandidateDraft,
-    b: PrimaryCandidateDraft
+    a: RecommendationCandidateDraft,
+    b: RecommendationCandidateDraft
   ) {
     if (b.displayRecommendationScore !== a.displayRecommendationScore) {
       return b.displayRecommendationScore - a.displayRecommendationScore;
@@ -1529,6 +1711,49 @@ import {
     secondaryTagKeys: string[]
   ) {
     return [...new Set([...primaryTagKeys, ...secondaryTagKeys])].slice(0, 8);
+  }
+
+
+  function buildRecommendationPools(
+    recommendations: SimilarWorkRecommendation[]
+  ) {
+    const mainPool = recommendations.slice(0, MAIN_POOL_SIZE);
+    const mainDisplayItems = mainPool.slice(0, 5).map((recommendation) => ({
+      ...recommendation,
+      recommendationType: "stable_match" as const,
+    }));
+    const mainReservePool = mainPool.slice(5).map((recommendation) => ({
+      ...recommendation,
+      recommendationType: "similar_texture" as const,
+    }));
+    const expansionCandidatePool = recommendations
+      .slice(MAIN_POOL_SIZE, EXPANSION_POOL_END)
+      .map((recommendation) => ({
+        ...recommendation,
+        recommendationType: "taste_expansion" as const,
+      }));
+    const expansionDisplayItems = pickExpansionDisplayItems({
+      mainDisplayItems,
+      expansionCandidatePool,
+    });
+    const expansionDisplayIdSet = new Set(
+      expansionDisplayItems.map(
+        (recommendation) => recommendation.candidate.canonicalWebtoonId
+      )
+    );
+    const expandReservePool = expansionCandidatePool.filter((recommendation) => {
+      return !expansionDisplayIdSet.has(
+        recommendation.candidate.canonicalWebtoonId
+      );
+    });
+
+    return {
+      mainDisplayItems,
+      mainReservePool,
+      expansionCandidatePool,
+      expansionDisplayItems,
+      expandReservePool,
+    };
   }
 
   function pickExpansionDisplayItems(params: {

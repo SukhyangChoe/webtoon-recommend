@@ -257,44 +257,31 @@ export function RecommendationCard({
         {recommendation.candidate.recommendationReason}
       </p>
 
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 8,
-        }}
-      >
-        {tagLabels.length > 0 ? (
-          tagLabels.map((tagLabel) => (
+      {tagLabels.length > 0 && (
+        <div
+            style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 8,
+            }}
+        >
+            {tagLabels.map((tagLabel) => (
             <span
-              key={tagLabel}
-              style={{
+                key={tagLabel}
+                style={{
                 borderRadius: 999,
                 background: "#f1f5f9",
                 color: "#334155",
                 padding: "8px 11px",
                 fontSize: 14,
                 fontWeight: 900,
-              }}
+                }}
             >
-              #{tagLabel}
+                #{tagLabel}
             </span>
-          ))
-        ) : (
-          <span
-            style={{
-              borderRadius: 999,
-              background: "#f1f5f9",
-              color: "#334155",
-              padding: "8px 11px",
-              fontSize: 14,
-              fontWeight: 900,
-            }}
-          >
-            #취향 접점
-          </span>
+            ))}
+        </div>
         )}
-      </div>
 
       <div
         style={{
@@ -434,6 +421,8 @@ export function RecommendationCard({
                 effectiveRank: recommendation.effectiveRank,
                 recommendationType:
                   recommendation.recommendationType,
+                tasteScoreSource:
+                  recommendation.tasteScoreSource,
                 sourceDb: recommendation.candidate.sourceDb,
                 sourceWeight: recommendation.candidate.sourceWeight,
                 primaryContentAxisKey:
