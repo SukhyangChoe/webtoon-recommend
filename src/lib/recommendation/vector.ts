@@ -1,5 +1,9 @@
 export type ScoreMap = Record<string, number>;
 
+export type NestedScoreMap = Record<string, ScoreMap>;
+
+export type TypeScoreMap = ScoreMap | NestedScoreMap;
+
 export type WeightedScoreMap = {
   scoreMap: ScoreMap;
   weight: number;
@@ -7,6 +11,10 @@ export type WeightedScoreMap = {
 
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 export function addScoreMaps(scoreMaps: ScoreMap[]): ScoreMap {
@@ -85,14 +93,24 @@ export function getPositiveWeightSum(weights: number[]): number {
   );
 }
 
-export function flattenTypeScores(
-  typeScores?: Record<string, ScoreMap>
-): ScoreMap {
-  if (!typeScores) return {};
+/**
+ * 작품 DB의 장르별 중첩 typeScores와 기존 userTasteProfile의 평탄화된
+ * typeScores를 모두 같은 비교 벡터로 변환합니다.
+ */
+export function flattenTypeScores(typeScores?: TypeScoreMap): ScoreMap {
+  if (!typeScores || !isRecord(typeScores)) return {};
 
-  return Object.values(typeScores).reduce<ScoreMap>(
-    (flattenedScores, genreTypeScores) => {
-      Object.entries(genreTypeScores).forEach(([typeKey, score]) => {
+  return Object.entries(typeScores).reduce<ScoreMap>(
+    (flattenedScores, [key, value]) => {
+      if (isFiniteNumber(value)) {
+        flattenedScores[key] =
+          (flattenedScores[key] ?? 0) + value;
+        return flattenedScores;
+      }
+
+      if (!isRecord(value)) return flattenedScores;
+
+      Object.entries(value).forEach(([typeKey, score]) => {
         if (!isFiniteNumber(score)) return;
 
         flattenedScores[typeKey] =

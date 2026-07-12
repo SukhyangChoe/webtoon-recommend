@@ -109,6 +109,12 @@ export type StoredDetailTestResult = {
    * 사용자 화면에 직접 노출하지 않는다.
    */
   genreKey?: string;
+
+  /**
+   * 실제 테스트 결과에 존재할 때만 추천 입력으로 전달한다.
+   * 값이 없으면 빈 점수로 만들지 않는다.
+   */
+  artStyleScores?: ScoreMap;
 };
 
 export type StoredTestResult =

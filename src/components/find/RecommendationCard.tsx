@@ -257,31 +257,31 @@ export function RecommendationCard({
         {recommendation.candidate.recommendationReason}
       </p>
 
-      {tagLabels.length > 0 && (
+      {tagLabels.length > 0 ? (
         <div
-            style={{
+          style={{
             display: "flex",
             flexWrap: "wrap",
             gap: 8,
-            }}
+          }}
         >
-            {tagLabels.map((tagLabel) => (
+          {tagLabels.map((tagLabel) => (
             <span
-                key={tagLabel}
-                style={{
+              key={tagLabel}
+              style={{
                 borderRadius: 999,
                 background: "#f1f5f9",
                 color: "#334155",
                 padding: "8px 11px",
                 fontSize: 14,
                 fontWeight: 900,
-                }}
+              }}
             >
-                #{tagLabel}
+              #{tagLabel}
             </span>
-            ))}
+          ))}
         </div>
-        )}
+      ) : null}
 
       <div
         style={{
@@ -441,6 +441,8 @@ export function RecommendationCard({
                   recommendation.selectedWorkTasteScore,
                 profileTasteScore:
                   recommendation.profileTasteScore,
+                detailTestTasteScore:
+                  recommendation.detailTestTasteScore,
                 effectiveTasteScore:
                   recommendation.effectiveTasteScore,
                 riskSafetyScore:

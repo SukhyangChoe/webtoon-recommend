@@ -34,7 +34,11 @@ export function FindRecommendationResult({
   const expansionDisplayItems =
     selectionResult.expansionDisplayItems ??
     selectionResult.recommendations.slice(5, 10);
-  const isSecondary =
+  const isDetailTestRecommendation =
+    selectionResult.vectorSource === "detail_test_result";
+  const isProfileRecommendation =
+    selectionResult.vectorSource === "user_taste_profile";
+  const isInstantRecommendation =
     selectionResult.recommendationMode === "instant_recommendation";
 
   function getBaseActionState(
@@ -140,9 +144,11 @@ export function FindRecommendationResult({
             fontWeight: 900,
           }}
         >
-          {isSecondary
-            ? "Secondary · instant_recommendation"
-            : "Primary · similar_work"}
+          {isDetailTestRecommendation
+            ? "Detail · detail_test_result"
+            : isProfileRecommendation
+              ? "Secondary · instant_recommendation"
+              : "Primary · similar_work"}
         </p>
 
         <h2
@@ -154,9 +160,11 @@ export function FindRecommendationResult({
             letterSpacing: "-0.04em",
           }}
         >
-          {isSecondary
-            ? "저장된 취향으로 지금 보기 좋은 후보를 골라봤어요."
-            : "선택한 작품과 비슷한 후보를 골라봤어요."}
+          {isDetailTestRecommendation
+            ? "방금 확인한 세부취향으로 지금 보기 좋은 후보를 골라봤어요."
+            : isProfileRecommendation
+              ? "저장된 취향으로 지금 보기 좋은 후보를 골라봤어요."
+              : "선택한 작품과 비슷한 후보를 골라봤어요."}
         </h2>
 
         <p
@@ -167,13 +175,16 @@ export function FindRecommendationResult({
             lineHeight: 1.7,
           }}
         >
-          {isSecondary
-            ? "추천 시작 당시의 userTasteProfile snapshot만 사용했어요. 추가 질문이나 7:3 혼합 없이 취향 점수를 계산했습니다."
-            : "먼저 선택한 작품의 취향 결로 후보를 만들고, 저장된 테스트 결과가 있으면 상위 후보 안에서만 8:2로 다시 정렬했어요."}
+          {isDetailTestRecommendation
+            ? "방금 완료한 해당 장르 세부취향 결과만 사용했어요. 누적 userTasteProfile이나 다른 테스트 결과는 섞지 않았습니다."
+            : isProfileRecommendation
+              ? "추천 시작 당시의 userTasteProfile snapshot만 사용했어요. 추가 질문이나 7:3 혼합 없이 취향 점수를 계산했습니다."
+              : "먼저 선택한 작품의 취향 결로 후보를 만들고, 저장된 테스트 결과가 있으면 상위 후보 안에서만 8:2로 다시 정렬했어요."}
         </p>
       </div>
 
-      {!isSecondary && selectionResult.selectedWebtoons.length > 0 ? (
+      {!isInstantRecommendation &&
+      selectionResult.selectedWebtoons.length > 0 ? (
         <SelectedSourceWorks
           selectedWebtoons={selectionResult.selectedWebtoons}
         />
@@ -195,7 +206,7 @@ export function FindRecommendationResult({
               letterSpacing: "-0.03em",
             }}
           >
-            {isSecondary ? "취향 맞춤" : "핵심 추천"}
+            {isInstantRecommendation ? "취향 맞춤" : "핵심 추천"}
           </h3>
 
           <p
@@ -206,9 +217,11 @@ export function FindRecommendationResult({
               lineHeight: 1.6,
             }}
           >
-            {isSecondary
-              ? "현재 누적 취향과 가장 안정적으로 맞는 후보 5개예요."
-              : "선택한 작품과 가장 안정적으로 맞는 후보 5개예요."}
+            {isDetailTestRecommendation
+              ? "방금 확인한 세부취향과 가장 안정적으로 맞는 후보 5개예요."
+              : isProfileRecommendation
+                ? "현재 누적 취향과 가장 안정적으로 맞는 후보 5개예요."
+                : "선택한 작품과 가장 안정적으로 맞는 후보 5개예요."}
           </p>
         </div>
 
@@ -268,7 +281,7 @@ export function FindRecommendationResult({
               fontWeight: 900,
             }}
           >
-            개발 확인용 v2.1.1 scoring pipeline / session snapshot /
+            개발 확인용 v2.1.2 scoring pipeline / session snapshot /
             actionStates
           </summary>
 
@@ -288,6 +301,7 @@ export function FindRecommendationResult({
                 scoreVersion: selectionResult.scoreVersion,
                 recommendationMode: selectionResult.recommendationMode,
                 vectorSource: selectionResult.vectorSource,
+                sourceTestKey: selectionResult.sourceTestKey,
                 hasLongTermProfile: selectionResult.hasLongTermProfile,
                 blendingWeights: selectionResult.blendingWeights,
                 activeRecommendationVector:

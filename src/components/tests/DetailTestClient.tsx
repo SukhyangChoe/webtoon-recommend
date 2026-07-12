@@ -7,6 +7,9 @@ import {
   loadTestResult,
   saveTestResult,
 } from "@/lib/storage/resultRepository";
+import {
+  saveDetailTestRecommendationEntry,
+} from "@/lib/storage/findRecommendationEntryStorage";
 import type {
   DetailTestAnswer,
   DetailTestCalculatedScores,
@@ -755,11 +758,13 @@ function ResultTagList({ tags }: { tags: string[] }) {
 
 function DetailResultView({
   genreLabel,
+  sourceTestKey,
   result,
   onRetake,
   debugData,
 }: {
   genreLabel: string;
+  sourceTestKey: DetailTestKey;
   result: DetailTestResult;
   onRetake: () => void;
   debugData: unknown;
@@ -877,7 +882,15 @@ function DetailResultView({
           <button
             type="button"
             onClick={() => {
-              window.location.href = "/find";
+              saveDetailTestRecommendationEntry(sourceTestKey);
+
+              const searchParams = new URLSearchParams({
+                mode: "instant_recommendation",
+                vectorSource: "detail_test_result",
+                sourceTestKey,
+              });
+
+              window.location.href = `/find/results?${searchParams.toString()}`;
             }}
             style={{
               width: "100%",
@@ -1294,6 +1307,7 @@ export function DetailTestClient({ config }: { config: DetailTestConfig }) {
     return (
       <DetailResultView
         genreLabel={genreLabel}
+        sourceTestKey={detailTestKey}
         result={currentResult}
         onRetake={handleRetake}
         debugData={debugData}
