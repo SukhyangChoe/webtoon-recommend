@@ -1,20 +1,75 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { RecommendationCard } from "./RecommendationCard";
 import { RecommendationMoreSection } from "./RecommendationMoreSection";
+import { RecommendationSlotComplete } from "./RecommendationSlotComplete";
 import { SelectedSourceWorks } from "./SelectedSourceWorks";
 
-import { updateFindRecommendationSessionActionStates } from "@/lib/storage/findPrimarySessionStorage";
+import { replaceRecommendationItem } from "@/lib/recommendation/replaceRecommendationItem";
+import {
+  restoreRecommendationSelectionResultFromSession,
+  saveFindPrimarySession,
+  updateFindRecommendationSessionActionStates,
+} from "@/lib/storage/findPrimarySessionStorage";
 
-import type { FindRecommendationSelectionResult } from "@/lib/recommendation/similarWorkRecommendation";
+import type {
+  FindRecommendationSelectionResult,
+  SimilarWorkRecommendation,
+} from "@/lib/recommendation/similarWorkRecommendation";
 import type { FindRecommendationSession } from "@/lib/storage/findPrimarySessionStorage";
 import type {
+  RecommendationDisplaySection,
+  RecommendationDisplaySlot,
   RecommendationFeedbackAction,
   RecommendationItemActionState,
   RecommendationItemActionStateMap,
 } from "@/types/find";
+
+function createFallbackDisplaySlots(
+  selectionResult: FindRecommendationSelectionResult
+): RecommendationDisplaySlot[] {
+  const mainSlots = Array.from({ length: 5 }, (_, index) => ({
+    section: "main_display" as const,
+    slot: index + 1,
+    currentWebtoonId:
+      selectionResult.mainDisplayItems[index]?.candidate
+        .canonicalWebtoonId ?? null,
+    replacementCount: 0,
+  }));
+  const expansionSlots = Array.from({ length: 5 }, (_, index) => ({
+    section: "expansion_display" as const,
+    slot: index + 6,
+    currentWebtoonId:
+      selectionResult.expansionDisplayItems[index]?.candidate
+        .canonicalWebtoonId ?? null,
+    replacementCount: 0,
+  }));
+
+  return [...mainSlots, ...expansionSlots];
+}
+
+function getReplacementNotice(params: {
+  status:
+    | "replaced"
+    | "replacement_limit_reached"
+    | "reserve_pool_empty";
+  section: RecommendationDisplaySection;
+  slot: number;
+}) {
+  const { status, section, slot } = params;
+  const slotLabel =
+    section === "main_display"
+      ? `TOP ${slot}`
+      : `확장 추천 ${slot - 5}`;
+
+  if (status === "replaced") {
+    return `${slotLabel}에 다음 예비 추천을 넣었어요.`;
+  }
+
+  return `${slotLabel}의 예비 추천을 모두 보여드렸어요.`;
+}
 
 export function FindRecommendationResult({
   selectionResult,
@@ -25,21 +80,68 @@ export function FindRecommendationResult({
   initialActionStates?: RecommendationItemActionStateMap;
   restoredSession?: FindRecommendationSession | null;
 }) {
+  const [currentSession, setCurrentSession] =
+    useState<FindRecommendationSession | null>(restoredSession ?? null);
+  const [currentSelectionResult, setCurrentSelectionResult] =
+    useState<FindRecommendationSelectionResult>(selectionResult);
   const [actionStates, setActionStates] =
     useState<RecommendationItemActionStateMap>(initialActionStates);
+  const [replacementNotice, setReplacementNotice] = useState<string | null>(
+    null
+  );
 
-  const mainDisplayItems =
-    selectionResult.mainDisplayItems ??
-    selectionResult.recommendations.slice(0, 5);
-  const expansionDisplayItems =
-    selectionResult.expansionDisplayItems ??
-    selectionResult.recommendations.slice(5, 10);
+  const recommendationById = useMemo(() => {
+    const recommendations = [
+      ...currentSelectionResult.mainDisplayItems,
+      ...currentSelectionResult.expansionDisplayItems,
+    ];
+
+    return new Map(
+      recommendations.map((recommendation) => [
+        recommendation.candidate.canonicalWebtoonId,
+        recommendation,
+      ])
+    );
+  }, [currentSelectionResult]);
+
+  const displaySlots = useMemo(() => {
+    return (
+      currentSession?.displaySlots ??
+      createFallbackDisplaySlots(currentSelectionResult)
+    );
+  }, [currentSelectionResult, currentSession]);
+
+  const mainDisplayItems = useMemo(() => {
+    return displaySlots
+      .filter((slot) => slot.section === "main_display")
+      .sort((a, b) => a.slot - b.slot)
+      .map((slot) => ({
+        ...slot,
+        recommendation: slot.currentWebtoonId
+          ? recommendationById.get(slot.currentWebtoonId) ?? null
+          : null,
+      }));
+  }, [displaySlots, recommendationById]);
+
+  const expansionDisplayItems = useMemo(() => {
+    return displaySlots
+      .filter((slot) => slot.section === "expansion_display")
+      .sort((a, b) => a.slot - b.slot)
+      .map((slot) => ({
+        ...slot,
+        recommendation: slot.currentWebtoonId
+          ? recommendationById.get(slot.currentWebtoonId) ?? null
+          : null,
+      }));
+  }, [displaySlots, recommendationById]);
+
   const isDetailTestRecommendation =
-    selectionResult.vectorSource === "detail_test_result";
+    currentSelectionResult.vectorSource === "detail_test_result";
   const isProfileRecommendation =
-    selectionResult.vectorSource === "user_taste_profile";
+    currentSelectionResult.vectorSource === "user_taste_profile";
   const isInstantRecommendation =
-    selectionResult.recommendationMode === "instant_recommendation";
+    currentSelectionResult.recommendationMode ===
+    "instant_recommendation";
 
   function getBaseActionState(
     canonicalWebtoonId: string
@@ -55,7 +157,12 @@ export function FindRecommendationResult({
   function persistActionStates(
     nextActionStates: RecommendationItemActionStateMap
   ) {
-    updateFindRecommendationSessionActionStates(nextActionStates);
+    const updatedSession =
+      updateFindRecommendationSessionActionStates(nextActionStates);
+
+    if (updatedSession) {
+      setCurrentSession(updatedSession);
+    }
   }
 
   function handleToggleSaved(canonicalWebtoonId: string) {
@@ -78,28 +185,39 @@ export function FindRecommendationResult({
     });
   }
 
-  function handleSetFeedbackAction(
-    canonicalWebtoonId: string,
-    feedbackAction: RecommendationFeedbackAction
-  ) {
-    setActionStates((currentActionStates) => {
-      const currentState = currentActionStates[canonicalWebtoonId] ?? {
-        canonicalWebtoonId,
-        isSaved: false,
-      };
-      const nextActionStates = {
-        ...currentActionStates,
-        [canonicalWebtoonId]: {
-          ...currentState,
-          feedbackAction,
-          feedbackCreatedAt: new Date().toISOString(),
-        },
-      };
+  function handleSetFeedbackAction(params: {
+    section: RecommendationDisplaySection;
+    slot: number;
+    canonicalWebtoonId: string;
+    feedbackAction: RecommendationFeedbackAction;
+  }) {
+    if (!currentSession) return;
 
-      persistActionStates(nextActionStates);
-
-      return nextActionStates;
+    const replacementResult = replaceRecommendationItem({
+      session: currentSession,
+      section: params.section,
+      slot: params.slot,
+      excludedWebtoonId: params.canonicalWebtoonId,
+      reason: params.feedbackAction,
     });
+
+    saveFindPrimarySession(replacementResult.updatedSession);
+    setCurrentSession(replacementResult.updatedSession);
+    setActionStates(
+      replacementResult.updatedSession.actionStateByWebtoonId
+    );
+    setCurrentSelectionResult(
+      restoreRecommendationSelectionResultFromSession(
+        replacementResult.updatedSession
+      )
+    );
+    setReplacementNotice(
+      getReplacementNotice({
+        status: replacementResult.status,
+        section: params.section,
+        slot: params.slot,
+      })
+    );
   }
 
   function handleMarkOfficialOpened(canonicalWebtoonId: string) {
@@ -120,6 +238,44 @@ export function FindRecommendationResult({
 
       return nextActionStates;
     });
+  }
+
+  function renderMainRecommendation(params: {
+    slot: number;
+    recommendation: SimilarWorkRecommendation | null;
+  }) {
+    const { slot, recommendation } = params;
+
+    if (!recommendation) {
+      return (
+        <RecommendationSlotComplete
+          key={`main-slot-${slot}`}
+          slotLabel={`TOP ${slot}`}
+        />
+      );
+    }
+
+    const canonicalWebtoonId =
+      recommendation.candidate.canonicalWebtoonId;
+
+    return (
+      <RecommendationCard
+        key={`main-slot-${slot}-${canonicalWebtoonId}`}
+        recommendation={recommendation}
+        rankLabel={`TOP ${slot}`}
+        actionState={getBaseActionState(canonicalWebtoonId)}
+        onToggleSaved={handleToggleSaved}
+        onSetFeedbackAction={(webtoonId, feedbackAction) => {
+          handleSetFeedbackAction({
+            section: "main_display",
+            slot,
+            canonicalWebtoonId: webtoonId,
+            feedbackAction,
+          });
+        }}
+        onMarkOfficialOpened={handleMarkOfficialOpened}
+      />
+    );
   }
 
   return (
@@ -183,10 +339,28 @@ export function FindRecommendationResult({
         </p>
       </div>
 
+      {replacementNotice ? (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            borderRadius: 14,
+            background: "#eef2ff",
+            color: "#4338ca",
+            padding: "12px 14px",
+            fontSize: 14,
+            fontWeight: 800,
+            lineHeight: 1.55,
+          }}
+        >
+          {replacementNotice}
+        </div>
+      ) : null}
+
       {!isInstantRecommendation &&
-      selectionResult.selectedWebtoons.length > 0 ? (
+      currentSelectionResult.selectedWebtoons.length > 0 ? (
         <SelectedSourceWorks
-          selectedWebtoons={selectionResult.selectedWebtoons}
+          selectedWebtoons={currentSelectionResult.selectedWebtoons}
         />
       ) : null}
 
@@ -225,42 +399,26 @@ export function FindRecommendationResult({
           </p>
         </div>
 
-        {mainDisplayItems.length > 0 ? (
-          mainDisplayItems.map((recommendation) => {
-            const canonicalWebtoonId =
-              recommendation.candidate.canonicalWebtoonId;
-
-            return (
-              <RecommendationCard
-                key={canonicalWebtoonId}
-                recommendation={recommendation}
-                actionState={getBaseActionState(canonicalWebtoonId)}
-                onToggleSaved={handleToggleSaved}
-                onSetFeedbackAction={handleSetFeedbackAction}
-                onMarkOfficialOpened={handleMarkOfficialOpened}
-              />
-            );
+        {mainDisplayItems.map((item) =>
+          renderMainRecommendation({
+            slot: item.slot,
+            recommendation: item.recommendation,
           })
-        ) : (
-          <p
-            style={{
-              margin: 0,
-              color: "#64748b",
-              fontSize: 15,
-              lineHeight: 1.7,
-            }}
-          >
-            추천 후보가 없어요. seed의 officialUrl, urlStatus, inputStatus를
-            확인해야 합니다.
-          </p>
         )}
       </div>
 
       <RecommendationMoreSection
-        recommendations={expansionDisplayItems}
+        items={expansionDisplayItems}
         actionStates={actionStates}
         onToggleSaved={handleToggleSaved}
-        onSetFeedbackAction={handleSetFeedbackAction}
+        onSetFeedbackAction={(slot, webtoonId, feedbackAction) => {
+          handleSetFeedbackAction({
+            section: "expansion_display",
+            slot,
+            canonicalWebtoonId: webtoonId,
+            feedbackAction,
+          });
+        }}
         onMarkOfficialOpened={handleMarkOfficialOpened}
       />
 
@@ -281,8 +439,8 @@ export function FindRecommendationResult({
               fontWeight: 900,
             }}
           >
-            개발 확인용 v2.1.2 scoring pipeline / session snapshot /
-            actionStates
+            개발 확인용 v2.1.2 scoring pipeline / replacement / session
+            snapshot
           </summary>
 
           <pre
@@ -298,27 +456,33 @@ export function FindRecommendationResult({
           >
             {JSON.stringify(
               {
-                scoreVersion: selectionResult.scoreVersion,
-                recommendationMode: selectionResult.recommendationMode,
-                vectorSource: selectionResult.vectorSource,
-                sourceTestKey: selectionResult.sourceTestKey,
-                hasLongTermProfile: selectionResult.hasLongTermProfile,
-                blendingWeights: selectionResult.blendingWeights,
+                scoreVersion: currentSelectionResult.scoreVersion,
+                recommendationMode:
+                  currentSelectionResult.recommendationMode,
+                vectorSource: currentSelectionResult.vectorSource,
+                sourceTestKey: currentSelectionResult.sourceTestKey,
+                hasLongTermProfile:
+                  currentSelectionResult.hasLongTermProfile,
+                blendingWeights: currentSelectionResult.blendingWeights,
                 activeRecommendationVector:
-                  selectionResult.activeRecommendationVector,
-                profileSnapshot: selectionResult.profileSnapshot,
-                candidatePoolSize: selectionResult.candidatePoolSize,
-                candidatePoolIds: selectionResult.candidatePoolIds,
+                  currentSelectionResult.activeRecommendationVector,
+                profileSnapshot: currentSelectionResult.profileSnapshot,
+                candidatePoolSize:
+                  currentSelectionResult.candidatePoolSize,
+                candidatePoolIds: currentSelectionResult.candidatePoolIds,
                 hardFilterExcludedItems:
-                  selectionResult.hardFilterExcludedItems,
-                mainDisplayItems: selectionResult.mainDisplayItems,
-                mainReservePool: selectionResult.mainReservePool,
+                  currentSelectionResult.hardFilterExcludedItems,
+                mainDisplayItems:
+                  currentSelectionResult.mainDisplayItems,
+                mainReservePool:
+                  currentSelectionResult.mainReservePool,
                 expansionCandidatePool:
-                  selectionResult.expansionCandidatePool,
+                  currentSelectionResult.expansionCandidatePool,
                 expansionDisplayItems:
-                  selectionResult.expansionDisplayItems,
-                expandReservePool: selectionResult.expandReservePool,
-                restoredSession,
+                  currentSelectionResult.expansionDisplayItems,
+                expandReservePool:
+                  currentSelectionResult.expandReservePool,
+                currentSession,
                 actionStates,
               },
               null,

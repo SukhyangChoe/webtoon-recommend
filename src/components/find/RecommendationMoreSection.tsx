@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { RecommendationCard } from "./RecommendationCard";
+import { RecommendationSlotComplete } from "./RecommendationSlotComplete";
 
 import type { SimilarWorkRecommendation } from "@/lib/recommendation/similarWorkRecommendation";
 import type {
@@ -11,17 +12,24 @@ import type {
   RecommendationItemActionStateMap,
 } from "@/types/find";
 
+type ExpansionDisplayItem = {
+  slot: number;
+  replacementCount: number;
+  recommendation: SimilarWorkRecommendation | null;
+};
+
 export function RecommendationMoreSection({
-  recommendations,
+  items,
   actionStates,
   onToggleSaved,
   onSetFeedbackAction,
   onMarkOfficialOpened,
 }: {
-  recommendations: SimilarWorkRecommendation[];
+  items: ExpansionDisplayItem[];
   actionStates: RecommendationItemActionStateMap;
   onToggleSaved: (canonicalWebtoonId: string) => void;
   onSetFeedbackAction: (
+    slot: number,
     canonicalWebtoonId: string,
     feedbackAction: RecommendationFeedbackAction
   ) => void;
@@ -29,7 +37,7 @@ export function RecommendationMoreSection({
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
-  if (recommendations.length === 0) {
+  if (items.length === 0) {
     return null;
   }
 
@@ -104,18 +112,36 @@ export function RecommendationMoreSection({
             </p>
           </div>
 
-          {recommendations.map((recommendation, index) => {
+          {items.map((item) => {
+            const recommendation = item.recommendation;
+            const displayNumber = item.slot - 5;
+
+            if (!recommendation) {
+              return (
+                <RecommendationSlotComplete
+                  key={`expansion-slot-${item.slot}`}
+                  slotLabel={`확장 추천 ${displayNumber}`}
+                />
+              );
+            }
+
             const canonicalWebtoonId =
               recommendation.candidate.canonicalWebtoonId;
 
             return (
               <RecommendationCard
-                key={canonicalWebtoonId}
+                key={`expansion-slot-${item.slot}-${canonicalWebtoonId}`}
                 recommendation={recommendation}
-                rankLabel={`확장 추천 ${index + 1}`}
+                rankLabel={`확장 추천 ${displayNumber}`}
                 actionState={getBaseActionState(canonicalWebtoonId)}
                 onToggleSaved={onToggleSaved}
-                onSetFeedbackAction={onSetFeedbackAction}
+                onSetFeedbackAction={(webtoonId, feedbackAction) => {
+                  onSetFeedbackAction(
+                    item.slot,
+                    webtoonId,
+                    feedbackAction
+                  );
+                }}
                 onMarkOfficialOpened={onMarkOfficialOpened}
               />
             );

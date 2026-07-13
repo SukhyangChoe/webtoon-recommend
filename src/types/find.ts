@@ -21,3 +21,14 @@ export type RecommendationItemActionStateMap = Record<
   string,
   RecommendationItemActionState
 >;
+
+export type RecommendationDisplaySection =
+  | "main_display"
+  | "expansion_display";
+
+export type RecommendationDisplaySlot = {
+  section: RecommendationDisplaySection;
+  slot: number;
+  currentWebtoonId: string | null;
+  replacementCount: number;
+};
