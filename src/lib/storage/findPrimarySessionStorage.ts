@@ -2,8 +2,11 @@ import {
   FIND_RECOMMENDATION_SCORE_VERSION,
   calculateRiskSafetyScore,
   calculateSuccessConfidenceScore,
+  getEffectiveTagScores,
   getGenreLabel,
   getStatusLabel,
+  isVisualAppealExcluded,
+  normalizeUserQualityPreference,
 } from "@/lib/recommendation/similarWorkRecommendation";
 import {
   getSourceWeight,
@@ -20,6 +23,7 @@ import type {
   HardFilterExclusionReason,
   RecommendationType,
   RecommendationVector,
+  UserQualityPreference,
   VisualStyleMigrationStatus,
   FindRecommendationSelectionResult,
   DetailTestRecommendationSelectionResult,
@@ -54,7 +58,7 @@ export const FIND_PRIMARY_SESSION_STORAGE_KEY =
 export const FIND_PRIMARY_SESSION_SCHEMA_VERSION = "2.1.1" as const;
 
 export const FIND_PRIMARY_SESSION_SEED_VERSION =
-  "webtoons_seed_v1_1_all_genres_integrated_v0_46";
+  "webtoons_seed_v1_1_all_genres_integrated_v0_50";
 
 export type SelectedWorkSourceSnapshot = {
   canonicalWebtoonId: string;
@@ -92,6 +96,7 @@ export type RecommendationSessionV211 = {
   activeRecommendationVector: RecommendationVector;
   profileSnapshot: RecommendationVector | null;
   inputSnapshotAtSave: RecommendationVector;
+  userQualityPreferenceSnapshot: UserQualityPreference | null;
 
   candidatePoolIds: string[];
   displayedItems: RecommendationItemSnapshot[];
@@ -165,6 +170,15 @@ export type RecommendationItemSnapshot = {
   effectiveTasteScore: number;
   riskSafetyScore: number;
   normalizedQualityScore: number;
+  artQualityScore?: number | null;
+  storyQualityScore?: number | null;
+  qualityFloorPenalty?: number;
+  personalizedQualityScore?: number;
+  artToneMismatchPenalty?: number;
+  profileArtToneMismatchPenalty?: number;
+  detailArtToneMismatchPenalty?: number;
+  effectiveTagScores?: ScoreMap;
+  visualAppealExcluded?: boolean;
   successConfidenceScore: number;
   displayRecommendationScore: number;
 
@@ -208,6 +222,8 @@ export type WebtoonScoreSnapshotAtSave = {
   ageRating?: string;
   isAdult?: boolean;
   qualityScore?: number;
+  qualityBand?: number;
+  qualityScoreSource?: string;
   qualityFactors?: ScoreMap;
   genreScores: ScoreMap;
   typeScores: ScoreMap;
@@ -216,6 +232,8 @@ export type WebtoonScoreSnapshotAtSave = {
   contentAxisScores: ScoreMap;
   artStyleScores?: ScoreMap;
   visualStyleMigrationStatus?: VisualStyleMigrationStatus;
+  effectiveTagScores?: ScoreMap;
+  visualAppealExcluded?: boolean;
   recommendationReason?: string;
 };
 
@@ -318,6 +336,45 @@ function normalizeVisualStyleMigrationStatus(
   return "legacy_visual_appeal";
 }
 
+function normalizeStoredUserQualityPreference(
+  value: unknown
+): UserQualityPreference | null {
+  if (!isRecord(value)) return null;
+
+  const artQualitySensitivity = getNumberValue(
+    value,
+    "artQualitySensitivity"
+  );
+  const storyQualitySensitivity = getNumberValue(
+    value,
+    "storyQualitySensitivity"
+  );
+  const minArtQuality = getNumberValue(value, "minArtQuality");
+  const minStoryQuality = getNumberValue(value, "minStoryQuality");
+
+  if (
+    artQualitySensitivity === undefined ||
+    storyQualitySensitivity === undefined ||
+    minArtQuality === undefined ||
+    minStoryQuality === undefined
+  ) {
+    return null;
+  }
+
+  return normalizeUserQualityPreference({
+    artQualitySensitivity,
+    storyQualitySensitivity,
+    minArtQuality,
+    minStoryQuality,
+    ...(typeof value.artAbsoluteFloor === "boolean"
+      ? { artAbsoluteFloor: value.artAbsoluteFloor }
+      : {}),
+    ...(typeof value.storyAbsoluteFloor === "boolean"
+      ? { storyAbsoluteFloor: value.storyAbsoluteFloor }
+      : {}),
+  });
+}
+
 function normalizeRecommendationVector(value: unknown): RecommendationVector {
   if (!isRecord(value)) {
     return emptyRecommendationVector();
@@ -370,13 +427,20 @@ function recommendationVectorFromStoredProfile(
 ): RecommendationVector | undefined {
   if (!isRecord(value)) return undefined;
 
+  const artStyleScores = toScoreMap(value.userArtStyleScores);
   const vector: RecommendationVector = {
     genreScores: toScoreMap(value.userGenreScores),
     typeScores: toScoreMap(value.userTypeScores),
     tagScores: toScoreMap(value.userTagScores),
     avoidanceTagScores: toScoreMap(value.userAvoidanceScores),
     contentAxisScores: {},
-    visualStyleMigrationStatus: "legacy_visual_appeal",
+    ...(Object.keys(artStyleScores).length > 0
+      ? { artStyleScores }
+      : {}),
+    visualStyleMigrationStatus:
+      Object.keys(artStyleScores).length > 0
+        ? "art_style_v1_ready"
+        : "legacy_visual_appeal",
   };
 
   const hasPositiveScore = (valueToCheck: unknown): boolean => {
@@ -756,6 +820,10 @@ function normalizeCurrentSession(
     inputSnapshotAtSave: normalizeRecommendationVector(
       parsed.inputSnapshotAtSave
     ),
+    userQualityPreferenceSnapshot:
+      normalizeStoredUserQualityPreference(
+        parsed.userQualityPreferenceSnapshot
+      ),
     candidatePoolIds: Array.isArray(parsed.candidatePoolIds)
       ? parsed.candidatePoolIds.filter(
           (value): value is string => typeof value === "string"
@@ -820,6 +888,15 @@ function safeParseSession(value: string | null): FindPrimarySession | null {
 function createSelectedScoreSnapshot(
   webtoon: WebtoonSeedItem
 ): WebtoonScoreSnapshotAtSave {
+  const tagScores = webtoon.recommendation.tagScores ?? {};
+  const visualStyleMigrationStatus =
+    webtoon.recommendation.visualStyleMigrationStatus ??
+    "legacy_visual_appeal";
+  const effectiveTagScores = getEffectiveTagScores(
+    tagScores,
+    visualStyleMigrationStatus
+  );
+
   return {
     scoreVersion: webtoon.recommendation.scoreVersion,
     canonicalWebtoonId: webtoon.canonicalWebtoonId,
@@ -839,15 +916,21 @@ function createSelectedScoreSnapshot(
     ageRating: webtoon.metadata.ageRating,
     isAdult: webtoon.metadata.isAdult,
     qualityScore: webtoon.metadata.qualityScore,
+    qualityBand: webtoon.metadata.qualityBand,
+    qualityScoreSource: webtoon.metadata.qualityScoreSource,
     qualityFactors: webtoon.metadata.qualityFactors,
     genreScores: webtoon.recommendation.genreScores,
     typeScores: flattenTypeScores(webtoon.recommendation.typeScores),
-    tagScores: webtoon.recommendation.tagScores ?? {},
+    tagScores,
     avoidanceTagScores: webtoon.recommendation.avoidanceTagScores ?? {},
     contentAxisScores: webtoon.recommendation.contentAxisScores ?? {},
     artStyleScores: webtoon.recommendation.artStyleScores,
-    visualStyleMigrationStatus:
-      webtoon.recommendation.visualStyleMigrationStatus,
+    visualStyleMigrationStatus,
+    effectiveTagScores,
+    visualAppealExcluded: isVisualAppealExcluded(
+      tagScores,
+      visualStyleMigrationStatus
+    ),
     recommendationReason: webtoon.recommendation.recommendationReason,
   };
 }
@@ -873,7 +956,12 @@ function createRecommendationScoreSnapshot(
       recommendation.candidate.primaryContentAxisKey,
     displayAxisLabel: recommendation.candidate.displayAxisLabel,
     status: recommendation.candidate.status,
-    qualityScore: roundScore(recommendation.normalizedQualityScore * 5),
+    qualityScore:
+      recommendation.debug.candidateQualityScore ?? undefined,
+    qualityBand:
+      recommendation.debug.candidateQualityBand ?? undefined,
+    qualityScoreSource:
+      recommendation.debug.candidateQualityScoreSource ?? undefined,
     qualityFactors:
       recommendation.debug.candidateQualityFactors ?? undefined,
     genreScores: recommendation.debug.candidateGenreScores,
@@ -886,6 +974,10 @@ function createRecommendationScoreSnapshot(
     artStyleScores: recommendation.debug.candidateArtStyleScores,
     visualStyleMigrationStatus:
       recommendation.debug.candidateVisualStyleMigrationStatus,
+    effectiveTagScores:
+      recommendation.debug.candidateEffectiveTagScores,
+    visualAppealExcluded:
+      recommendation.debug.candidateVisualAppealExcluded,
     recommendationReason:
       recommendation.candidate.recommendationReason,
   };
@@ -959,6 +1051,19 @@ function createRecommendationSnapshot(params: {
     effectiveTasteScore: recommendation.effectiveTasteScore,
     riskSafetyScore: recommendation.riskSafetyScore,
     normalizedQualityScore: recommendation.normalizedQualityScore,
+    artQualityScore: recommendation.artQualityScore,
+    storyQualityScore: recommendation.storyQualityScore,
+    qualityFloorPenalty: recommendation.qualityFloorPenalty,
+    personalizedQualityScore: recommendation.personalizedQualityScore,
+    artToneMismatchPenalty:
+      recommendation.artToneMismatchPenalty,
+    profileArtToneMismatchPenalty:
+      profileBreakdown?.artToneMismatchPenalty,
+    detailArtToneMismatchPenalty:
+      detailTestBreakdown?.artToneMismatchPenalty,
+    effectiveTagScores: recommendation.effectiveTagScores,
+    visualAppealExcluded:
+      recommendation.visualAppealExcluded,
     successConfidenceScore: recommendation.successConfidenceScore,
     displayRecommendationScore:
       recommendation.displayRecommendationScore,
@@ -1101,6 +1206,8 @@ export function createFindRecommendationSession(params: {
       selectionResult.activeRecommendationVector,
     profileSnapshot: selectionResult.profileSnapshot,
     inputSnapshotAtSave: selectionResult.inputSnapshotAtSave,
+    userQualityPreferenceSnapshot:
+      selectionResult.userQualityPreferenceSnapshot,
     candidatePoolIds: selectionResult.candidatePoolIds,
     displayedItems,
     displaySlots: createDefaultDisplaySlots({
@@ -1296,6 +1403,42 @@ function restoreRecommendation(
     scoreSnapshot.sourceWeight ?? getSourceWeight(sourceDb);
   const displayAxisLabel = getSnapshotDisplayAxisLabel(scoreSnapshot);
   const contentAxisScores = scoreSnapshot.contentAxisScores ?? {};
+  const visualStyleMigrationStatus =
+    scoreSnapshot.visualStyleMigrationStatus ??
+    "legacy_visual_appeal";
+  const effectiveTagScores =
+    snapshot.effectiveTagScores ??
+    scoreSnapshot.effectiveTagScores ??
+    getEffectiveTagScores(
+      scoreSnapshot.tagScores ?? {},
+      visualStyleMigrationStatus
+    );
+  const visualAppealExcluded =
+    snapshot.visualAppealExcluded ??
+    scoreSnapshot.visualAppealExcluded ??
+    isVisualAppealExcluded(
+      scoreSnapshot.tagScores ?? {},
+      visualStyleMigrationStatus
+    );
+  const legacyQualityBreakdown = calculateSuccessConfidenceScore({
+    qualityScore: scoreSnapshot.qualityScore,
+    qualityFactors: scoreSnapshot.qualityFactors,
+    riskSafetyScore: snapshot.riskSafetyScore,
+  });
+  const artQualityScore =
+    snapshot.artQualityScore === undefined
+      ? legacyQualityBreakdown.artQualityScore
+      : snapshot.artQualityScore;
+  const storyQualityScore =
+    snapshot.storyQualityScore === undefined
+      ? legacyQualityBreakdown.storyQualityScore
+      : snapshot.storyQualityScore;
+  const qualityFloorPenalty = snapshot.qualityFloorPenalty ?? 0;
+  const personalizedQualityScore =
+    snapshot.personalizedQualityScore ??
+    snapshot.normalizedQualityScore;
+  const artToneMismatchPenalty =
+    snapshot.artToneMismatchPenalty ?? 0;
   const effectiveTasteRank =
     snapshot.effectiveTasteRank ??
     snapshot.candidatePoolRank ??
@@ -1341,6 +1484,13 @@ function restoreRecommendation(
     effectiveTasteScore: snapshot.effectiveTasteScore,
     riskSafetyScore: snapshot.riskSafetyScore,
     normalizedQualityScore: snapshot.normalizedQualityScore,
+    artQualityScore,
+    storyQualityScore,
+    qualityFloorPenalty,
+    personalizedQualityScore,
+    artToneMismatchPenalty,
+    effectiveTagScores,
+    visualAppealExcluded,
     successConfidenceScore: snapshot.successConfidenceScore,
     displayRecommendationScore: snapshot.displayRecommendationScore,
     matchedTagKeys: snapshot.matchedTagKeys,
@@ -1356,12 +1506,13 @@ function restoreRecommendation(
       candidateGenreScores: scoreSnapshot.genreScores,
       candidateTypeScores: scoreSnapshot.typeScores,
       candidateTagScores: scoreSnapshot.tagScores,
+      candidateEffectiveTagScores: effectiveTagScores,
+      candidateVisualAppealExcluded: visualAppealExcluded,
       candidateAvoidanceTagScores: scoreSnapshot.avoidanceTagScores,
       candidateContentAxisScores: contentAxisScores,
-      candidateArtStyleScores: scoreSnapshot.artStyleScores ?? {},
+      candidateArtStyleScores: scoreSnapshot.artStyleScores,
       candidateVisualStyleMigrationStatus:
-        scoreSnapshot.visualStyleMigrationStatus ??
-        "legacy_visual_appeal",
+        visualStyleMigrationStatus,
       candidateSourceDb: sourceDb,
       candidateSourceType: scoreSnapshot.sourceType ?? sourceDb,
       candidateSourceWeight: sourceWeight,
@@ -1371,6 +1522,10 @@ function restoreRecommendation(
           : null,
       candidateQualityEvidenceGateDecision:
         scoreSnapshot.qualityEvidenceGateDecision ?? null,
+      candidateQualityScore: scoreSnapshot.qualityScore ?? null,
+      candidateQualityBand: scoreSnapshot.qualityBand ?? null,
+      candidateQualityScoreSource:
+        scoreSnapshot.qualityScoreSource ?? null,
       candidateQualityFactors: scoreSnapshot.qualityFactors ?? null,
       candidateDisplayAxisLabel: displayAxisLabel,
       selectedWorkBreakdown: {
@@ -1380,6 +1535,7 @@ function restoreRecommendation(
         contentAxisMatch: snapshot.contentAxisMatch,
         positiveRaw: snapshot.selectedPositiveRaw ?? 0,
         userAvoidancePenalty: snapshot.userAvoidancePenalty,
+        artToneMismatchPenalty,
         selectedWorkTasteScore: snapshot.selectedWorkTasteScore,
         matchedTagKeys: snapshot.matchedTagKeys,
       },
@@ -1392,6 +1548,8 @@ function restoreRecommendation(
               positiveRaw: snapshot.profilePositiveRaw ?? 0,
               profileAvoidancePenalty:
                 snapshot.profileAvoidancePenalty ?? 0,
+              artToneMismatchPenalty:
+                snapshot.profileArtToneMismatchPenalty ?? 0,
               profileTasteScore: snapshot.profileTasteScore,
               matchedTagKeys: snapshot.matchedTagKeys,
             }
@@ -1409,6 +1567,9 @@ function restoreRecommendation(
               userAvoidancePenalty:
                 snapshot.detailAvoidancePenalty ??
                 snapshot.userAvoidancePenalty,
+              artToneMismatchPenalty:
+                snapshot.detailArtToneMismatchPenalty ??
+                artToneMismatchPenalty,
               detailTestTasteScore: snapshot.detailTestTasteScore,
               matchedTagKeys: snapshot.matchedTagKeys,
             }
@@ -1480,6 +1641,8 @@ export function restoreRecommendationSelectionResultFromSession(
     scoreVersion: FIND_RECOMMENDATION_SCORE_VERSION,
     activeRecommendationVector: session.activeRecommendationVector,
     inputSnapshotAtSave: session.inputSnapshotAtSave,
+    userQualityPreferenceSnapshot:
+      session.userQualityPreferenceSnapshot ?? null,
     scoringVersion: FIND_RECOMMENDATION_SCORE_VERSION,
     candidatePoolSize: session.candidatePoolSize,
     candidatePoolIds: session.candidatePoolIds,
@@ -1600,6 +1763,9 @@ function storedTasteProfileFromVector(
     userTypeScores: flattenTypeScores(vector.typeScores),
     userTagScores: vector.tagScores,
     userAvoidanceScores: vector.avoidanceTagScores,
+    ...(vector.artStyleScores
+      ? { userArtStyleScores: vector.artStyleScores }
+      : {}),
   };
 }
 
@@ -1675,6 +1841,7 @@ function adaptLegacySession(parsed: RawRecord): RecommendationSessionV211 | null
     activeRecommendationVector,
     profileSnapshot: profileSnapshot ?? null,
     inputSnapshotAtSave: activeRecommendationVector,
+    userQualityPreferenceSnapshot: null,
     candidatePoolIds: [...new Set(
       allCandidateSnapshots
         .sort((a, b) => a.currentRank - b.currentRank)

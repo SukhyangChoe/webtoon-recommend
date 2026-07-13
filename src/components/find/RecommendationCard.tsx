@@ -454,6 +454,31 @@ export function RecommendationCard({
                   recommendation.riskSafetyScore,
                 normalizedQualityScore:
                   recommendation.normalizedQualityScore,
+                artQualityScore:
+                  recommendation.artQualityScore,
+                storyQualityScore:
+                  recommendation.storyQualityScore,
+                qualityFloorPenalty:
+                  recommendation.qualityFloorPenalty,
+                personalizedQualityScore:
+                  recommendation.personalizedQualityScore,
+                artToneMismatchPenalty:
+                  recommendation.artToneMismatchPenalty,
+                effectiveTagScores:
+                  recommendation.effectiveTagScores,
+                visualAppealExcluded:
+                  recommendation.visualAppealExcluded,
+                visualStyleMigrationStatus:
+                  recommendation.debug
+                    .candidateVisualStyleMigrationStatus,
+                artStyleScores:
+                  recommendation.debug.candidateArtStyleScores,
+                qualityScore:
+                  recommendation.debug.candidateQualityScore,
+                qualityBand:
+                  recommendation.debug.candidateQualityBand,
+                qualityScoreSource:
+                  recommendation.debug.candidateQualityScoreSource,
                 successConfidenceScore:
                   recommendation.successConfidenceScore,
                 displayRecommendationScore:

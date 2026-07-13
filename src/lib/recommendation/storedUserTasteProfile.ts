@@ -8,6 +8,7 @@ export type StoredUserTasteProfile = {
   userTypeScores: ScoreMap;
   userTagScores: ScoreMap;
   userAvoidanceScores: ScoreMap;
+  userArtStyleScores?: ScoreMap;
 };
 
 type RawRecord = Record<string, unknown>;
@@ -113,6 +114,7 @@ export function hasAnyTasteScore(
     profile.userTypeScores,
     profile.userTagScores,
     profile.userAvoidanceScores,
+    profile.userArtStyleScores,
   ].some(hasPositiveFiniteNumber);
 }
 
@@ -245,6 +247,7 @@ export function buildStoredUserTasteProfile(): StoredUserTasteProfile | null {
   const userTypeScores: ScoreMap = {};
   const userTagScores: ScoreMap = {};
   const userAvoidanceScores: ScoreMap = {};
+  const userArtStyleScores: ScoreMap = {};
 
   const genrePreferenceResult = loadRawTestResult("genre_preference");
   const genrePreferenceScores = getGenrePreferenceScores(genrePreferenceResult);
@@ -264,12 +267,14 @@ export function buildStoredUserTasteProfile(): StoredUserTasteProfile | null {
     const branchScores = toScoreMap(detailResult.branchScores);
     const tagScores = toScoreMap(detailResult.tagScores);
     const avoidanceTagScores = toScoreMap(detailResult.avoidanceTagScores);
+    const artStyleScores = toScoreMap(detailResult.artStyleScores);
     const mainBranchKey = getStringValue(detailResult, "mainBranchKey");
 
     if (
       !hasScores(branchScores) &&
       !hasScores(tagScores) &&
       !hasScores(avoidanceTagScores) &&
+      !hasScores(artStyleScores) &&
       !mainBranchKey
     ) {
       return;
@@ -280,6 +285,7 @@ export function buildStoredUserTasteProfile(): StoredUserTasteProfile | null {
     addScores(userTypeScores, branchScores);
     addScores(userTagScores, tagScores);
     addScores(userAvoidanceScores, avoidanceTagScores);
+    addScores(userArtStyleScores, artStyleScores);
 
     if (mainBranchKey && !userTypeScores[mainBranchKey]) {
       userTypeScores[mainBranchKey] = 1;
@@ -296,5 +302,6 @@ export function buildStoredUserTasteProfile(): StoredUserTasteProfile | null {
     userTypeScores,
     userTagScores,
     userAvoidanceScores,
+    ...(hasScores(userArtStyleScores) ? { userArtStyleScores } : {}),
   };
 }
