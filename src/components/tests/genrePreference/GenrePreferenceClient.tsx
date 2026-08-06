@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AppButton } from "@/components/ui/AppButton";
+import { PageContainer } from "@/components/layout/PageContainer";
+import { StatePanel } from "@/components/ui/StatePanel";
 import {
   genrePreferenceQuestions,
-  genrePreferenceStartCopy,
   genrePreferenceTest,
   type PairChoiceSide,
 } from "@/data/tests/genrePreference";
@@ -20,8 +22,15 @@ import {
   toGenrePreferenceResult,
   type GenrePreferenceStoredResult,
 } from "@/lib/storage/genrePreferenceStorage";
+import {
+  clearGenrePreferenceProgress,
+  loadGenrePreferenceProgress,
+  saveGenrePreferenceProgress,
+} from "@/lib/storage/testProgressStorage";
 import GenrePairQuestionView from "./GenrePairQuestionView";
 import GenrePreferenceResultView from "./GenrePreferenceResultView";
+
+const AUTO_ADVANCE_DELAY_MS = 260;
 
 function upsertAnswer(
   answers: PairChoiceAnswer[],
@@ -75,16 +84,16 @@ function getSavedResultSummary(storedResult: GenrePreferenceStoredResult) {
     .filter(Boolean);
 
   if (mapState.resultType === "balanced") {
-    return "여러 장르의 세계가 고르게 열려 있어요.";
+    return "여러 장르에 고르게 끌리는 취향으로 나왔어요.";
   }
 
   if (mapState.resultType === "linked") {
-    return `${centerGenreNames.join(" · ")} 세계가 함께 열렸어요.`;
+    return `${centerGenreNames.join(" · ")} 취향이 함께 높게 나왔어요.`;
   }
 
   return centerGenreNames[0]
-    ? `${centerGenreNames[0]} 세계가 가장 선명하게 열렸어요.`
-    : "저장된 결과를 다시 볼 수 있어요.";
+    ? `${centerGenreNames[0]} 취향이 가장 높게 나왔어요.`
+    : "저장된 장르 취향 결과를 다시 확인할 수 있어요.";
 }
 
 function SavedGenrePreferenceNotice({
@@ -97,134 +106,38 @@ function SavedGenrePreferenceNotice({
   onRetake: () => void;
 }) {
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background: "#020617",
-        color: "#ffffff",
-        padding: 24,
-      }}
-    >
-      <section
-        style={{
-          maxWidth: 760,
-          margin: "0 auto",
-          paddingTop: 72,
-        }}
-      >
-        <p
-          style={{
-            margin: "0 0 12px",
-            color: "#a5b4fc",
-            fontWeight: 900,
-            fontSize: 14,
-          }}
-        >
-          저장된 결과
-        </p>
+    <main className="genre-test-page">
+      <PageContainer size="test" className="genre-test-page__container">
+        <section className="genre-saved-result">
+          <p className="genre-test-eyebrow">저장된 테스트 결과</p>
+          <h1 className="genre-test-title">결과를 다시 확인할까요?</h1>
+          <p className="genre-test-lead">
+            이전에 완료한 웹툰 장르 취향 테스트 결과가 있어요.
+          </p>
 
-        <h1
-          style={{
-            margin: "0 0 16px",
-            fontSize: 34,
-            lineHeight: 1.25,
-          }}
-        >
-          저장된 웹툰 세계관 지도가 있어요.
-        </h1>
-
-        <p
-          style={{
-            margin: "0 0 12px",
-            color: "#cbd5e1",
-            fontSize: 18,
-            lineHeight: 1.7,
-          }}
-        >
-          최근 결과를 다시 볼 수 있어요.
-        </p>
-
-        <p
-          style={{
-            margin: "0 0 24px",
-            color: "#94a3b8",
-            fontSize: 15,
-            lineHeight: 1.6,
-          }}
-        >
-          다시 테스트하면 기존 결과는 새 결과로 바뀝니다.
-        </p>
-
-        <section
-          style={{
-            borderRadius: 20,
-            border: "1px solid #334155",
-            background: "#0f172a",
-            padding: 18,
-            marginBottom: 22,
-          }}
-        >
-          <dl
-            style={{
-              display: "grid",
-              gridTemplateColumns: "140px 1fr",
-              gap: "8px 12px",
-              margin: 0,
-              color: "#e2e8f0",
-              fontSize: 14,
-              lineHeight: 1.6,
-            }}
-          >
-            <dt style={{ color: "#94a3b8" }}>결과</dt>
-            <dd style={{ margin: 0 }}>{storedResult.resultName}</dd>
-
-            <dt style={{ color: "#94a3b8" }}>요약</dt>
-            <dd style={{ margin: 0 }}>{getSavedResultSummary(storedResult)}</dd>
-
-            <dt style={{ color: "#94a3b8" }}>완료 시각</dt>
-            <dd style={{ margin: 0 }}>
-              {formatCompletedAt(storedResult.completedAt)}
-            </dd>
+          <dl className="genre-saved-result__summary">
+            <div>
+              <dt>결과</dt>
+              <dd>{storedResult.resultName}</dd>
+            </div>
+            <div>
+              <dt>한 줄 요약</dt>
+              <dd>{getSavedResultSummary(storedResult)}</dd>
+            </div>
+            <div>
+              <dt>완료 시각</dt>
+              <dd>{formatCompletedAt(storedResult.completedAt)}</dd>
+            </div>
           </dl>
+
+          <div className="genre-test-actions">
+            <AppButton onClick={onRestore}>결과 보기</AppButton>
+            <AppButton variant="secondary" onClick={onRetake}>
+              다시 테스트하기
+            </AppButton>
+          </div>
         </section>
-
-        <button
-          type="button"
-          onClick={onRestore}
-          style={{
-            width: "100%",
-            border: "none",
-            borderRadius: 16,
-            background: "#ffffff",
-            color: "#0f172a",
-            padding: "16px 18px",
-            fontSize: 17,
-            fontWeight: 900,
-            cursor: "pointer",
-          }}
-        >
-          결과 다시 보기
-        </button>
-
-        <button
-          type="button"
-          onClick={onRetake}
-          style={{
-            width: "100%",
-            marginTop: 10,
-            border: "1px solid #475569",
-            borderRadius: 16,
-            background: "transparent",
-            color: "#e2e8f0",
-            padding: "14px 16px",
-            fontSize: 15,
-            fontWeight: 900,
-            cursor: "pointer",
-          }}
-        >
-          다시 테스트하기
-        </button>
-      </section>
+      </PageContainer>
     </main>
   );
 }
@@ -239,9 +152,11 @@ export default function GenrePreferenceClient() {
   const [restoredResult, setRestoredResult] =
     useState<GenrePreferenceResult | null>(null);
   const [storageChecked, setStorageChecked] = useState(false);
+  const [progressHydrated, setProgressHydrated] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const advanceTimerRef = useRef<number | null>(null);
 
   const currentQuestion = genrePreferenceQuestions[currentQuestionIndex];
-
   const selectedSide = currentQuestion
     ? findAnswerByQuestionKey(answers, currentQuestion.questionKey)
         ?.selectedSide ?? null
@@ -255,28 +170,89 @@ export default function GenrePreferenceClient() {
   }, [answers]);
 
   useEffect(() => {
-    const loadedResult = loadGenrePreferenceResult();
-    // 저장된 장르 취향 결과를 최초 진입 시 1회 복원하기 위한 의도적 hydration 처리입니다.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setStoredResult(loadedResult);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setStorageChecked(true);
+    const timerId = window.setTimeout(() => {
+      const loadedResult = loadGenrePreferenceResult();
+      const loadedProgress = loadGenrePreferenceProgress();
+
+      setStoredResult(loadedResult);
+
+      if (loadedResult) {
+        clearGenrePreferenceProgress();
+      }
+
+      if (!loadedResult && loadedProgress) {
+        const maxQuestionIndex = Math.max(
+          0,
+          genrePreferenceQuestions.length - 1
+        );
+        const restoredQuestionIndex = Math.min(
+          loadedProgress.currentQuestionIndex,
+          maxQuestionIndex
+        );
+        const validQuestionKeys = new Set(
+          genrePreferenceQuestions.map((question) => question.questionKey)
+        );
+        const restoredAnswers = loadedProgress.answers.filter((answer) =>
+          validQuestionKeys.has(answer.questionKey)
+        );
+
+        setHasStarted(true);
+        setCurrentQuestionIndex(restoredQuestionIndex);
+        setAnswers(restoredAnswers);
+      }
+
+      setProgressHydrated(true);
+      setStorageChecked(true);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
   }, []);
 
+  useEffect(() => {
+    if (!progressHydrated || !hasStarted || completed) return;
+
+    saveGenrePreferenceProgress({
+      testVersion: genrePreferenceTest.testVersion,
+      currentQuestionIndex,
+      answers,
+    });
+  }, [answers, completed, currentQuestionIndex, hasStarted, progressHydrated]);
+
+  useEffect(() => {
+    return () => {
+      if (advanceTimerRef.current !== null) {
+        window.clearTimeout(advanceTimerRef.current);
+      }
+    };
+  }, []);
+
+  function clearAdvanceTimer() {
+    if (advanceTimerRef.current !== null) {
+      window.clearTimeout(advanceTimerRef.current);
+      advanceTimerRef.current = null;
+    }
+  }
+
   function resetTestState() {
+    clearAdvanceTimer();
     setCurrentQuestionIndex(0);
     setAnswers([]);
     setCompleted(false);
     setRestoredResult(null);
+    setIsTransitioning(false);
   }
 
   function handleStart() {
+    clearGenrePreferenceProgress();
     setHasStarted(true);
     resetTestState();
   }
 
   function handleRetake() {
     clearGenrePreferenceResult();
+    clearGenrePreferenceProgress();
     setStoredResult(null);
     setHasStarted(true);
     resetTestState();
@@ -285,8 +261,8 @@ export default function GenrePreferenceClient() {
   function handleRestoreStoredResult() {
     if (!storedResult) return;
 
+    clearGenrePreferenceProgress();
     const restored = toGenrePreferenceResult(storedResult);
-
     setAnswers(restored.answers);
     setRestoredResult(restored);
     setHasStarted(true);
@@ -294,61 +270,67 @@ export default function GenrePreferenceClient() {
   }
 
   function handleSelect(side: PairChoiceSide) {
-    if (!currentQuestion) return;
+    if (!currentQuestion || isTransitioning) return;
 
-    setRestoredResult(null);
-
-    setAnswers((prev) =>
-      upsertAnswer(prev, {
-        questionKey: currentQuestion.questionKey,
-        selectedSide: side,
-      })
-    );
-  }
-
-  function handleNext() {
-    if (!currentQuestion || !selectedSide) return;
-
+    const questionIndexAtSelection = currentQuestionIndex;
+    const nextAnswers = upsertAnswer(answers, {
+      questionKey: currentQuestion.questionKey,
+      selectedSide: side,
+    });
     const isLastQuestion =
-      currentQuestionIndex >= genrePreferenceQuestions.length - 1;
+      questionIndexAtSelection >= genrePreferenceQuestions.length - 1;
 
-    if (isLastQuestion) {
-      const nextStoredResult = saveGenrePreferenceResult(calculatedResult);
-      setStoredResult(nextStoredResult);
-      setRestoredResult(null);
-      setCompleted(true);
-      return;
-    }
+    clearAdvanceTimer();
+    setRestoredResult(null);
+    setAnswers(nextAnswers);
+    setIsTransitioning(true);
 
-    setCurrentQuestionIndex((prev) => prev + 1);
+    advanceTimerRef.current = window.setTimeout(() => {
+      if (isLastQuestion) {
+        const nextResult = calculateGenrePreferenceResult({
+          answers: nextAnswers,
+          questions: genrePreferenceQuestions,
+        });
+        const nextStoredResult = saveGenrePreferenceResult(nextResult);
+
+        clearGenrePreferenceProgress();
+        setStoredResult(nextStoredResult);
+        setRestoredResult(nextResult);
+        setCompleted(true);
+        setIsTransitioning(false);
+        advanceTimerRef.current = null;
+        return;
+      }
+
+      setCurrentQuestionIndex((previousIndex) => {
+        return previousIndex === questionIndexAtSelection
+          ? previousIndex + 1
+          : previousIndex;
+      });
+      setIsTransitioning(false);
+      advanceTimerRef.current = null;
+    }, AUTO_ADVANCE_DELAY_MS);
   }
 
   function handlePrevious() {
     if (currentQuestionIndex <= 0) return;
-    setCurrentQuestionIndex((prev) => prev - 1);
+
+    clearAdvanceTimer();
+    setIsTransitioning(false);
+    setCurrentQuestionIndex((previousIndex) => previousIndex - 1);
   }
 
   if (!storageChecked) {
     return (
-      <main
-        style={{
-          minHeight: "100vh",
-          background: "#020617",
-          color: "#ffffff",
-          padding: 24,
-        }}
-      >
-        <section
-          style={{
-            maxWidth: 760,
-            margin: "0 auto",
-            paddingTop: 72,
-          }}
-        >
-          <p style={{ color: "#cbd5e1", fontSize: 18 }}>
-            저장된 결과를 확인하는 중입니다.
-          </p>
-        </section>
+      <main className="genre-test-page">
+        <PageContainer size="test" className="genre-test-page__container">
+          <StatePanel
+            tone="loading"
+            eyebrow="웹툰 장르 취향 테스트"
+            title="저장된 결과를 확인하고 있어요"
+            description="잠시만 기다려 주세요."
+          />
+        </PageContainer>
       </main>
     );
   }
@@ -379,114 +361,58 @@ export default function GenrePreferenceClient() {
         totalCount={genrePreferenceQuestions.length}
         selectedSide={selectedSide}
         onSelect={handleSelect}
-        onNext={handleNext}
         onPrevious={handlePrevious}
         canGoPrevious={currentQuestionIndex > 0}
-        isLastQuestion={
-          currentQuestionIndex === genrePreferenceQuestions.length - 1
-        }
+        isTransitioning={isTransitioning}
       />
     );
   }
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background: "#020617",
-        color: "#ffffff",
-        padding: 24,
-      }}
-    >
-      <section
-        style={{
-          maxWidth: 760,
-          margin: "0 auto",
-          paddingTop: 72,
-        }}
-      >
-        <p
-          style={{
-            margin: "0 0 12px",
-            color: "#a5b4fc",
-            fontWeight: 900,
-            fontSize: 14,
-          }}
-        >
-          {genrePreferenceStartCopy.helperText}
-        </p>
+    <main className="genre-test-page">
+      <PageContainer size="test" className="genre-test-page__container">
+        <section className="genre-test-intro">
+          <div className="genre-test-intro__content">
+            <p className="genre-test-eyebrow">대표 취향 테스트</p>
+            <h1 className="genre-test-title">웹툰 장르 취향 테스트</h1>
+            <p className="genre-test-lead">
+              두 장면 중 더 보고 싶은 쪽을 고르면
+              <br />
+              내가 어떤 웹툰 장르에 끌리는지 알 수 있어요.
+            </p>
 
-        <h1
-          style={{
-            margin: "0 0 20px",
-            fontSize: 34,
-            lineHeight: 1.25,
-          }}
-        >
-          {genrePreferenceStartCopy.title}
-        </h1>
+            <div className="genre-test-info">
+              <strong>{genrePreferenceTest.questionCount}문항</strong>
+              <span aria-hidden="true">·</span>
+              <span>예상 시간 약 1분</span>
+            </div>
 
-        <div
-          style={{
-            display: "grid",
-            gap: 6,
-            marginBottom: 28,
-            color: "#cbd5e1",
-            fontSize: 18,
-            lineHeight: 1.7,
-          }}
-        >
-          {genrePreferenceStartCopy.descriptionLines.map((line, index) =>
-            line ? (
-              <p key={`${line}-${index}`} style={{ margin: 0 }}>
-                {line}
-              </p>
-            ) : (
-              <div key={`space-${index}`} style={{ height: 8 }} />
-            )
-          )}
-        </div>
+            <div className="genre-test-note">
+              <strong>정답은 없어요.</strong>
+              <span>지금 더 끌리는 쪽을 가볍게 골라주세요.</span>
+            </div>
 
-        <section
-          style={{
-            borderRadius: 18,
-            border: "1px solid #334155",
-            background: "#0f172a",
-            padding: 16,
-            marginBottom: 22,
-          }}
-        >
-          <p
-            style={{
-              margin: 0,
-              color: "#cbd5e1",
-              fontSize: 15,
-              lineHeight: 1.7,
-            }}
-          >
-            총 {genrePreferenceTest.questionCount}문항 · 최대{" "}
-            {genrePreferenceTest.maxSelect}개 선택
-          </p>
+            <AppButton className="genre-test-start-button" onClick={handleStart}>
+              시작하기
+            </AppButton>
+          </div>
+
+          <div className="genre-test-intro__preview" aria-hidden="true">
+            <div className="genre-test-preview-card genre-test-preview-card--left">
+              <span>장면 A</span>
+            </div>
+            <div className="genre-test-preview-divider">VS</div>
+            <div className="genre-test-preview-card genre-test-preview-card--right">
+              <span>장면 B</span>
+            </div>
+            <div className="genre-test-preview-options">
+              <span>← 왼쪽</span>
+              <span>둘 다</span>
+              <span>오른쪽 →</span>
+            </div>
+          </div>
         </section>
-
-        <button
-          type="button"
-          onClick={handleStart}
-          style={{
-            width: "100%",
-            border: "none",
-            borderRadius: 16,
-            background: "#ffffff",
-            color: "#0f172a",
-            padding: "16px 18px",
-            fontSize: 17,
-            fontWeight: 900,
-            cursor: "pointer",
-          }}
-        >
-          {genrePreferenceStartCopy.buttonText}
-        </button>
-      </section>
+      </PageContainer>
     </main>
   );
 }

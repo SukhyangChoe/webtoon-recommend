@@ -1,12 +1,21 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type MouseEvent } from "react";
+import { PageContainer } from "@/components/layout/PageContainer";
+import { AppButton } from "@/components/ui/AppButton";
+import { ProgressBar } from "@/components/ui/ProgressBar";
 import { getDetailChoiceImageSrc } from "@/data/tests/detailChoiceImages";
+import { getResultObjectImageSrc } from "@/data/tests/resultObjectImages";
 import {
   clearTestResult,
   loadTestResult,
   saveTestResult,
 } from "@/lib/storage/resultRepository";
+import {
+  clearDetailTestProgress,
+  loadDetailTestProgress,
+  saveDetailTestProgress,
+} from "@/lib/storage/testProgressStorage";
 import {
   saveDetailTestRecommendationEntry,
 } from "@/lib/storage/findRecommendationEntryStorage";
@@ -27,77 +36,6 @@ import type {
   StoredDetailTestResult,
 } from "@/types/testResults";
 
-const RESULT_OBJECT_IMAGE_MAP: Record<string, string> = {
-  fantasy_system_successor:
-    "/images/detail-results/fantasy_system_window.png",
-  fantasy_system_window: "/images/detail-results/fantasy_system_window.png",
-
-  fantasy_hidden_power: "/images/detail-results/fantasy_hidden_aura.png",
-  fantasy_hidden_aura: "/images/detail-results/fantasy_hidden_aura.png",
-
-  fantasy_limit_breaker: "/images/detail-results/fantasy_limit_break.png",
-  fantasy_limit_break: "/images/detail-results/fantasy_limit_break.png",
-
-  fantasy_truth_chaser: "/images/detail-results/fantasy_truth_map.png",
-  fantasy_truth_map: "/images/detail-results/fantasy_truth_map.png",
-
-  fantasy_survival_commander:
-    "/images/detail-results/fantasy_battle_fortress.png",
-  fantasy_battle_fortress:
-    "/images/detail-results/fantasy_battle_fortress.png",
-
-  fantasy_kingdom_strategist:
-    "/images/detail-results/fantasy_strategy_board.png",
-  fantasy_strategy_board:
-    "/images/detail-results/fantasy_strategy_board.png",
-
-  murim_growth_training: "/images/detail-results/murim_growth_training.png",
-  murim_absolute_power: "/images/detail-results/murim_absolute_power.png",
-  murim_revenge_recovery: "/images/detail-results/murim_revenge_recovery.png",
-  murim_sect_politics: "/images/detail-results/murim_sect_politics.png",
-  murim_wanderer_justice: "/images/detail-results/murim_wanderer_justice.png",
-
-  romance_contract_document:
-    "/images/detail-results/romance_contract_document.png",
-  romance_reversal_chess:
-    "/images/detail-results/romance_reversal_chess.png",
-  romance_emotional_garden:
-    "/images/detail-results/romance_emotional_garden.png",
-  romance_court_invitation:
-    "/images/detail-results/romance_court_invitation.png",
-  romance_direct_heart: "/images/detail-results/romance_direct_heart.png",
-  romance_warm_teacup: "/images/detail-results/romance_warm_teacup.png",
-
-  thriller_mystery_chaser: "/images/detail-results/thriller_mystery_clue.png",
-  thriller_mystery_clue: "/images/detail-results/thriller_mystery_clue.png",
-  thriller_survival_escape: "/images/detail-results/thriller_locked_exit.png",
-  thriller_locked_exit: "/images/detail-results/thriller_locked_exit.png",
-  thriller_occult_uncanny: "/images/detail-results/thriller_old_photo.png",
-  thriller_old_photo: "/images/detail-results/thriller_old_photo.png",
-  thriller_crime_revenge: "/images/detail-results/thriller_crime_trace.png",
-  thriller_crime_trace: "/images/detail-results/thriller_crime_trace.png",
-  thriller_psychological_tension:
-    "/images/detail-results/thriller_silent_room.png",
-  thriller_silent_room: "/images/detail-results/thriller_silent_room.png",
-  thriller_conspiracy_twist:
-    "/images/detail-results/thriller_conspiracy_file.png",
-  thriller_conspiracy_file:
-    "/images/detail-results/thriller_conspiracy_file.png",
-
-  drama_life_realism: "/images/detail-results/drama_commute_window.png",
-  drama_commute_window: "/images/detail-results/drama_commute_window.png",
-  drama_youth_growth: "/images/detail-results/drama_worn_sneakers.png",
-  drama_worn_sneakers: "/images/detail-results/drama_worn_sneakers.png",
-  drama_healing_daily: "/images/detail-results/drama_warm_cafe.png",
-  drama_warm_cafe: "/images/detail-results/drama_warm_cafe.png",
-  drama_family_relationship: "/images/detail-results/drama_family_note.png",
-  drama_family_note: "/images/detail-results/drama_family_note.png",
-  drama_emotional_afterglow: "/images/detail-results/drama_old_letter.png",
-  drama_old_letter: "/images/detail-results/drama_old_letter.png",
-  drama_comedy_life: "/images/detail-results/drama_daily_laugh.png",
-  drama_daily_laugh: "/images/detail-results/drama_daily_laugh.png",
-};
-
 const TIE_BREAK_ORDER = ["_q4", "_q5", "_q2", "_q3", "_q1"];
 
 function getStringValue(
@@ -108,13 +46,6 @@ function getStringValue(
   return typeof value === "string" ? value : undefined;
 }
 
-function getNumberValue(
-  source: Record<string, unknown>,
-  key: string
-): number | undefined {
-  const value = source[key];
-  return typeof value === "number" ? value : undefined;
-}
 
 function getStringArrayValue(
   source: Record<string, unknown>,
@@ -213,6 +144,22 @@ function getQuestionTitle(question: DetailTestQuestion, index: number): string {
 
 function getQuestionText(question: DetailTestQuestion): string {
   return question.questionText || question.text || "";
+}
+
+const DETAIL_QUESTION_PROMPTS = [
+  "첫 화에서 더 끌리는 시작 장면을 골라주세요.",
+  "더 따라가고 싶은 인물을 골라주세요.",
+  "더 보고 싶은 사건 전개를 골라주세요.",
+  "볼 때 더 중요하게 느끼는 연출을 골라주세요.",
+  "다음 화까지 보고 싶게 만드는 흐름을 골라주세요.",
+  "덜 보고 싶은 부담 요소를 골라주세요.",
+] as const;
+
+function getQuestionPrompt(
+  question: DetailTestQuestion,
+  questionIndex: number
+): string {
+  return DETAIL_QUESTION_PROMPTS[questionIndex] || getQuestionText(question);
 }
 
 function getQuestionOptions(question: DetailTestQuestion): DetailTestOption[] {
@@ -540,30 +487,21 @@ function getTestVersion(testData: DetailTestData): string {
 }
 
 function getStartTitle(testData: DetailTestData, genreLabel: string): string {
-  const testDataRecord = asRecord(testData);
-
-  return (
-    getStringValue(testDataRecord, "startTitle") ||
-    `제목 없는 ${genreLabel} 웹툰 원고가 도착했습니다.`
-  );
+  void testData;
+  return `${genreLabel} 웹툰 취향 테스트`;
 }
 
 function getStartDescription(
   testData: DetailTestData,
   genreLabel: string
 ): string {
-  const testDataRecord = asRecord(testData);
-
-  return (
-    getStringValue(testDataRecord, "startDescription") ||
-    `당신이 고르는 장면들이 모여 오래 머물 ${genreLabel}의 방향을 만들어갑니다.`
-  );
+  void testData;
+  return `${genreLabel} 안에서도 어떤 이야기와 장면에 더 끌리는지 알아볼게요.`;
 }
 
 function getStartButtonText(testData: DetailTestData): string {
-  const testDataRecord = asRecord(testData);
-
-  return getStringValue(testDataRecord, "startButtonText") || "첫 장면 확인하기";
+  void testData;
+  return "시작하기";
 }
 
 function PreviousSelectionSummary({
@@ -578,7 +516,6 @@ function PreviousSelectionSummary({
   if (currentQuestionIndex === 0) return null;
 
   const isQ6 = currentQuestionIndex === 5;
-
   const targetQuestions = isQ6
     ? questions.slice(0, currentQuestionIndex)
     : questions.slice(currentQuestionIndex - 1, currentQuestionIndex);
@@ -588,7 +525,6 @@ function PreviousSelectionSummary({
       const actualIndex = isQ6
         ? slicedIndex
         : currentQuestionIndex - 1 + slicedIndex;
-
       const questionKey = getQuestionKey(question, actualIndex);
       const answer = answers[questionKey];
 
@@ -599,17 +535,15 @@ function PreviousSelectionSummary({
           const option = findOptionByKey(question, selectedOption.optionKey);
           if (!option) return null;
 
-          return `${selectedOption.rank === 1 ? "①" : "②"} ${getOptionLabel(
-            option
-          )}`;
+          return getOptionLabel(option);
         })
-        .filter(Boolean);
+        .filter((label): label is string => Boolean(label));
 
       if (selectedLabels.length === 0) return null;
 
       return {
         role: getDefaultQuestionTitle(actualIndex),
-        labels: selectedLabels.join(" / "),
+        labels: selectedLabels.join(" · "),
       };
     })
     .filter(Boolean) as { role: string; labels: string }[];
@@ -618,53 +552,22 @@ function PreviousSelectionSummary({
 
   return (
     <section
-      style={{
-        margin: "18px 0",
-        padding: 16,
-        borderRadius: 16,
-        background: "#f8fafc",
-        border: "1px solid #e2e8f0",
-      }}
+      className={`detail-selection-summary${
+        isQ6 ? " detail-selection-summary--avoidance" : ""
+      }`}
     >
-      <p
-        style={{
-          margin: "0 0 8px",
-          fontSize: 14,
-          fontWeight: 800,
-          color: "#475569",
-        }}
-      >
+      <p className="detail-selection-summary__title">
         {isQ6 ? "지금까지 끌린 요소" : "이전 선택"}
       </p>
 
-      <div style={{ display: "grid", gap: 6 }}>
+      <div className="detail-selection-summary__rows">
         {summaryRows.map((row) => (
-          <p
-            key={`${row.role}-${row.labels}`}
-            style={{
-              margin: 0,
-              fontSize: 14,
-              lineHeight: 1.5,
-              color: "#334155",
-            }}
-          >
-            <strong>{row.role}</strong>: {row.labels}
+          <p key={`${row.role}-${row.labels}`}>
+            <span>{row.role}</span>
+            {row.labels}
           </p>
         ))}
       </div>
-
-      {isQ6 ? (
-        <p
-          style={{
-            margin: "12px 0 0",
-            fontSize: 14,
-            lineHeight: 1.5,
-            color: "#64748b",
-          }}
-        >
-          마지막으로, 덜 보고 싶은 부담 요소를 골라주세요.
-        </p>
-      ) : null}
     </section>
   );
 }
@@ -676,80 +579,60 @@ function ResultObjectImage({
   imageKey: string;
   resultName: string;
 }) {
-  const [hasImageError, setHasImageError] = useState(false);
-  const imageSrc = RESULT_OBJECT_IMAGE_MAP[imageKey];
+  const imageSrc = getResultObjectImageSrc(imageKey);
+  const [retryCount, setRetryCount] = useState(0);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">(
+    imageSrc ? "loading" : "error"
+  );
 
-  if (!imageSrc || hasImageError) {
-    return (
-      <section
-        style={{
-          marginTop: 16,
-          padding: 24,
-          borderRadius: 20,
-          border: "1px solid #e5e7eb",
-          background: "#f8fafc",
-          textAlign: "center",
-        }}
-      >
-        <p
-          style={{
-            margin: "0 0 8px",
-            fontSize: 18,
-            fontWeight: 800,
-            color: "#0f172a",
-          }}
-        >
-          이미지 준비 중
-        </p>
-      </section>
-    );
+  function retryImage() {
+    setStatus(imageSrc ? "loading" : "error");
+    setRetryCount((current) => current + 1);
   }
 
   return (
-    <section style={{ marginTop: 16 }}>
-      <img
-        src={imageSrc}
-        alt={`${resultName} 대표 오브젝트`}
-        onError={() => setHasImageError(true)}
-        style={{
-          width: "100%",
-          maxHeight: 360,
-          objectFit: "contain",
-          borderRadius: 20,
-          background: "#f8fafc",
-          border: "1px solid #e5e7eb",
-        }}
-      />
-    </section>
+    <div className="detail-result-visual">
+      {imageSrc ? (
+        <img
+          key={`${imageSrc}-${retryCount}`}
+          src={imageSrc}
+          alt={`${resultName} 대표 이미지`}
+          onLoad={() => setStatus("ready")}
+          onError={() => setStatus("error")}
+          className={status === "ready" ? "is-ready" : ""}
+        />
+      ) : null}
+
+      {status !== "ready" ? (
+        <div className="detail-result-image-state" aria-live="polite">
+          <strong>
+            {status === "loading"
+              ? "결과 이미지를 불러오고 있어요"
+              : "결과 이미지를 불러오지 못했어요"}
+          </strong>
+          <span>이미지를 다시 불러와 결과를 확인해 주세요.</span>
+          {status === "error" ? (
+            <button type="button" onClick={retryImage}>
+              다시 시도
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
 function ResultTagList({ tags }: { tags: string[] }) {
-  if (tags.length === 0) return null;
+  const visibleTags = tags.slice(0, 3);
+
+  if (visibleTags.length === 0) return null;
 
   return (
-    <section style={{ marginTop: 28 }}>
-      <h3 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 800 }}>
-        이런 포인트에 끌려요
-      </h3>
-
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-        {tags.map((tag) => (
-          <span
-            key={tag}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              borderRadius: 999,
-              padding: "8px 12px",
-              background: "#eef2ff",
-              color: "#4338ca",
-              fontSize: 14,
-              fontWeight: 700,
-            }}
-          >
-            {tag}
-          </span>
+    <section className="detail-result-tags">
+      <h2>이런 포인트에 끌려요</h2>
+      <div>
+        {visibleTags.map((tag) => (
+          <span key={tag}>{tag}</span>
         ))}
       </div>
     </section>
@@ -774,189 +657,122 @@ function DetailResultView({
   const resultImageKey = getResultImageKey(result);
   const resultShareText = getResultShareText(result);
   const resultSceneText = getResultSceneText(result);
+  const [shareStatus, setShareStatus] = useState<
+    "idle" | "shared" | "copied" | "error"
+  >("idle");
+
+  function openRecommendation() {
+    saveDetailTestRecommendationEntry(sourceTestKey);
+
+    const searchParams = new URLSearchParams({
+      mode: "instant_recommendation",
+      vectorSource: "detail_test_result",
+      sourceTestKey,
+    });
+
+    window.location.href = `/find/results?${searchParams.toString()}`;
+  }
+
+  async function shareResult() {
+    const text =
+      resultShareText ||
+      `${genreLabel} 웹툰 취향 테스트 결과는 ${resultName}. ${resultSummary}`;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `${genreLabel} 웹툰 취향 테스트 결과`,
+          text,
+          url: window.location.href,
+        });
+        setShareStatus("shared");
+        return;
+      }
+
+      await navigator.clipboard.writeText(`${text}
+${window.location.href}`);
+      setShareStatus("copied");
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        setShareStatus("idle");
+        return;
+      }
+
+      setShareStatus("error");
+    }
+  }
+
+  const shareMessage =
+    shareStatus === "shared"
+      ? "공유했어요."
+      : shareStatus === "copied"
+        ? "결과 문구를 복사했어요."
+        : shareStatus === "error"
+          ? "공유하지 못했어요. 다시 시도해 주세요."
+          : "";
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background: "#020617",
-        padding: 24,
-        color: "#0f172a",
-      }}
-    >
-      <section
-        style={{
-          maxWidth: 760,
-          margin: "0 auto",
-          borderRadius: 28,
-          background: "#ffffff",
-          padding: 24,
-        }}
-      >
-        <p
-          style={{
-            margin: "0 0 10px",
-            color: "#6366f1",
-            fontWeight: 900,
-            fontSize: 14,
-          }}
-        >
-          {genreLabel} 웹툰 취향 테스트 결과
-        </p>
+    <main className="detail-test-page detail-result-page">
+      <PageContainer size="test" className="detail-result-container">
+        <a href="/tests" className="detail-test-back-link">
+          ← 다른 테스트 보기
+        </a>
 
-        <h1
-          style={{
-            margin: "0 0 16px",
-            fontSize: 30,
-            lineHeight: 1.25,
-          }}
-        >
-          {resultName}
-        </h1>
+        <section className="detail-result-hero">
+          <ResultObjectImage
+            imageKey={resultImageKey}
+            resultName={resultName}
+          />
 
-        <ResultObjectImage imageKey={resultImageKey} resultName={resultName} />
+          <div className="detail-result-copy">
+            <p className="detail-test-eyebrow">
+              {genreLabel} 웹툰 취향 테스트 결과
+            </p>
+            <h1>{resultName}</h1>
+            <p className="detail-result-summary">{resultSummary}</p>
 
-        <section style={{ marginTop: 24 }}>
-          <h2 style={{ margin: "0 0 8px", fontSize: 17, fontWeight: 900 }}>
-            한 줄 해석
-          </h2>
-          <p style={{ margin: 0, fontSize: 17, lineHeight: 1.7 }}>
-            {resultSummary}
-          </p>
+            <ResultTagList tags={getResultDisplayTags(result)} />
+
+            <AppButton fullWidth onClick={openRecommendation}>
+              이 취향으로 웹툰 추천받기
+            </AppButton>
+
+            <p className="detail-result-cta-note">
+              방금 확인한 {genreLabel} 취향만 사용해 웹툰을 골라드려요.
+            </p>
+          </div>
         </section>
 
-        <section style={{ marginTop: 24 }}>
-          <h2 style={{ margin: "0 0 8px", fontSize: 17, fontWeight: 900 }}>
-            당신이 오래 머무를 장면
-          </h2>
-          <p
-            style={{
-              margin: 0,
-              fontSize: 16,
-              lineHeight: 1.7,
-              color: "#334155",
-            }}
-          >
-            {resultSceneText ??
-              "이 결과에 맞는 장면 설명은 이후 결과 문구 정리 단계에서 보강됩니다."}
-          </p>
+        <section className="detail-result-story-card">
+          <p className="detail-result-section-label">당신이 오래 머무를 장면</p>
+          <p>{resultSceneText || resultSummary}</p>
         </section>
 
-        <ResultTagList tags={getResultDisplayTags(result)} />
-
-        <section style={{ marginTop: 24 }}>
-          <h2 style={{ margin: "0 0 8px", fontSize: 17, fontWeight: 900 }}>
-            공유 문구
-          </h2>
-          <p
-            style={{
-              margin: 0,
-              fontSize: 15,
-              lineHeight: 1.7,
-              color: "#475569",
-            }}
-          >
-            {resultShareText || "공유 문구는 이후 단계에서 보강됩니다."}
-          </p>
-        </section>
-
-        <section style={{ marginTop: 28 }}>
-          <button
-            type="button"
-            onClick={() => alert("공유 기능은 이후 단계에서 연결됩니다.")}
-            style={{
-              width: "100%",
-              padding: "14px 16px",
-              borderRadius: 14,
-              border: "1px solid #c7d2fe",
-              background: "#ffffff",
-              color: "#4338ca",
-              fontWeight: 800,
-              fontSize: 15,
-              cursor: "pointer",
-            }}
-          >
+        <section className="detail-result-actions" aria-label="결과 보조 기능">
+          <AppButton variant="secondary" onClick={shareResult}>
             결과 공유하기
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              saveDetailTestRecommendationEntry(sourceTestKey);
-
-              const searchParams = new URLSearchParams({
-                mode: "instant_recommendation",
-                vectorSource: "detail_test_result",
-                sourceTestKey,
-              });
-
-              window.location.href = `/find/results?${searchParams.toString()}`;
-            }}
-            style={{
-              width: "100%",
-              marginTop: 10,
-              padding: "14px 16px",
-              borderRadius: 14,
-              border: "none",
-              background: "#4f46e5",
-              color: "#ffffff",
-              fontWeight: 900,
-              fontSize: 15,
-              cursor: "pointer",
-            }}
-          >
-            이 취향으로 웹툰 추천받기
-          </button>
-
-          <button
-            type="button"
-            onClick={onRetake}
-            style={{
-              width: "100%",
-              marginTop: 10,
-              padding: "12px 16px",
-              borderRadius: 14,
-              border: "1px solid #e5e7eb",
-              background: "#f8fafc",
-              color: "#334155",
-              fontWeight: 800,
-              fontSize: 14,
-              cursor: "pointer",
-            }}
-          >
+          </AppButton>
+          <AppButton href="/tests" variant="secondary">
+            다른 장르도 알아보기
+          </AppButton>
+          <AppButton variant="ghost" onClick={onRetake}>
             다시 테스트하기
-          </button>
+          </AppButton>
         </section>
+
+        {shareMessage ? (
+          <p className="detail-result-share-status" role="status">
+            {shareMessage}
+          </p>
+        ) : null}
 
         {process.env.NODE_ENV === "development" ? (
-          <details style={{ marginTop: 28 }}>
-            <summary
-              style={{
-                cursor: "pointer",
-                fontWeight: 900,
-                color: "#475569",
-              }}
-            >
-              개발 확인용 점수 보기
-            </summary>
-
-            <pre
-              style={{
-                marginTop: 12,
-                padding: 16,
-                borderRadius: 16,
-                background: "#0f172a",
-                color: "#e2e8f0",
-                overflowX: "auto",
-                fontSize: 13,
-                lineHeight: 1.5,
-              }}
-            >
-              {JSON.stringify(debugData, null, 2)}
-            </pre>
+          <details className="detail-test-debug detail-result-debug">
+            <summary>개발 확인용 점수 보기</summary>
+            <pre>{JSON.stringify(debugData, null, 2)}</pre>
           </details>
         ) : null}
-      </section>
+      </PageContainer>
     </main>
   );
 }
@@ -964,63 +780,59 @@ function DetailResultView({
 function ChoiceImagePreview({
   imageKey,
   label,
+  onAvailabilityChange,
 }: {
   imageKey?: string;
   label: string;
+  onAvailabilityChange: (isAvailable: boolean) => void;
 }) {
-  const [hasImageError, setHasImageError] = useState(false);
   const imageSrc = getDetailChoiceImageSrc(imageKey);
+  const [retryCount, setRetryCount] = useState(0);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">(
+    imageSrc ? "loading" : "error"
+  );
 
-  if (!imageSrc || hasImageError) {
-    return (
-      <div
-        style={{
-          width: "100%",
-          maxWidth: 420,
-          aspectRatio: "4 / 5",
-          borderRadius: 16,
-          background: "#e2e8f0",
-          margin: "0 auto 14px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "#64748b",
-          fontSize: 14,
-          fontWeight: 800,
-          overflow: "hidden",
-        }}
-      >
-        <div style={{ textAlign: "center" }}>
-          <div>이미지 준비 중</div>
-        </div>
-      </div>
-    );
+  function retryImage(event: MouseEvent<HTMLButtonElement>) {
+    event.stopPropagation();
+    setStatus(imageSrc ? "loading" : "error");
+    setRetryCount((current) => current + 1);
+    onAvailabilityChange(false);
   }
 
   return (
-    <div
-      style={{
-        width: "100%",
-        maxWidth: 420,
-        aspectRatio: "4 / 5",
-        borderRadius: 16,
-        background: "#e2e8f0",
-        margin: "0 auto 14px",
-        overflow: "hidden",
-      }}
-    >
-      <img
-        src={imageSrc}
-        alt={`${label} 선택지 이미지`}
-        onError={() => setHasImageError(true)}
-        style={{
-          width: "100%",
-          height: "100%",
-          objectFit: "contain",
-          display: "block",
-          background: "#e2e8f0",
-        }}
-      />
+    <div className="detail-choice-image">
+      {imageSrc ? (
+        <img
+          key={`${imageSrc}-${retryCount}`}
+          src={imageSrc}
+          alt={`${label} 선택지 이미지`}
+          onLoad={() => {
+            setStatus("ready");
+            onAvailabilityChange(true);
+          }}
+          onError={() => {
+            setStatus("error");
+            onAvailabilityChange(false);
+          }}
+          className={status === "ready" ? "is-ready" : ""}
+        />
+      ) : null}
+
+      {status !== "ready" ? (
+        <div className="detail-choice-image__state" aria-live="polite">
+          <strong>
+            {status === "loading"
+              ? "이미지를 불러오고 있어요"
+              : "이미지를 불러오지 못했어요"}
+          </strong>
+          <span>이미지를 확인한 뒤 선택할 수 있어요.</span>
+          {status === "error" ? (
+            <button type="button" onClick={retryImage}>
+              다시 시도
+            </button>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -1040,62 +852,52 @@ function QuestionOptionCard({
 }) {
   const label = getOptionLabel(option);
   const description = getOptionDescription(option);
+  const [isImageAvailable, setIsImageAvailable] = useState(!isImageCard);
+  const canSelect = !isImageCard || isImageAvailable;
+
+  function selectOption() {
+    if (!canSelect) return;
+    onClick();
+  }
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        width: "100%",
-        textAlign: "left",
-        borderRadius: 18,
-        border: isSelected ? "2px solid #4f46e5" : "1px solid #e5e7eb",
-        background: isSelected ? "#eef2ff" : "#ffffff",
-        padding: 20,
-        cursor: "pointer",
-        color: "#0f172a",
+    <div
+      className={`detail-choice-card${isSelected ? " is-selected" : ""}${
+        isImageCard ? " detail-choice-card--image" : ""
+      }${!canSelect ? " is-unavailable" : ""}`}
+      role="button"
+      tabIndex={canSelect ? 0 : -1}
+      aria-pressed={isSelected}
+      aria-disabled={!canSelect}
+      onClick={selectOption}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          selectOption();
+        }
       }}
     >
       {isImageCard ? (
-        <ChoiceImagePreview imageKey={option.imageKey} label={label} />
+        <ChoiceImagePreview
+          imageKey={option.imageKey}
+          label={label}
+          onAvailabilityChange={setIsImageAvailable}
+        />
       ) : null}
 
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        {isSelected ? (
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: 28,
-              height: 28,
-              borderRadius: 999,
-              background: "#4f46e5",
-              color: "#ffffff",
-              fontWeight: 900,
-              flexShrink: 0,
-            }}
-          >
-            {rank === 1 ? "①" : "②"}
-          </span>
-        ) : null}
+      <div className="detail-choice-card__body">
+        <div className="detail-choice-card__title-row">
+          <strong>{label}</strong>
+          {isSelected ? (
+            <span className="detail-choice-card__rank">
+              {rank === 1 ? "① 가장 끌림" : "② 이것도 좋음"}
+            </span>
+          ) : null}
+        </div>
 
-        <strong style={{ fontSize: 18, lineHeight: 1.4 }}>{label}</strong>
+        {description ? <p>{description}</p> : null}
       </div>
-
-      {description ? (
-        <p
-          style={{
-            margin: "12px 0 0",
-            fontSize: 15,
-            lineHeight: 1.7,
-            color: "#334155",
-          }}
-        >
-          {description}
-        </p>
-      ) : null}
-    </button>
+    </div>
   );
 }
 
@@ -1107,7 +909,7 @@ export function DetailTestClient({ config }: { config: DetailTestConfig }) {
   const detailTestKey = isDetailTestKey(testKey) ? testKey : null;
   const testVersion = getTestVersion(testData);
   const genreLabel = getGenreLabel(testKey);
-  const questions = testData.questions ?? [];
+  const questions = useMemo(() => testData.questions ?? [], [testData.questions]);
 
   const [hasStarted, setHasStarted] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -1120,6 +922,7 @@ export function DetailTestClient({ config }: { config: DetailTestConfig }) {
     null
   );
   const [completed, setCompleted] = useState(false);
+  const [progressHydrated, setProgressHydrated] = useState(false);
 
   const currentQuestion = questions[currentQuestionIndex];
 
@@ -1143,23 +946,101 @@ export function DetailTestClient({ config }: { config: DetailTestConfig }) {
   useEffect(() => {
     if (!detailTestKey) return;
 
-    const loadedResult = loadTestResult(detailTestKey);
-    // 저장된 테스트 결과를 최초 진입 시 1회 복원하기 위한 의도적 hydration 처리입니다.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setStoredResult(loadedResult);
-  }, [detailTestKey]);
+    const timerId = window.setTimeout(() => {
+      const loadedResult = loadTestResult(detailTestKey);
+      const loadedProgress = loadDetailTestProgress(detailTestKey);
+
+      setStoredResult(loadedResult);
+
+      if (loadedResult) {
+        clearDetailTestProgress(detailTestKey);
+      }
+
+      if (
+        !loadedResult &&
+        loadedProgress &&
+        loadedProgress.testVersion === testVersion
+      ) {
+        const maxQuestionIndex = Math.max(0, questions.length - 1);
+        const restoredQuestionIndex = Math.min(
+          loadedProgress.currentQuestionIndex,
+          maxQuestionIndex
+        );
+        const restoredQuestion = questions[restoredQuestionIndex];
+        const restoredQuestionKey = restoredQuestion
+          ? getQuestionKey(restoredQuestion, restoredQuestionIndex)
+          : "";
+        const restoredAnswer = loadedProgress.answers[restoredQuestionKey];
+        const restoredSelectedOptionKeys =
+          loadedProgress.selectedOptionKeys.length > 0
+            ? loadedProgress.selectedOptionKeys
+            : restoredAnswer?.selectedOptions.map(
+                (option) => option.optionKey
+              ) ?? [];
+
+        setHasStarted(true);
+        setCurrentQuestionIndex(restoredQuestionIndex);
+        setAnswers(loadedProgress.answers);
+        setSelectedOptionKeys(restoredSelectedOptionKeys.slice(0, 2));
+      } else if (
+        loadedProgress &&
+        loadedProgress.testVersion !== testVersion
+      ) {
+        clearDetailTestProgress(detailTestKey);
+      }
+
+      setProgressHydrated(true);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, [detailTestKey, questions, testVersion]);
+
+  useEffect(() => {
+    if (
+      !progressHydrated ||
+      !detailTestKey ||
+      !hasStarted ||
+      completed
+    ) {
+      return;
+    }
+
+    saveDetailTestProgress({
+      testKey: detailTestKey,
+      testVersion,
+      currentQuestionIndex,
+      answers,
+      selectedOptionKeys,
+    });
+  }, [
+    answers,
+    completed,
+    currentQuestionIndex,
+    detailTestKey,
+    hasStarted,
+    progressHydrated,
+    selectedOptionKeys,
+    testVersion,
+  ]);
 
   function handleStart() {
+    if (!detailTestKey) return;
+
+    clearDetailTestProgress(detailTestKey);
     setHasStarted(true);
     setCompleted(false);
     setCurrentResult(null);
+    setAnswers({});
     setCurrentQuestionIndex(0);
     setSelectedOptionKeys([]);
   }
 
   function handleShowStoredResult() {
-    if (!storedResult) return;
+    if (!storedResult || !detailTestKey) return;
 
+    clearDetailTestProgress(detailTestKey);
     const restoredAnswers: Record<string, DetailTestAnswer> = {};
     storedResult.answers.forEach((answer) => {
       restoredAnswers[answer.questionKey] = answer;
@@ -1175,6 +1056,7 @@ export function DetailTestClient({ config }: { config: DetailTestConfig }) {
     if (!detailTestKey) return;
 
     clearTestResult(detailTestKey);
+    clearDetailTestProgress(detailTestKey);
     setStoredResult(null);
     setAnswers({});
     setCurrentResult(null);
@@ -1248,6 +1130,7 @@ export function DetailTestClient({ config }: { config: DetailTestConfig }) {
 
     saveTestResult(detailTestKey, nextStoredResult);
 
+    clearDetailTestProgress(detailTestKey);
     setStoredResult(nextStoredResult);
     setCurrentResult(result);
     setCompleted(true);
@@ -1317,268 +1200,196 @@ export function DetailTestClient({ config }: { config: DetailTestConfig }) {
 
   if (!hasStarted) {
     return (
-      <main
-        style={{
-          minHeight: "100vh",
-          background: "#020617",
-          color: "#ffffff",
-          padding: 24,
-        }}
-      >
-        <section style={{ maxWidth: 760, margin: "0 auto", paddingTop: 64 }}>
-          <h1 style={{ fontSize: 32, lineHeight: 1.3, marginBottom: 16 }}>
-            {getStartTitle(testData, genreLabel)}
-          </h1>
+      <main className="detail-test-page detail-test-intro-page">
+        <PageContainer size="test" className="detail-test-intro-container">
+          <a href="/tests" className="detail-test-back-link">
+            ← 다른 테스트 보기
+          </a>
 
-          <p
-            style={{
-              fontSize: 20,
-              lineHeight: 1.7,
-              color: "#cbd5e1",
-              marginBottom: 28,
-            }}
-          >
-            {getStartDescription(testData, genreLabel)}
-          </p>
+          <section className="detail-test-intro-card">
+            <p className="detail-test-eyebrow">장르별 세부 취향 테스트</p>
+            <h1>{getStartTitle(testData, genreLabel)}</h1>
+            <p className="detail-test-intro-card__description">
+              {getStartDescription(testData, genreLabel)}
+            </p>
 
-          {storedResult ? (
-            <section
-              style={{
-                marginBottom: 24,
-                padding: 18,
-                borderRadius: 18,
-                background: "#111827",
-                border: "1px solid #334155",
-              }}
-            >
-              <p style={{ margin: "0 0 12px", color: "#e2e8f0" }}>
-                저장된 {genreLabel} 결과가 있습니다.
+            <p className="detail-test-intro-card__meta">
+              6문항 <span aria-hidden="true">·</span> 예상 시간 약 1분
+            </p>
+
+            <div className="detail-test-intro-card__guide">
+              <strong>선택 방법</strong>
+              <p>
+                가장 끌리는 것을 먼저 고르고,
+                <br />
+                비슷하게 끌리는 것이 있다면 하나 더 골라도 돼요.
               </p>
+            </div>
 
-              <button
-                type="button"
-                onClick={handleShowStoredResult}
-                style={{
-                  marginRight: 8,
-                  padding: "12px 14px",
-                  borderRadius: 12,
-                  border: "none",
-                  background: "#4f46e5",
-                  color: "#ffffff",
-                  fontWeight: 800,
-                  cursor: "pointer",
-                }}
-              >
-                결과 다시 보기
-              </button>
-
-              <button
-                type="button"
-                onClick={handleRetake}
-                style={{
-                  padding: "12px 14px",
-                  borderRadius: 12,
-                  border: "1px solid #475569",
-                  background: "transparent",
-                  color: "#e2e8f0",
-                  fontWeight: 800,
-                  cursor: "pointer",
-                }}
-              >
-                다시 테스트하기
-              </button>
-            </section>
-          ) : null}
-
-          <button
-            type="button"
-            onClick={handleStart}
-            style={{
-              padding: "14px 18px",
-              borderRadius: 14,
-              border: "none",
-              background: "#ffffff",
-              color: "#0f172a",
-              fontWeight: 900,
-              fontSize: 16,
-              cursor: "pointer",
-            }}
-          >
-            {getStartButtonText(testData)}
-          </button>
-        </section>
+            {storedResult ? (
+              <section className="detail-test-saved-result">
+                <div>
+                  <strong>완료한 {genreLabel} 결과가 있어요.</strong>
+                  <p>바로 결과를 보거나 새로 다시 진행할 수 있어요.</p>
+                </div>
+                <div className="detail-test-saved-result__actions">
+                  <AppButton onClick={handleShowStoredResult}>
+                    결과 보기
+                  </AppButton>
+                  <AppButton variant="secondary" onClick={handleRetake}>
+                    다시 테스트하기
+                  </AppButton>
+                </div>
+              </section>
+            ) : (
+              <div className="detail-test-intro-card__actions">
+                <AppButton onClick={handleStart}>
+                  {getStartButtonText(testData)}
+                </AppButton>
+                <a href="/tests">다른 테스트 보기</a>
+              </div>
+            )}
+          </section>
+        </PageContainer>
       </main>
     );
   }
 
   if (!currentQuestion) {
     return (
-      <main style={{ padding: 24 }}>
-        <h1>질문 데이터를 찾을 수 없습니다.</h1>
-        <button type="button" onClick={handleRetake}>
-          다시 시작하기
-        </button>
+      <main className="detail-test-page">
+        <PageContainer size="test" className="detail-test-error-state">
+          <p className="detail-test-eyebrow">잠시 문제가 생겼어요</p>
+          <h1>질문 데이터를 찾을 수 없어요.</h1>
+          <p>입력한 내용은 그대로 두었으니 다시 시도해 주세요.</p>
+          <div>
+            <AppButton onClick={handleRetake}>다시 시도</AppButton>
+            <AppButton href="/tests" variant="secondary">
+              처음으로
+            </AppButton>
+          </div>
+        </PageContainer>
       </main>
     );
   }
 
   const currentOptions = getQuestionOptions(currentQuestion);
+  const isImageQuestion =
+    currentQuestionIndex === 0 || currentQuestionIndex === 3;
+  const isAvoidanceQuestionStep = currentQuestionIndex === 5;
+  const selectionGuide =
+    selectedOptionKeys.length === 0
+      ? "가장 끌리는 것을 먼저 골라주세요."
+      : selectedOptionKeys.length === 1
+        ? "하나 더 선택할 수 있어요."
+        : "선택 완료";
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background: "#020617",
-        color: "#ffffff",
-        padding: 24,
-      }}
-    >
-      <section style={{ maxWidth: 840, margin: "0 auto" }}>
-        <p style={{ color: "#94a3b8", fontWeight: 800, marginBottom: 8 }}>
-          질문 {currentQuestionIndex + 1}/{questions.length}
-        </p>
+    <main className="detail-test-page detail-test-question-page">
+      <PageContainer size="test" className="detail-test-question-container">
+        <header className="detail-test-question-header">
+          <a href="/tests">← 장르 취향 테스트</a>
+          <span>
+            {currentQuestionIndex + 1} / {questions.length}
+          </span>
+        </header>
 
-        <h1 style={{ fontSize: 24, margin: "0 0 8px" }}>
-          {getQuestionTitle(currentQuestion, currentQuestionIndex)}
-        </h1>
-
-        <p
-          style={{
-            fontSize: 20,
-            lineHeight: 1.6,
-            color: "#e2e8f0",
-            margin: "0 0 12px",
-          }}
-        >
-          {getQuestionText(currentQuestion)}
-        </p>
-
-        <p
-          style={{
-            color: "#94a3b8",
-            fontSize: 15,
-            lineHeight: 1.6,
-            margin: "0 0 18px",
-          }}
-        >
-          최대 2개까지 선택할 수 있어요. 먼저 고른 선택지가 ①, 두 번째가
-          ②로 저장됩니다.
-        </p>
-
-        <PreviousSelectionSummary
-          currentQuestionIndex={currentQuestionIndex}
-          questions={questions}
-          answers={answers}
+        <ProgressBar
+          value={currentQuestionIndex + 1}
+          max={questions.length}
+          label={`${genreLabel} 세부 취향 테스트 ${currentQuestionIndex + 1}번 질문`}
         />
 
-        <div style={{ display: "grid", gap: 14 }}>
-          {currentOptions.map((option) => {
-            const optionKey = getOptionKey(option);
-            const rank = currentSelectedRanks[optionKey];
-            const isSelected = Boolean(rank);
-            const isImageCard = currentQuestion.cardType === "image" && Boolean(option.imageKey);
+        <section className="detail-test-question-card">
+          <PreviousSelectionSummary
+            currentQuestionIndex={currentQuestionIndex}
+            questions={questions}
+            answers={answers}
+          />
 
-            return (
-              <QuestionOptionCard
-                key={optionKey}
-                option={option}
-                rank={rank}
-                isSelected={isSelected}
-                isImageCard={isImageCard}
-                onClick={() => handleOptionToggle(optionKey)}
-              />
-            );
-          })}
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            gap: 10,
-            marginTop: 24,
-          }}
-        >
-          <button
-            type="button"
-            onClick={goToPreviousQuestion}
-            disabled={currentQuestionIndex === 0}
-            style={{
-              padding: "14px 16px",
-              borderRadius: 14,
-              border: "1px solid #475569",
-              background:
-                currentQuestionIndex === 0 ? "#1e293b" : "transparent",
-              color: currentQuestionIndex === 0 ? "#64748b" : "#e2e8f0",
-              fontWeight: 800,
-              cursor: currentQuestionIndex === 0 ? "not-allowed" : "pointer",
-            }}
+          <div
+            className={`detail-test-question-copy${
+              isAvoidanceQuestionStep
+                ? " detail-test-question-copy--avoidance"
+                : ""
+            }`}
           >
-            이전
-          </button>
+            <p className="detail-test-question-copy__label">
+              {getQuestionTitle(currentQuestion, currentQuestionIndex)}
+            </p>
+            <h1>{getQuestionPrompt(currentQuestion, currentQuestionIndex)}</h1>
+            <p
+              className={`detail-test-selection-guide detail-test-selection-guide--${selectedOptionKeys.length}`}
+              aria-live="polite"
+            >
+              {selectionGuide}
+            </p>
+          </div>
 
-          <button
-            type="button"
-            onClick={handleNextQuestion}
-            disabled={selectedOptionKeys.length === 0}
-            style={{
-              flex: 1,
-              padding: "14px 16px",
-              borderRadius: 14,
-              border: "none",
-              background:
-                selectedOptionKeys.length === 0 ? "#334155" : "#4f46e5",
-              color: "#ffffff",
-              fontWeight: 900,
-              fontSize: 16,
-              cursor:
-                selectedOptionKeys.length === 0 ? "not-allowed" : "pointer",
-            }}
+          <div
+            className={`detail-choice-grid ${
+              isImageQuestion
+                ? "detail-choice-grid--image"
+                : "detail-choice-grid--text"
+            }`}
           >
-            {currentQuestionIndex === questions.length - 1
-              ? "결과 보기"
-              : "다음"}
-          </button>
-        </div>
+            {currentOptions.map((option) => {
+              const optionKey = getOptionKey(option);
+              const rank = currentSelectedRanks[optionKey];
+              const isSelected = Boolean(rank);
 
-        {process.env.NODE_ENV === "development" ? (
-          <details style={{ marginTop: 24 }}>
-            <summary
-              style={{
-                cursor: "pointer",
-                color: "#94a3b8",
-                fontWeight: 800,
-              }}
-            >
-              개발 확인용 현재 상태 보기
-            </summary>
+              return (
+                <QuestionOptionCard
+                  key={optionKey}
+                  option={option}
+                  rank={rank}
+                  isSelected={isSelected}
+                  isImageCard={isImageQuestion}
+                  onClick={() => handleOptionToggle(optionKey)}
+                />
+              );
+            })}
+          </div>
 
-            <pre
-              style={{
-                marginTop: 12,
-                padding: 16,
-                borderRadius: 16,
-                background: "#0f172a",
-                color: "#e2e8f0",
-                overflowX: "auto",
-                fontSize: 13,
-                lineHeight: 1.5,
-              }}
+          <footer className="detail-test-question-actions">
+            <AppButton
+              variant="secondary"
+              onClick={goToPreviousQuestion}
+              disabled={currentQuestionIndex === 0}
             >
-              {JSON.stringify(
-                {
-                  testKey: detailTestKey,
-                  currentQuestionKey,
-                  selectedOptionKeys,
-                  answers,
-                  calculatedScores,
-                },
-                null,
-                2
-              )}
-            </pre>
-          </details>
-        ) : null}
-      </section>
+              이전
+            </AppButton>
+            <AppButton
+              fullWidth
+              onClick={handleNextQuestion}
+              disabled={selectedOptionKeys.length === 0}
+            >
+              {currentQuestionIndex === questions.length - 1
+                ? "결과 보기"
+                : "다음"}
+            </AppButton>
+          </footer>
+
+          {process.env.NODE_ENV === "development" ? (
+            <details className="detail-test-debug">
+              <summary>개발 확인용 현재 상태 보기</summary>
+              <pre>
+                {JSON.stringify(
+                  {
+                    testKey: detailTestKey,
+                    currentQuestionKey,
+                    selectedOptionKeys,
+                    answers,
+                    calculatedScores,
+                  },
+                  null,
+                  2
+                )}
+              </pre>
+            </details>
+          ) : null}
+        </section>
+      </PageContainer>
     </main>
   );
 }

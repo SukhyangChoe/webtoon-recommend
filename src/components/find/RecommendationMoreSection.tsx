@@ -53,101 +53,76 @@ export function RecommendationMoreSection({
   }
 
   return (
-    <section
-      style={{
-        display: "grid",
-        gap: 14,
-      }}
-    >
+    <section className="recommendation-expansion">
       {!isOpen ? (
         <button
           type="button"
+          className="recommendation-expansion__open"
           onClick={() => setIsOpen(true)}
-          style={{
-            width: "100%",
-            minHeight: 54,
-            borderRadius: 16,
-            border: "1px solid #c7d2fe",
-            background: "#ffffff",
-            color: "#4338ca",
-            padding: "13px 16px",
-            fontSize: 15,
-            fontWeight: 900,
-            cursor: "pointer",
-          }}
         >
-          추천 웹툰 더보기
+          <span>
+            <strong>조금 다른 취향도 살펴볼까요?</strong>
+            <small>취향을 넓혀볼 웹툰 5개가 더 있어요.</small>
+          </span>
+          <span aria-hidden="true">→</span>
         </button>
-      ) : null}
-
-      {isOpen ? (
+      ) : (
         <>
-          <div
-            style={{
-              display: "grid",
-              gap: 6,
-            }}
-          >
-            <h3
-              style={{
-                margin: 0,
-                color: "#0f172a",
-                fontSize: 22,
-                lineHeight: 1.35,
-                letterSpacing: "-0.03em",
-              }}
+          <div className="recommendation-section-heading">
+            <div>
+              <p className="recommendation-section-heading__eyebrow">
+                취향 확장
+              </p>
+              <h2>취향을 넓혀볼 웹툰</h2>
+              <p>
+                좋아하는 결은 이어가면서, 조금 다른 재미까지 골라봤어요.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="recommendation-expansion__close"
+              onClick={() => setIsOpen(false)}
             >
-              이런 작품도 잘 맞을 수 있어요
-            </h3>
-
-            <p
-              style={{
-                margin: 0,
-                color: "#64748b",
-                fontSize: 15,
-                lineHeight: 1.6,
-              }}
-            >
-              취향은 이어가되, 조금 다른 방향까지 넓혀봤어요.
-            </p>
+              접기
+            </button>
           </div>
 
-          {items.map((item) => {
-            const recommendation = item.recommendation;
-            const displayNumber = item.slot - 5;
+          <div className="recommendation-list">
+            {items.map((item) => {
+              const recommendation = item.recommendation;
 
-            if (!recommendation) {
+              if (!recommendation) {
+                return (
+                  <RecommendationSlotComplete
+                    key={`expansion-slot-${item.slot}`}
+                  />
+                );
+              }
+
+              const canonicalWebtoonId =
+                recommendation.candidate.canonicalWebtoonId;
+
               return (
-                <RecommendationSlotComplete
-                  key={`expansion-slot-${item.slot}`}
-                  slotLabel={`확장 추천 ${displayNumber}`}
+                <RecommendationCard
+                  key={`expansion-slot-${item.slot}-${canonicalWebtoonId}`}
+                  recommendation={recommendation}
+                  isReplacement={item.replacementCount > 0}
+                  actionState={getBaseActionState(canonicalWebtoonId)}
+                  onToggleSaved={onToggleSaved}
+                  onSetFeedbackAction={(webtoonId, feedbackAction) => {
+                    onSetFeedbackAction(
+                      item.slot,
+                      webtoonId,
+                      feedbackAction
+                    );
+                  }}
+                  onMarkOfficialOpened={onMarkOfficialOpened}
                 />
               );
-            }
-
-            const canonicalWebtoonId =
-              recommendation.candidate.canonicalWebtoonId;
-
-            return (
-              <RecommendationCard
-                key={`expansion-slot-${item.slot}-${canonicalWebtoonId}`}
-                recommendation={recommendation}
-                rankLabel={`확장 추천 ${displayNumber}`}
-                actionState={getBaseActionState(canonicalWebtoonId)}
-                onToggleSaved={onToggleSaved}
-                onSetFeedbackAction={(webtoonId, feedbackAction) => {
-                  onSetFeedbackAction(
-                    item.slot,
-                    webtoonId,
-                    feedbackAction
-                  );
-                }}
-                onMarkOfficialOpened={onMarkOfficialOpened}
-              />
-            );
-          })}
+            })}
+          </div>
         </>
-      ) : null}
+      )}
     </section>
   );
 }

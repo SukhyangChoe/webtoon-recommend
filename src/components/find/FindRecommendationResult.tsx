@@ -50,25 +50,30 @@ function createFallbackDisplaySlots(
   return [...mainSlots, ...expansionSlots];
 }
 
-function getReplacementNotice(params: {
-  status:
-    | "replaced"
-    | "replacement_limit_reached"
-    | "reserve_pool_empty";
-  section: RecommendationDisplaySection;
-  slot: number;
-}) {
-  const { status, section, slot } = params;
-  const slotLabel =
-    section === "main_display"
-      ? `TOP ${slot}`
-      : `확장 추천 ${slot - 5}`;
-
+function getReplacementNotice(status:
+  | "replaced"
+  | "replacement_limit_reached"
+  | "reserve_pool_empty"
+) {
   if (status === "replaced") {
-    return `${slotLabel}에 다음 예비 추천을 넣었어요.`;
+    return "같은 자리에 새로운 추천을 넣었어요.";
   }
 
-  return `${slotLabel}의 예비 추천을 모두 보여드렸어요.`;
+  return "이 자리의 예비 추천을 모두 보여드렸어요.";
+}
+
+function getResultDescription(
+  selectionResult: FindRecommendationSelectionResult
+) {
+  if (selectionResult.vectorSource === "detail_test_result") {
+    return "방금 확인한 세부 취향을 기준으로 골랐어요.";
+  }
+
+  if (selectionResult.vectorSource === "user_taste_profile") {
+    return "지금까지 저장된 취향을 기준으로 골랐어요.";
+  }
+
+  return "재밌게 본 작품의 분위기와 닮은 결을 중심으로 골랐어요.";
 }
 
 export function FindRecommendationResult({
@@ -135,10 +140,6 @@ export function FindRecommendationResult({
       }));
   }, [displaySlots, recommendationById]);
 
-  const isDetailTestRecommendation =
-    currentSelectionResult.vectorSource === "detail_test_result";
-  const isProfileRecommendation =
-    currentSelectionResult.vectorSource === "user_taste_profile";
   const isInstantRecommendation =
     currentSelectionResult.recommendationMode ===
     "instant_recommendation";
@@ -211,13 +212,7 @@ export function FindRecommendationResult({
         replacementResult.updatedSession
       )
     );
-    setReplacementNotice(
-      getReplacementNotice({
-        status: replacementResult.status,
-        section: params.section,
-        slot: params.slot,
-      })
-    );
+    setReplacementNotice(getReplacementNotice(replacementResult.status));
   }
 
   function handleMarkOfficialOpened(canonicalWebtoonId: string) {
@@ -242,17 +237,13 @@ export function FindRecommendationResult({
 
   function renderMainRecommendation(params: {
     slot: number;
+    replacementCount: number;
     recommendation: SimilarWorkRecommendation | null;
   }) {
-    const { slot, recommendation } = params;
+    const { slot, replacementCount, recommendation } = params;
 
     if (!recommendation) {
-      return (
-        <RecommendationSlotComplete
-          key={`main-slot-${slot}`}
-          slotLabel={`TOP ${slot}`}
-        />
-      );
+      return <RecommendationSlotComplete key={`main-slot-${slot}`} />;
     }
 
     const canonicalWebtoonId =
@@ -262,7 +253,7 @@ export function FindRecommendationResult({
       <RecommendationCard
         key={`main-slot-${slot}-${canonicalWebtoonId}`}
         recommendation={recommendation}
-        rankLabel={`TOP ${slot}`}
+        isReplacement={replacementCount > 0}
         actionState={getBaseActionState(canonicalWebtoonId)}
         onToggleSaved={handleToggleSaved}
         onSetFeedbackAction={(webtoonId, feedbackAction) => {
@@ -279,79 +270,20 @@ export function FindRecommendationResult({
   }
 
   return (
-    <section
-      style={{
-        marginTop: 34,
-        display: "grid",
-        gap: 22,
-      }}
-    >
-      <div
-        style={{
-          display: "grid",
-          gap: 10,
-        }}
-      >
-        <p
-          style={{
-            margin: 0,
-            color: "#4f46e5",
-            fontSize: 14,
-            fontWeight: 900,
-          }}
-        >
-          {isDetailTestRecommendation
-            ? "Detail · detail_test_result"
-            : isProfileRecommendation
-              ? "Secondary · instant_recommendation"
-              : "Primary · similar_work"}
+    <section className="find-recommendation-result">
+      <header className="find-recommendation-result__hero">
+        <p className="find-recommendation-result__eyebrow">
+          지금 보기 좋은 추천
         </p>
-
-        <h2
-          style={{
-            margin: 0,
-            color: "#0f172a",
-            fontSize: "clamp(26px, 5vw, 38px)",
-            lineHeight: 1.18,
-            letterSpacing: "-0.04em",
-          }}
-        >
-          {isDetailTestRecommendation
-            ? "방금 확인한 세부취향으로 지금 보기 좋은 후보를 골라봤어요."
-            : isProfileRecommendation
-              ? "저장된 취향으로 지금 보기 좋은 후보를 골라봤어요."
-              : "선택한 작품과 비슷한 후보를 골라봤어요."}
-        </h2>
-
-        <p
-          style={{
-            margin: 0,
-            color: "#475569",
-            fontSize: 16,
-            lineHeight: 1.7,
-          }}
-        >
-          {isDetailTestRecommendation
-            ? "방금 완료한 해당 장르 세부취향 결과만 사용했어요. 누적 userTasteProfile이나 다른 테스트 결과는 섞지 않았습니다."
-            : isProfileRecommendation
-              ? "추천 시작 당시의 userTasteProfile snapshot만 사용했어요. 추가 질문이나 7:3 혼합 없이 취향 점수를 계산했습니다."
-              : "먼저 선택한 작품의 취향 결로 후보를 만들고, 저장된 테스트 결과가 있으면 상위 후보 안에서만 8:2로 다시 정렬했어요."}
-        </p>
-      </div>
+        <h1>오늘은 이런 웹툰이 잘 맞을 것 같아요.</h1>
+        <p>{getResultDescription(currentSelectionResult)}</p>
+      </header>
 
       {replacementNotice ? (
         <div
+          className="find-recommendation-result__notice"
           role="status"
           aria-live="polite"
-          style={{
-            borderRadius: 14,
-            background: "#eef2ff",
-            color: "#4338ca",
-            padding: "12px 14px",
-            fontSize: 14,
-            fontWeight: 800,
-            lineHeight: 1.55,
-          }}
         >
           {replacementNotice}
         </div>
@@ -364,48 +296,27 @@ export function FindRecommendationResult({
         />
       ) : null}
 
-      <div
-        style={{
-          display: "grid",
-          gap: 14,
-        }}
-      >
-        <div>
-          <h3
-            style={{
-              margin: 0,
-              color: "#0f172a",
-              fontSize: 22,
-              lineHeight: 1.35,
-              letterSpacing: "-0.03em",
-            }}
-          >
-            {isInstantRecommendation ? "취향 맞춤" : "핵심 추천"}
-          </h3>
-
-          <p
-            style={{
-              margin: "6px 0 0",
-              color: "#64748b",
-              fontSize: 15,
-              lineHeight: 1.6,
-            }}
-          >
-            {isDetailTestRecommendation
-              ? "방금 확인한 세부취향과 가장 안정적으로 맞는 후보 5개예요."
-              : isProfileRecommendation
-                ? "현재 누적 취향과 가장 안정적으로 맞는 후보 5개예요."
-                : "선택한 작품과 가장 안정적으로 맞는 후보 5개예요."}
-          </p>
+      <section className="recommendation-main-section">
+        <div className="recommendation-section-heading">
+          <div>
+            <p className="recommendation-section-heading__eyebrow">
+              오늘의 추천
+            </p>
+            <h2>취향에 잘 맞는 웹툰</h2>
+            <p>지금 시작하기 좋은 작품부터 차례로 골라봤어요.</p>
+          </div>
         </div>
 
-        {mainDisplayItems.map((item) =>
-          renderMainRecommendation({
-            slot: item.slot,
-            recommendation: item.recommendation,
-          })
-        )}
-      </div>
+        <div className="recommendation-list">
+          {mainDisplayItems.map((item) =>
+            renderMainRecommendation({
+              slot: item.slot,
+              replacementCount: item.replacementCount,
+              recommendation: item.recommendation,
+            })
+          )}
+        </div>
+      </section>
 
       <RecommendationMoreSection
         items={expansionDisplayItems}
@@ -423,37 +334,9 @@ export function FindRecommendationResult({
       />
 
       {process.env.NODE_ENV === "development" ? (
-        <details
-          style={{
-            borderRadius: 18,
-            border: "1px solid #bbf7d0",
-            background: "#f0fdf4",
-            color: "#166534",
-            padding: 16,
-          }}
-        >
-          <summary
-            style={{
-              cursor: "pointer",
-              fontSize: 14,
-              fontWeight: 900,
-            }}
-          >
-            개발 확인용 v2.1.2 scoring pipeline / replacement / session
-            snapshot
-          </summary>
-
-          <pre
-            style={{
-              margin: "14px 0 0",
-              maxHeight: 460,
-              overflow: "auto",
-              whiteSpace: "pre-wrap",
-              wordBreak: "break-word",
-              fontSize: 12,
-              lineHeight: 1.55,
-            }}
-          >
+        <details className="recommendation-session-debug">
+          <summary>개발 확인용 추천 세션</summary>
+          <pre>
             {JSON.stringify(
               {
                 scoreVersion: currentSelectionResult.scoreVersion,
@@ -461,23 +344,15 @@ export function FindRecommendationResult({
                   currentSelectionResult.recommendationMode,
                 vectorSource: currentSelectionResult.vectorSource,
                 sourceTestKey: currentSelectionResult.sourceTestKey,
-                hasLongTermProfile:
-                  currentSelectionResult.hasLongTermProfile,
-                blendingWeights: currentSelectionResult.blendingWeights,
                 activeRecommendationVector:
                   currentSelectionResult.activeRecommendationVector,
                 profileSnapshot: currentSelectionResult.profileSnapshot,
                 candidatePoolSize:
                   currentSelectionResult.candidatePoolSize,
-                candidatePoolIds: currentSelectionResult.candidatePoolIds,
-                hardFilterExcludedItems:
-                  currentSelectionResult.hardFilterExcludedItems,
                 mainDisplayItems:
                   currentSelectionResult.mainDisplayItems,
                 mainReservePool:
                   currentSelectionResult.mainReservePool,
-                expansionCandidatePool:
-                  currentSelectionResult.expansionCandidatePool,
                 expansionDisplayItems:
                   currentSelectionResult.expansionDisplayItems,
                 expandReservePool:

@@ -1,0 +1,262 @@
+{
+  "generatedAt": "2026-08-06T14:33:43.439Z",
+  "status": "passed",
+  "totals": {
+    "checks": 50,
+    "passed": 50,
+    "failed": 0
+  },
+  "scope": "login-free UI integration static QA",
+  "checks": [
+    {
+      "id": "file:src/app/page.tsx",
+      "passed": true,
+      "detail": "exists"
+    },
+    {
+      "id": "file:src/app/find/page.tsx",
+      "passed": true,
+      "detail": "exists"
+    },
+    {
+      "id": "file:src/app/find/results/page.tsx",
+      "passed": true,
+      "detail": "exists"
+    },
+    {
+      "id": "file:src/app/tests/page.tsx",
+      "passed": true,
+      "detail": "exists"
+    },
+    {
+      "id": "file:src/app/genre-preference/page.tsx",
+      "passed": true,
+      "detail": "exists"
+    },
+    {
+      "id": "file:src/app/loading.tsx",
+      "passed": true,
+      "detail": "exists"
+    },
+    {
+      "id": "file:src/app/error.tsx",
+      "passed": true,
+      "detail": "exists"
+    },
+    {
+      "id": "file:src/app/not-found.tsx",
+      "passed": true,
+      "detail": "exists"
+    },
+    {
+      "id": "file:src/components/layout/BrandBar.tsx",
+      "passed": true,
+      "detail": "exists"
+    },
+    {
+      "id": "file:src/components/ui/StatePanel.tsx",
+      "passed": true,
+      "detail": "exists"
+    },
+    {
+      "id": "file:src/components/tests/DetailTestClient.tsx",
+      "passed": true,
+      "detail": "exists"
+    },
+    {
+      "id": "file:src/components/tests/genrePreference/GenrePreferenceClient.tsx",
+      "passed": true,
+      "detail": "exists"
+    },
+    {
+      "id": "file:src/lib/storage/testProgressStorage.ts",
+      "passed": true,
+      "detail": "exists"
+    },
+    {
+      "id": "file:src/data/tests/detailChoiceImages.ts",
+      "passed": true,
+      "detail": "exists"
+    },
+    {
+      "id": "file:src/data/tests/resultObjectImages.ts",
+      "passed": true,
+      "detail": "exists"
+    },
+    {
+      "id": "css:--brand-ivory: #fcfaf5",
+      "passed": true,
+      "detail": "--brand-ivory: #fcfaf5"
+    },
+    {
+      "id": "css:--brand-navy: #17324d",
+      "passed": true,
+      "detail": "--brand-navy: #17324d"
+    },
+    {
+      "id": "css:--brand-mint: #53d8bd",
+      "passed": true,
+      "detail": "--brand-mint: #53d8bd"
+    },
+    {
+      "id": "css:--content-max: 1200px",
+      "passed": true,
+      "detail": "--content-max: 1200px"
+    },
+    {
+      "id": "css:--test-max: 900px",
+      "passed": true,
+      "detail": "--test-max: 900px"
+    },
+    {
+      "id": "css:--result-max: 1100px",
+      "passed": true,
+      "detail": "--result-max: 1100px"
+    },
+    {
+      "id": "css:@media (max-width: 767px)",
+      "passed": true,
+      "detail": "@media (max-width: 767px)"
+    },
+    {
+      "id": "css:@media (max-width: 1199px)",
+      "passed": true,
+      "detail": "@media (max-width: 1199px)"
+    },
+    {
+      "id": "css:overflow-x: hidden",
+      "passed": true,
+      "detail": "overflow-x: hidden"
+    },
+    {
+      "id": "palette:no-prototype-purple",
+      "passed": true,
+      "detail": "banned purple prototype colors are absent"
+    },
+    {
+      "id": "auth:no-visible-login-ui",
+      "passed": true,
+      "detail": "login/profile UI is not rendered in the login-free UI freeze"
+    },
+    {
+      "id": "auth:no-login-copy-on-home",
+      "passed": true,
+      "detail": "home page does not mention login"
+    },
+    {
+      "id": "find:approved-heading",
+      "passed": true,
+      "detail": "재밌게 본 웹툰을 골라주세요"
+    },
+    {
+      "id": "find:no-source-weight-copy",
+      "passed": true,
+      "detail": "sourceWeight"
+    },
+    {
+      "id": "results:approved-loading-copy",
+      "passed": true,
+      "detail": "취향에 맞는 웹툰을 찾고 있어요"
+    },
+    {
+      "id": "results:approved-heading",
+      "passed": true,
+      "detail": "오늘은 이런 웹툰이 잘 맞을 것 같아요."
+    },
+    {
+      "id": "results:selected-source-heading",
+      "passed": true,
+      "detail": "재밌게 봤던 작품"
+    },
+    {
+      "id": "results:no-ranking-label",
+      "passed": true,
+      "detail": "recommendation cards do not render rankings"
+    },
+    {
+      "id": "results:no-fallback-taste-tag",
+      "passed": true,
+      "detail": "empty matched tags do not render a generic fallback"
+    },
+    {
+      "id": "results:no-cover-component",
+      "passed": true,
+      "detail": "recommendation cards are text-first without managed cover images"
+    },
+    {
+      "id": "results:debug-development-only",
+      "passed": true,
+      "detail": "raw recommendation debug data is development-only"
+    },
+    {
+      "id": "tests:detail-section",
+      "passed": true,
+      "detail": "장르별 세부 취향 테스트"
+    },
+    {
+      "id": "genre-preference:auto-advance-delay",
+      "passed": true,
+      "detail": "260"
+    },
+    {
+      "id": "genre-preference:result-title",
+      "passed": true,
+      "detail": "내 웹툰 세계관 지도"
+    },
+    {
+      "id": "genre-preference:find-cta",
+      "passed": true,
+      "detail": "href=\"/find\""
+    },
+    {
+      "id": "detail:q1-q4-image-rule",
+      "passed": true,
+      "detail": "Q1 and Q4 image-card rendering conditions are present"
+    },
+    {
+      "id": "detail:progress-storage",
+      "passed": true,
+      "detail": "detail test draft save/restore is wired"
+    },
+    {
+      "id": "genre-preference:progress-storage",
+      "passed": true,
+      "detail": "genre preference draft save/restore is wired"
+    },
+    {
+      "id": "images:detail-q1-q4:count",
+      "passed": true,
+      "detail": "expected 50, found 50"
+    },
+    {
+      "id": "images:detail-q1-q4:files",
+      "passed": true,
+      "detail": "all assets exist"
+    },
+    {
+      "id": "images:detail-results:count",
+      "passed": true,
+      "detail": "expected 29, found 29"
+    },
+    {
+      "id": "images:detail-results:files",
+      "passed": true,
+      "detail": "all assets exist"
+    },
+    {
+      "id": "images:genre-preference-count",
+      "passed": true,
+      "detail": "expected 20, found 20"
+    },
+    {
+      "id": "syntax:typescript-tsx",
+      "passed": true,
+      "detail": "88 files parsed"
+    },
+    {
+      "id": "format:no-trailing-whitespace",
+      "passed": true,
+      "detail": "none"
+    }
+  ]
+}
