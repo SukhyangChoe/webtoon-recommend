@@ -113,7 +113,12 @@ export type WebtoonSeedItem = {
   };
   recommendation: {
     recommendationReason?: string;
-    scoreVersion?: string;
+    publicationType?: string;
+    adultPolicyCheck?: string;
+    recommendationEligible?: boolean;
+    officialViewAvailable?: boolean;
+    sexualCore?: boolean;
+       scoreVersion?: string;
     genreScores: ScoreMap;
     typeScores?: Record<string, ScoreMap>;
     tagScores?: ScoreMap;
@@ -1669,7 +1674,6 @@ export function createSimilarWorkSelectionResult(params: {
   };
 }
 
-
 export function createInstantRecommendationSelectionResult(params: {
   allWebtoons: WebtoonSeedItem[];
   storedUserTasteProfile?: StoredUserTasteProfile | null;
@@ -2096,7 +2100,7 @@ function getHardFilterExclusionReason(params: {
 
   const urlStatus = normalizePolicyValue(metadata.urlStatus);
 
-  if (urlStatus === "invalid" || urlStatus.startsWith("invalid_")) {
+  if (urlStatus !== "valid") {
     return "invalid_url";
   }
 
@@ -2105,7 +2109,7 @@ function getHardFilterExclusionReason(params: {
   }
 
   if (
-    candidate.recommendationEligible === false ||
+    candidate.recommendationEligible !== true ||
     metadata.recommendationEligible === false
   ) {
     return "recommendation_ineligible";
@@ -2117,6 +2121,13 @@ function getHardFilterExclusionReason(params: {
 
   if (qualityGateReason) {
     return qualityGateReason;
+  }
+
+  if (
+    normalizePolicyValue(candidate.qualityEvidenceGateDecision) !==
+    "verified_precision"
+  ) {
+    return "quality_gate_ineligible";
   }
 
   if (isNonRecommendableInputStatus(metadata.inputStatus)) {
@@ -2184,7 +2195,6 @@ function getHardFilterExclusionReason(params: {
   return null;
 }
 
-
 function getQualityGateExclusionReason(
   qualityEvidenceGateDecision?: string
 ): HardFilterExclusionReason | null {
@@ -2222,13 +2232,19 @@ function normalizePolicyValue(value?: string) {
   return value?.trim().toLocaleLowerCase("en-US") ?? "";
 }
 
-function containsBlockedPolicyValue(value: string | undefined, blocked: string[]) {
+function containsBlockedPolicyValue(
+  value: string | undefined,
+  blocked: string[]
+) {
   const normalizedValue = normalizePolicyValue(value);
 
   if (!normalizedValue) return false;
 
   return blocked.some((blockedValue) => {
-    return normalizedValue === blockedValue || normalizedValue.includes(blockedValue);
+    return (
+      normalizedValue === blockedValue ||
+      normalizedValue.includes(blockedValue)
+    );
   });
 }
 
@@ -2412,7 +2428,6 @@ function sortBySelectedWorkTasteScore(
   );
 }
 
-
 function sortByDetailTestTasteScore(
   a: RecommendationCandidateDraft,
   b: RecommendationCandidateDraft
@@ -2533,7 +2548,6 @@ function mergeMatchedTagKeys(
 ) {
   return [...new Set([...primaryTagKeys, ...secondaryTagKeys])].slice(0, 8);
 }
-
 
 function buildRecommendationPools(
   recommendations: SimilarWorkRecommendation[]
