@@ -1,0 +1,1565 @@
+{
+  "version": "webtoon_match_synthetic_profiles_v0_2",
+  "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate",
+  "status": "SYNTHETIC_QA_ONLY",
+  "profiles": [
+    {
+      "profileKey": "P01",
+      "displayName": "판타지 시스템 몰빵",
+      "rawGenreAffinity": {
+        "fantasy": 3
+      },
+      "genreStars": {
+        "fantasy": 18,
+        "murim": 0,
+        "romance": 0,
+        "ropan": 0,
+        "action": 0,
+        "thriller_horror": 0,
+        "drama_daily": 0,
+        "comedy": 0,
+        "sports": 0
+      },
+      "positiveTasteScores": {
+        "setting_system_dungeon": 1,
+        "setting_regression_rebirth": 0.3,
+        "appeal_growth_training": 1,
+        "appeal_action_catharsis": 0.3,
+        "character_hidden_power": 1,
+        "character_overpowered": 0.3
+      },
+      "avoidanceTasteScores": {
+        "avoid_calm_healing_daily": 1
+      },
+      "positiveTasteEvidenceStates": {
+        "setting": "specific",
+        "appeal": "specific",
+        "character_relationship": "specific"
+      }
+    },
+    {
+      "profileKey": "P02",
+      "displayName": "판타지 시스템 근접형",
+      "rawGenreAffinity": {
+        "fantasy": 3,
+        "action": 1.5
+      },
+      "genreStars": {
+        "fantasy": 12,
+        "murim": 0,
+        "romance": 0,
+        "ropan": 0,
+        "action": 6,
+        "thriller_horror": 0,
+        "drama_daily": 0,
+        "comedy": 0,
+        "sports": 0
+      },
+      "positiveTasteScores": {
+        "setting_system_dungeon": 1,
+        "setting_school_academy": 0.3,
+        "appeal_growth_training": 1,
+        "appeal_revenge_justice": 0.3,
+        "character_hidden_power": 1,
+        "character_effortful_protagonist": 0.3
+      },
+      "avoidanceTasteScores": {
+        "avoid_repetition": 1
+      },
+      "positiveTasteEvidenceStates": {
+        "setting": "specific",
+        "appeal": "specific",
+        "character_relationship": "specific"
+      }
+    },
+    {
+      "profileKey": "P03",
+      "displayName": "판타지 성장 세계관",
+      "rawGenreAffinity": {
+        "fantasy": 3,
+        "murim": 1.5,
+        "action": 1.5
+      },
+      "genreStars": {
+        "fantasy": 9,
+        "murim": 5,
+        "romance": 0,
+        "ropan": 0,
+        "action": 4,
+        "thriller_horror": 0,
+        "drama_daily": 0,
+        "comedy": 0,
+        "sports": 0
+      },
+      "positiveTasteScores": {
+        "setting_school_academy": 1,
+        "setting_system_dungeon": 0.3,
+        "appeal_growth_training": 1,
+        "appeal_world_mystery": 0.3,
+        "character_effortful_protagonist": 1,
+        "relationship_bond": 0.3
+      },
+      "avoidanceTasteScores": {
+        "avoid_repetition": 1
+      },
+      "positiveTasteEvidenceStates": {
+        "setting": "specific",
+        "appeal": "specific",
+        "character_relationship": "specific"
+      }
+    },
+    {
+      "profileKey": "P04",
+      "displayName": "무협 성장 액션",
+      "rawGenreAffinity": {
+        "murim": 3,
+        "action": 3,
+        "fantasy": 1.5
+      },
+      "genreStars": {
+        "fantasy": 4,
+        "murim": 7,
+        "romance": 0,
+        "ropan": 0,
+        "action": 7,
+        "thriller_horror": 0,
+        "drama_daily": 0,
+        "comedy": 0,
+        "sports": 0
+      },
+      "positiveTasteScores": {
+        "setting_court_family": 1,
+        "setting_school_academy": 0.3,
+        "appeal_growth_training": 1,
+        "appeal_action_catharsis": 0.3,
+        "character_effortful_protagonist": 1,
+        "character_justice_rebellion": 0.3
+      },
+      "avoidanceTasteScores": {
+        "avoid_repetition": 1,
+        "avoid_frustrating_protagonist": 1
+      },
+      "positiveTasteEvidenceStates": {
+        "setting": "specific",
+        "appeal": "specific",
+        "character_relationship": "specific"
+      }
+    },
+    {
+      "profileKey": "P05",
+      "displayName": "로판 관계 감정",
+      "rawGenreAffinity": {
+        "ropan": 3,
+        "romance": 1.5,
+        "fantasy": 1.5
+      },
+      "genreStars": {
+        "fantasy": 5,
+        "murim": 0,
+        "romance": 4,
+        "ropan": 9,
+        "action": 0,
+        "thriller_horror": 0,
+        "drama_daily": 0,
+        "comedy": 0,
+        "sports": 0
+      },
+      "positiveTasteScores": {
+        "setting_court_family": 1,
+        "setting_possession_isekai": 0.3,
+        "appeal_emotional_afterglow": 1,
+        "appeal_strategy_powerplay": 0.3,
+        "relationship_slow_build": 1,
+        "relationship_healing": 0.3
+      },
+      "avoidanceTasteScores": {
+        "avoid_relationship_conflict": 1,
+        "avoid_excessive_comedy": 1
+      },
+      "positiveTasteEvidenceStates": {
+        "setting": "specific",
+        "appeal": "specific",
+        "character_relationship": "specific"
+      }
+    },
+    {
+      "profileKey": "P06",
+      "displayName": "로판 관계 근접형",
+      "rawGenreAffinity": {
+        "ropan": 3,
+        "romance": 3,
+        "fantasy": 1.5
+      },
+      "genreStars": {
+        "fantasy": 4,
+        "murim": 0,
+        "romance": 7,
+        "ropan": 7,
+        "action": 0,
+        "thriller_horror": 0,
+        "drama_daily": 0,
+        "comedy": 0,
+        "sports": 0
+      },
+      "positiveTasteScores": {
+        "setting_court_family": 1,
+        "setting_regression_rebirth": 0.3,
+        "appeal_emotional_afterglow": 1,
+        "appeal_twist_reveal": 0.3,
+        "relationship_slow_build": 1,
+        "relationship_direct_chemistry": 0.3
+      },
+      "avoidanceTasteScores": {
+        "avoid_relationship_conflict": 1
+      },
+      "positiveTasteEvidenceStates": {
+        "setting": "specific",
+        "appeal": "specific",
+        "character_relationship": "specific"
+      }
+    },
+    {
+      "profileKey": "P07",
+      "displayName": "현대 로맨스 코미디",
+      "rawGenreAffinity": {
+        "romance": 3,
+        "comedy": 3,
+        "drama_daily": 1.5
+      },
+      "genreStars": {
+        "fantasy": 0,
+        "murim": 0,
+        "romance": 7,
+        "ropan": 0,
+        "action": 0,
+        "thriller_horror": 0,
+        "drama_daily": 4,
+        "comedy": 7,
+        "sports": 0
+      },
+      "positiveTasteScores": {
+        "setting_real_job": 1,
+        "setting_idol_showbiz": 0.3,
+        "appeal_humor_banter": 1,
+        "appeal_emotional_afterglow": 0.3,
+        "relationship_direct_chemistry": 1,
+        "relationship_power_reversal": 0.3
+      },
+      "avoidanceTasteScores": {
+        "avoid_graphic_heavy": 1
+      },
+      "positiveTasteEvidenceStates": {
+        "setting": "specific",
+        "appeal": "specific",
+        "character_relationship": "specific"
+      }
+    },
+    {
+      "profileKey": "P08",
+      "displayName": "스릴러 생존",
+      "rawGenreAffinity": {
+        "thriller_horror": 3,
+        "action": 1.5
+      },
+      "genreStars": {
+        "fantasy": 0,
+        "murim": 0,
+        "romance": 0,
+        "ropan": 0,
+        "action": 6,
+        "thriller_horror": 12,
+        "drama_daily": 0,
+        "comedy": 0,
+        "sports": 0
+      },
+      "positiveTasteScores": {
+        "setting_survival_disaster": 1,
+        "setting_occult_uncanny": 0.3,
+        "appeal_survival_tension": 1,
+        "appeal_twist_reveal": 0.3,
+        "character_justice_rebellion": 1,
+        "relationship_bond": 0.3
+      },
+      "avoidanceTasteScores": {
+        "avoid_excessive_comedy": 1
+      },
+      "positiveTasteEvidenceStates": {
+        "setting": "specific",
+        "appeal": "specific",
+        "character_relationship": "specific"
+      }
+    },
+    {
+      "profileKey": "P09",
+      "displayName": "드라마 힐링",
+      "rawGenreAffinity": {
+        "drama_daily": 3,
+        "romance": 1.5
+      },
+      "genreStars": {
+        "fantasy": 0,
+        "murim": 0,
+        "romance": 6,
+        "ropan": 0,
+        "action": 0,
+        "thriller_horror": 0,
+        "drama_daily": 12,
+        "comedy": 0,
+        "sports": 0
+      },
+      "positiveTasteScores": {
+        "setting_real_job": 1,
+        "setting_idol_showbiz": 0.3,
+        "appeal_emotional_afterglow": 1,
+        "appeal_humor_banter": 0.3,
+        "relationship_healing": 1,
+        "relationship_slow_build": 0.3
+      },
+      "avoidanceTasteScores": {
+        "avoid_graphic_heavy": 1,
+        "avoid_complexity": 1
+      },
+      "positiveTasteEvidenceStates": {
+        "setting": "specific",
+        "appeal": "specific",
+        "character_relationship": "specific"
+      }
+    },
+    {
+      "profileKey": "P10",
+      "displayName": "스포츠 액션",
+      "rawGenreAffinity": {
+        "sports": 3,
+        "action": 3,
+        "drama_daily": 1.5
+      },
+      "genreStars": {
+        "fantasy": 0,
+        "murim": 0,
+        "romance": 0,
+        "ropan": 0,
+        "action": 7,
+        "thriller_horror": 0,
+        "drama_daily": 4,
+        "comedy": 0,
+        "sports": 7
+      },
+      "positiveTasteScores": {
+        "setting_school_academy": 1,
+        "setting_real_job": 0.3,
+        "appeal_growth_training": 1,
+        "appeal_action_catharsis": 0.3,
+        "character_effortful_protagonist": 1,
+        "relationship_bond": 0.3
+      },
+      "avoidanceTasteScores": {
+        "avoid_slow_without_payoff": 1
+      },
+      "positiveTasteEvidenceStates": {
+        "setting": "specific",
+        "appeal": "specific",
+        "character_relationship": "specific"
+      }
+    },
+    {
+      "profileKey": "P11",
+      "displayName": "완전 잡식형",
+      "rawGenreAffinity": {
+        "fantasy": 1.5,
+        "murim": 1.5,
+        "romance": 1.5,
+        "ropan": 1.5,
+        "action": 1.5,
+        "thriller_horror": 1.5,
+        "drama_daily": 1.5,
+        "comedy": 1.5,
+        "sports": 1.5
+      },
+      "genreStars": {
+        "fantasy": 2,
+        "murim": 2,
+        "romance": 2,
+        "ropan": 2,
+        "action": 2,
+        "thriller_horror": 2,
+        "drama_daily": 2,
+        "comedy": 2,
+        "sports": 2
+      },
+      "positiveTasteScores": {
+        "setting_system_dungeon": 1,
+        "setting_real_job": 0.3,
+        "appeal_growth_training": 1,
+        "appeal_emotional_afterglow": 0.3,
+        "relationship_bond": 1,
+        "relationship_direct_chemistry": 0.3
+      },
+      "avoidanceTasteScores": {},
+      "positiveTasteEvidenceStates": {
+        "setting": "specific",
+        "appeal": "specific",
+        "character_relationship": "specific"
+      }
+    },
+    {
+      "profileKey": "P12",
+      "displayName": "판타지 시스템 복제",
+      "rawGenreAffinity": {
+        "fantasy": 3
+      },
+      "genreStars": {
+        "fantasy": 18,
+        "murim": 0,
+        "romance": 0,
+        "ropan": 0,
+        "action": 0,
+        "thriller_horror": 0,
+        "drama_daily": 0,
+        "comedy": 0,
+        "sports": 0
+      },
+      "positiveTasteScores": {
+        "setting_system_dungeon": 1,
+        "setting_regression_rebirth": 0.3,
+        "appeal_growth_training": 1,
+        "appeal_action_catharsis": 0.3,
+        "character_hidden_power": 1,
+        "character_overpowered": 0.3
+      },
+      "avoidanceTasteScores": {
+        "avoid_calm_healing_daily": 1
+      },
+      "positiveTasteEvidenceStates": {
+        "setting": "specific",
+        "appeal": "specific",
+        "character_relationship": "specific"
+      }
+    }
+  ],
+  "pairResults": [
+    {
+      "a": "P01",
+      "b": "P02",
+      "score": 82,
+      "raw": 0.819194,
+      "genreSimilarity": 0.814711,
+      "positiveTasteSimilarity": 0.934559,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.92753,
+        "appeal": 0.938073,
+        "character_relationship": 0.938073
+      },
+      "bandLabel": "취향 잘 맞음",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P01",
+      "b": "P03",
+      "score": 63,
+      "raw": 0.63371,
+      "genreSimilarity": 0.705723,
+      "positiveTasteSimilarity": 0.534255,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.445879,
+        "appeal": 0.917431,
+        "character_relationship": 0.239457
+      },
+      "bandLabel": "장르 따라 잘 맞음",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P01",
+      "b": "P04",
+      "score": 35,
+      "raw": 0.353881,
+      "genreSimilarity": 0.286667,
+      "positiveTasteSimilarity": 0.439602,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.068807,
+        "appeal": 1.0,
+        "character_relationship": 0.25
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P01",
+      "b": "P05",
+      "score": 26,
+      "raw": 0.263781,
+      "genreSimilarity": 0.352861,
+      "positiveTasteSimilarity": 0.006881,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.020642,
+        "appeal": 0.0,
+        "character_relationship": 0.0
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P01",
+      "b": "P06",
+      "score": 23,
+      "raw": 0.230257,
+      "genreSimilarity": 0.286667,
+      "positiveTasteSimilarity": 0.027523,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.082569,
+        "appeal": 0.0,
+        "character_relationship": 0.0
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P01",
+      "b": "P07",
+      "score": 5,
+      "raw": 0.05,
+      "genreSimilarity": 0.0,
+      "positiveTasteSimilarity": 0.0,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.0,
+        "appeal": 0.0,
+        "character_relationship": 0.0
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P01",
+      "b": "P08",
+      "score": 7,
+      "raw": 0.073946,
+      "genreSimilarity": 0.0,
+      "positiveTasteSimilarity": 0.079819,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.0,
+        "appeal": 0.0,
+        "character_relationship": 0.239457
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P01",
+      "b": "P09",
+      "score": 5,
+      "raw": 0.05,
+      "genreSimilarity": 0.0,
+      "positiveTasteSimilarity": 0.0,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.0,
+        "appeal": 0.0,
+        "character_relationship": 0.0
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P01",
+      "b": "P10",
+      "score": 20,
+      "raw": 0.196881,
+      "genreSimilarity": 0.0,
+      "positiveTasteSimilarity": 0.489605,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.229358,
+        "appeal": 1.0,
+        "character_relationship": 0.239457
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P01",
+      "b": "P11",
+      "score": 40,
+      "raw": 0.39682,
+      "genreSimilarity": 0.255556,
+      "positiveTasteSimilarity": 0.611621,
+      "avoidanceCompatibility": 0.6,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.917431,
+        "appeal": 0.917431,
+        "character_relationship": 0.0
+      },
+      "bandLabel": "반반 갈림",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P01",
+      "b": "P12",
+      "score": 100,
+      "raw": 1.0,
+      "genreSimilarity": 1.0,
+      "positiveTasteSimilarity": 1.0,
+      "avoidanceCompatibility": 1,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 1.0,
+        "appeal": 1.0,
+        "character_relationship": 1.0
+      },
+      "bandLabel": "거의 같은 취향",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P02",
+      "b": "P03",
+      "score": 82,
+      "raw": 0.816135,
+      "genreSimilarity": 0.855866,
+      "positiveTasteSimilarity": 0.675385,
+      "avoidanceCompatibility": 1,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.662844,
+        "appeal": 0.917431,
+        "character_relationship": 0.445879
+      },
+      "bandLabel": "취향 잘 맞음",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P02",
+      "b": "P04",
+      "score": 57,
+      "raw": 0.572377,
+      "genreSimilarity": 0.574252,
+      "positiveTasteSimilarity": 0.50942,
+      "avoidanceCompatibility": 0.75,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.133764,
+        "appeal": 0.938073,
+        "character_relationship": 0.456422
+      },
+      "bandLabel": "장르 따라 잘 맞음",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P02",
+      "b": "P05",
+      "score": 24,
+      "raw": 0.244908,
+      "genreSimilarity": 0.324846,
+      "positiveTasteSimilarity": 0.0,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.0,
+        "appeal": 0.0,
+        "character_relationship": 0.0
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P02",
+      "b": "P06",
+      "score": 21,
+      "raw": 0.208276,
+      "genreSimilarity": 0.263793,
+      "positiveTasteSimilarity": 0.0,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.0,
+        "appeal": 0.0,
+        "character_relationship": 0.0
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P02",
+      "b": "P07",
+      "score": 5,
+      "raw": 0.05,
+      "genreSimilarity": 0.0,
+      "positiveTasteSimilarity": 0.0,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.0,
+        "appeal": 0.0,
+        "character_relationship": 0.0
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P02",
+      "b": "P08",
+      "score": 22,
+      "raw": 0.221946,
+      "genreSimilarity": 0.246667,
+      "positiveTasteSimilarity": 0.079819,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.0,
+        "appeal": 0.0,
+        "character_relationship": 0.239457
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P02",
+      "b": "P09",
+      "score": 5,
+      "raw": 0.05,
+      "genreSimilarity": 0.0,
+      "positiveTasteSimilarity": 0.0,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.0,
+        "appeal": 0.0,
+        "character_relationship": 0.0
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P02",
+      "b": "P10",
+      "score": 42,
+      "raw": 0.419259,
+      "genreSimilarity": 0.310459,
+      "positiveTasteSimilarity": 0.609944,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.445879,
+        "appeal": 0.938073,
+        "character_relationship": 0.445879
+      },
+      "bandLabel": "반반 갈림",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P02",
+      "b": "P11",
+      "score": 47,
+      "raw": 0.465576,
+      "genreSimilarity": 0.368467,
+      "positiveTasteSimilarity": 0.614987,
+      "avoidanceCompatibility": 0.6,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.92753,
+        "appeal": 0.917431,
+        "character_relationship": 0.0
+      },
+      "bandLabel": "반반 갈림",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P02",
+      "b": "P12",
+      "score": 82,
+      "raw": 0.819194,
+      "genreSimilarity": 0.814711,
+      "positiveTasteSimilarity": 0.934559,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.92753,
+        "appeal": 0.938073,
+        "character_relationship": 0.938073
+      },
+      "bandLabel": "취향 잘 맞음",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P03",
+      "b": "P04",
+      "score": 75,
+      "raw": 0.752756,
+      "genreSimilarity": 0.775723,
+      "positiveTasteSimilarity": 0.70774,
+      "avoidanceCompatibility": 0.75,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.278259,
+        "appeal": 0.917431,
+        "character_relationship": 0.92753
+      },
+      "bandLabel": "꽤 잘 맞음",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P03",
+      "b": "P05",
+      "score": 24,
+      "raw": 0.239684,
+      "genreSimilarity": 0.304167,
+      "positiveTasteSimilarity": 0.023946,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.0,
+        "appeal": 0.0,
+        "character_relationship": 0.071837
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P03",
+      "b": "P06",
+      "score": 21,
+      "raw": 0.205025,
+      "genreSimilarity": 0.246908,
+      "positiveTasteSimilarity": 0.022936,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.0,
+        "appeal": 0.0,
+        "character_relationship": 0.068807
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P03",
+      "b": "P07",
+      "score": 5,
+      "raw": 0.05,
+      "genreSimilarity": 0.0,
+      "positiveTasteSimilarity": 0.0,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.0,
+        "appeal": 0.0,
+        "character_relationship": 0.0
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P03",
+      "b": "P08",
+      "score": 21,
+      "raw": 0.211777,
+      "genreSimilarity": 0.206173,
+      "positiveTasteSimilarity": 0.126911,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.0,
+        "appeal": 0.068807,
+        "character_relationship": 0.311927
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P03",
+      "b": "P09",
+      "score": 6,
+      "raw": 0.056511,
+      "genreSimilarity": 0.0,
+      "positiveTasteSimilarity": 0.023946,
+      "avoidanceCompatibility": 0.493269,
+      "mutualConflict": 0.013462,
+      "positiveGroups": {
+        "setting": 0.0,
+        "appeal": 0.0,
+        "character_relationship": 0.071837
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P03",
+      "b": "P10",
+      "score": 49,
+      "raw": 0.493141,
+      "genreSimilarity": 0.264408,
+      "positiveTasteSimilarity": 0.94832,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.92753,
+        "appeal": 0.917431,
+        "character_relationship": 1.0
+      },
+      "bandLabel": "반반 갈림",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P03",
+      "b": "P11",
+      "score": 51,
+      "raw": 0.506143,
+      "genreSimilarity": 0.470482,
+      "positiveTasteSimilarity": 0.54618,
+      "avoidanceCompatibility": 0.6,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.445879,
+        "appeal": 0.917431,
+        "character_relationship": 0.275229
+      },
+      "bandLabel": "반반 갈림",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P03",
+      "b": "P12",
+      "score": 63,
+      "raw": 0.63371,
+      "genreSimilarity": 0.705723,
+      "positiveTasteSimilarity": 0.534255,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.445879,
+        "appeal": 0.917431,
+        "character_relationship": 0.239457
+      },
+      "bandLabel": "장르 따라 잘 맞음",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P04",
+      "b": "P05",
+      "score": 24,
+      "raw": 0.236815,
+      "genreSimilarity": 0.158454,
+      "positiveTasteSimilarity": 0.30581,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.917431,
+        "appeal": 0.0,
+        "character_relationship": 0.0
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P04",
+      "b": "P06",
+      "score": 23,
+      "raw": 0.227076,
+      "genreSimilarity": 0.142222,
+      "positiveTasteSimilarity": 0.30581,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.917431,
+        "appeal": 0.0,
+        "character_relationship": 0.0
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P04",
+      "b": "P07",
+      "score": 5,
+      "raw": 0.05,
+      "genreSimilarity": 0.0,
+      "positiveTasteSimilarity": 0.0,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.0,
+        "appeal": 0.0,
+        "character_relationship": 0.0
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P04",
+      "b": "P08",
+      "score": 28,
+      "raw": 0.280863,
+      "genreSimilarity": 0.310459,
+      "positiveTasteSimilarity": 0.148626,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.0,
+        "appeal": 0.0,
+        "character_relationship": 0.445879
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P04",
+      "b": "P09",
+      "score": 5,
+      "raw": 0.05,
+      "genreSimilarity": 0.0,
+      "positiveTasteSimilarity": 0.0,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.0,
+        "appeal": 0.0,
+        "character_relationship": 0.0
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P04",
+      "b": "P10",
+      "score": 53,
+      "raw": 0.527609,
+      "genreSimilarity": 0.428889,
+      "positiveTasteSimilarity": 0.734253,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.275229,
+        "appeal": 1.0,
+        "character_relationship": 0.92753
+      },
+      "bandLabel": "반반 갈림",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P04",
+      "b": "P11",
+      "score": 45,
+      "raw": 0.445291,
+      "genreSimilarity": 0.477778,
+      "positiveTasteSimilarity": 0.328746,
+      "avoidanceCompatibility": 0.6,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.068807,
+        "appeal": 0.917431,
+        "character_relationship": 0.0
+      },
+      "bandLabel": "반반 갈림",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P04",
+      "b": "P12",
+      "score": 35,
+      "raw": 0.353881,
+      "genreSimilarity": 0.286667,
+      "positiveTasteSimilarity": 0.439602,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.068807,
+        "appeal": 1.0,
+        "character_relationship": 0.25
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P05",
+      "b": "P06",
+      "score": 91,
+      "raw": 0.905374,
+      "genreSimilarity": 0.916677,
+      "positiveTasteSimilarity": 0.934559,
+      "avoidanceCompatibility": 0.75,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.938073,
+        "appeal": 0.938073,
+        "character_relationship": 0.92753
+      },
+      "bandLabel": "거의 같은 취향",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P05",
+      "b": "P07",
+      "score": 25,
+      "raw": 0.248425,
+      "genreSimilarity": 0.264408,
+      "positiveTasteSimilarity": 0.148626,
+      "avoidanceCompatibility": 0.451923,
+      "mutualConflict": 0.096154,
+      "positiveGroups": {
+        "setting": 0.0,
+        "appeal": 0.445879,
+        "character_relationship": 0.0
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P05",
+      "b": "P08",
+      "score": 8,
+      "raw": 0.084248,
+      "genreSimilarity": 0.0,
+      "positiveTasteSimilarity": 0.030826,
+      "avoidanceCompatibility": 0.75,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.0,
+        "appeal": 0.020642,
+        "character_relationship": 0.071837
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P05",
+      "b": "P09",
+      "score": 33,
+      "raw": 0.331299,
+      "genreSimilarity": 0.206173,
+      "positiveTasteSimilarity": 0.530125,
+      "avoidanceCompatibility": 0.485577,
+      "mutualConflict": 0.028846,
+      "positiveGroups": {
+        "setting": 0.0,
+        "appeal": 0.92753,
+        "character_relationship": 0.662844
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P05",
+      "b": "P10",
+      "score": 6,
+      "raw": 0.057184,
+      "genreSimilarity": 0.0,
+      "positiveTasteSimilarity": 0.023946,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.0,
+        "appeal": 0.0,
+        "character_relationship": 0.071837
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P05",
+      "b": "P11",
+      "score": 39,
+      "raw": 0.393758,
+      "genreSimilarity": 0.470482,
+      "positiveTasteSimilarity": 0.171562,
+      "avoidanceCompatibility": 0.6,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.0,
+        "appeal": 0.275229,
+        "character_relationship": 0.239457
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P05",
+      "b": "P12",
+      "score": 26,
+      "raw": 0.263781,
+      "genreSimilarity": 0.352861,
+      "positiveTasteSimilarity": 0.006881,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.020642,
+        "appeal": 0.0,
+        "character_relationship": 0.0
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P06",
+      "b": "P07",
+      "score": 38,
+      "raw": 0.379747,
+      "genreSimilarity": 0.428889,
+      "positiveTasteSimilarity": 0.241379,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.0,
+        "appeal": 0.445879,
+        "character_relationship": 0.278259
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P06",
+      "b": "P08",
+      "score": 7,
+      "raw": 0.065138,
+      "genreSimilarity": 0.0,
+      "positiveTasteSimilarity": 0.050459,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.0,
+        "appeal": 0.082569,
+        "character_relationship": 0.068807
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P06",
+      "b": "P09",
+      "score": 37,
+      "raw": 0.372943,
+      "genreSimilarity": 0.310459,
+      "positiveTasteSimilarity": 0.457803,
+      "avoidanceCompatibility": 0.493269,
+      "mutualConflict": 0.013462,
+      "positiveGroups": {
+        "setting": 0.0,
+        "appeal": 0.92753,
+        "character_relationship": 0.445879
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P06",
+      "b": "P10",
+      "score": 6,
+      "raw": 0.056881,
+      "genreSimilarity": 0.0,
+      "positiveTasteSimilarity": 0.022936,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.0,
+        "appeal": 0.0,
+        "character_relationship": 0.068807
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P06",
+      "b": "P11",
+      "score": 41,
+      "raw": 0.405382,
+      "genreSimilarity": 0.477778,
+      "positiveTasteSimilarity": 0.195719,
+      "avoidanceCompatibility": 0.6,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.0,
+        "appeal": 0.275229,
+        "character_relationship": 0.311927
+      },
+      "bandLabel": "반반 갈림",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P06",
+      "b": "P12",
+      "score": 23,
+      "raw": 0.230257,
+      "genreSimilarity": 0.286667,
+      "positiveTasteSimilarity": 0.027523,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.082569,
+        "appeal": 0.0,
+        "character_relationship": 0.0
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P07",
+      "b": "P08",
+      "score": 4,
+      "raw": 0.038654,
+      "genreSimilarity": 0.0,
+      "positiveTasteSimilarity": 0.0,
+      "avoidanceCompatibility": 0.386538,
+      "mutualConflict": 0.226923,
+      "positiveGroups": {
+        "setting": 0.0,
+        "appeal": 0.0,
+        "character_relationship": 0.0
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P07",
+      "b": "P09",
+      "score": 59,
+      "raw": 0.585835,
+      "genreSimilarity": 0.574252,
+      "positiveTasteSimilarity": 0.554281,
+      "avoidanceCompatibility": 0.75,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 1.0,
+        "appeal": 0.662844,
+        "character_relationship": 0.0
+      },
+      "bandLabel": "장르 따라 잘 맞음",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P07",
+      "b": "P10",
+      "score": 16,
+      "raw": 0.163159,
+      "genreSimilarity": 0.142222,
+      "positiveTasteSimilarity": 0.092753,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.278259,
+        "appeal": 0.0,
+        "character_relationship": 0.0
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P07",
+      "b": "P11",
+      "score": 42,
+      "raw": 0.415695,
+      "genreSimilarity": 0.477778,
+      "positiveTasteSimilarity": 0.230094,
+      "avoidanceCompatibility": 0.6,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.278259,
+        "appeal": 0.133764,
+        "character_relationship": 0.278259
+      },
+      "bandLabel": "반반 갈림",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P07",
+      "b": "P12",
+      "score": 5,
+      "raw": 0.05,
+      "genreSimilarity": 0.0,
+      "positiveTasteSimilarity": 0.0,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.0,
+        "appeal": 0.0,
+        "character_relationship": 0.0
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P08",
+      "b": "P09",
+      "score": 5,
+      "raw": 0.04853,
+      "genreSimilarity": 0.0,
+      "positiveTasteSimilarity": 0.023946,
+      "avoidanceCompatibility": 0.413462,
+      "mutualConflict": 0.173077,
+      "positiveGroups": {
+        "setting": 0.0,
+        "appeal": 0.0,
+        "character_relationship": 0.071837
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P08",
+      "b": "P10",
+      "score": 27,
+      "raw": 0.267468,
+      "genreSimilarity": 0.310459,
+      "positiveTasteSimilarity": 0.103976,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.0,
+        "appeal": 0.0,
+        "character_relationship": 0.311927
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P08",
+      "b": "P11",
+      "score": 31,
+      "raw": 0.308603,
+      "genreSimilarity": 0.368467,
+      "positiveTasteSimilarity": 0.091743,
+      "avoidanceCompatibility": 0.6,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.0,
+        "appeal": 0.0,
+        "character_relationship": 0.275229
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P08",
+      "b": "P12",
+      "score": 7,
+      "raw": 0.073946,
+      "genreSimilarity": 0.0,
+      "positiveTasteSimilarity": 0.079819,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.0,
+        "appeal": 0.0,
+        "character_relationship": 0.239457
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P09",
+      "b": "P10",
+      "score": 24,
+      "raw": 0.243285,
+      "genreSimilarity": 0.263793,
+      "positiveTasteSimilarity": 0.116699,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.278259,
+        "appeal": 0.0,
+        "character_relationship": 0.071837
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P09",
+      "b": "P11",
+      "score": 36,
+      "raw": 0.360677,
+      "genreSimilarity": 0.368467,
+      "positiveTasteSimilarity": 0.265325,
+      "avoidanceCompatibility": 0.6,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.278259,
+        "appeal": 0.278259,
+        "character_relationship": 0.239457
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P09",
+      "b": "P12",
+      "score": 5,
+      "raw": 0.05,
+      "genreSimilarity": 0.0,
+      "positiveTasteSimilarity": 0.0,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.0,
+        "appeal": 0.0,
+        "character_relationship": 0.0
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P10",
+      "b": "P11",
+      "score": 50,
+      "raw": 0.497125,
+      "genreSimilarity": 0.477778,
+      "positiveTasteSimilarity": 0.501529,
+      "avoidanceCompatibility": 0.6,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.311927,
+        "appeal": 0.917431,
+        "character_relationship": 0.275229
+      },
+      "bandLabel": "반반 갈림",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P10",
+      "b": "P12",
+      "score": 20,
+      "raw": 0.196881,
+      "genreSimilarity": 0.0,
+      "positiveTasteSimilarity": 0.489605,
+      "avoidanceCompatibility": 0.5,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.229358,
+        "appeal": 1.0,
+        "character_relationship": 0.239457
+      },
+      "bandLabel": "취향이 꽤 다름",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    },
+    {
+      "a": "P11",
+      "b": "P12",
+      "score": 40,
+      "raw": 0.39682,
+      "genreSimilarity": 0.255556,
+      "positiveTasteSimilarity": 0.611621,
+      "avoidanceCompatibility": 0.6,
+      "mutualConflict": 0.0,
+      "positiveGroups": {
+        "setting": 0.917431,
+        "appeal": 0.917431,
+        "character_relationship": 0.0
+      },
+      "bandLabel": "반반 갈림",
+      "compatibilityVersion": "webtoon_match_compatibility_v0_2_candidate"
+    }
+  ],
+  "questionSetVersion": "webtoon_match_question_set_v0_4_candidate",
+  "compatibilityVersionNote": "기존 12개 profile은 세 긍정 그룹 모두 specific이므로 v0.2 evidence gate에서도 기존 66 pair 점수를 동일하게 재현한다."
+}

@@ -1,0 +1,158 @@
+{
+  "version": "webtoon_match_setting_selection_fixtures_v0_1",
+  "questionSetVersion": "webtoon_match_question_set_v0_4_candidate",
+  "policyKey": "setting_primary_plus_secondary_up_to_4",
+  "tolerance": 1e-06,
+  "weightCases": [
+    {
+      "caseKey": "one_setting",
+      "selected": [
+        "setting_system_dungeon"
+      ],
+      "primary": "setting_system_dungeon",
+      "expectedWeights": {
+        "setting_system_dungeon": 1.0
+      },
+      "expectedSum": 1.0
+    },
+    {
+      "caseKey": "two_settings",
+      "selected": [
+        "setting_system_dungeon",
+        "setting_regression_rebirth"
+      ],
+      "primary": "setting_system_dungeon",
+      "expectedWeights": {
+        "setting_system_dungeon": 0.666667,
+        "setting_regression_rebirth": 0.333333
+      },
+      "expectedSum": 1.0
+    },
+    {
+      "caseKey": "three_settings",
+      "selected": [
+        "setting_system_dungeon",
+        "setting_regression_rebirth",
+        "setting_school_academy"
+      ],
+      "primary": "setting_system_dungeon",
+      "expectedWeights": {
+        "setting_system_dungeon": 0.5,
+        "setting_regression_rebirth": 0.25,
+        "setting_school_academy": 0.25
+      },
+      "expectedSum": 1.0
+    },
+    {
+      "caseKey": "four_settings",
+      "selected": [
+        "setting_system_dungeon",
+        "setting_regression_rebirth",
+        "setting_school_academy",
+        "setting_survival_disaster"
+      ],
+      "primary": "setting_system_dungeon",
+      "expectedWeights": {
+        "setting_system_dungeon": 0.4,
+        "setting_regression_rebirth": 0.2,
+        "setting_school_academy": 0.2,
+        "setting_survival_disaster": 0.2
+      },
+      "expectedSum": 1.0
+    }
+  ],
+  "validationCases": [
+    {
+      "caseKey": "single_auto_primary",
+      "input": {
+        "selected": [
+          "setting_case_mystery"
+        ],
+        "primary": null
+      },
+      "expected": "PASS_AUTO_ASSIGN_PRIMARY"
+    },
+    {
+      "caseKey": "multi_missing_primary",
+      "input": {
+        "selected": [
+          "setting_case_mystery",
+          "setting_occult_uncanny"
+        ],
+        "primary": null
+      },
+      "expected": "FAIL_PRIMARY_REQUIRED"
+    },
+    {
+      "caseKey": "primary_not_selected",
+      "input": {
+        "selected": [
+          "setting_case_mystery",
+          "setting_occult_uncanny"
+        ],
+        "primary": "setting_system_dungeon"
+      },
+      "expected": "FAIL_PRIMARY_NOT_SELECTED"
+    },
+    {
+      "caseKey": "over_limit",
+      "input": {
+        "selected": [
+          "setting_regression_rebirth",
+          "setting_possession_isekai",
+          "setting_system_dungeon",
+          "setting_school_academy",
+          "setting_court_family"
+        ],
+        "primary": "setting_regression_rebirth"
+      },
+      "expected": "FAIL_MAX_SELECT_4"
+    },
+    {
+      "caseKey": "indifferent_only",
+      "input": {
+        "specialChoice": "setting_indifferent",
+        "selected": [],
+        "primary": null
+      },
+      "expected": "PASS_EVIDENCE_INDIFFERENT"
+    },
+    {
+      "caseKey": "indifferent_with_general",
+      "input": {
+        "specialChoice": "setting_indifferent",
+        "selected": [
+          "setting_real_job"
+        ],
+        "primary": "setting_real_job"
+      },
+      "expected": "FAIL_EXCLUSIVE_CHOICE"
+    }
+  ],
+  "compatibilityEvidenceCases": [
+    {
+      "caseKey": "both_specific",
+      "aState": "specific",
+      "bState": "specific",
+      "expectedSettingGroup": "INCLUDED"
+    },
+    {
+      "caseKey": "one_indifferent",
+      "aState": "specific",
+      "bState": "indifferent",
+      "expectedSettingGroup": "EXCLUDED_NO_PENALTY"
+    },
+    {
+      "caseKey": "both_indifferent",
+      "aState": "indifferent",
+      "bState": "indifferent",
+      "expectedSettingGroup": "EXCLUDED_NO_BONUS"
+    },
+    {
+      "caseKey": "one_missing",
+      "aState": "specific",
+      "bState": "missing",
+      "expectedSettingGroup": "EXCLUDED_NO_PENALTY"
+    }
+  ]
+}
