@@ -120,6 +120,15 @@ export function ChallengeRankingView({ challengeCode }: { challengeCode: string 
     }
   }
 
+  async function copyInvitationLink() {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/match/c/${challengeCode}`);
+      setMessage("초대 링크를 복사했어요.");
+    } catch {
+      setMessage("초대 화면을 연 뒤 주소창의 링크를 복사해 주세요.");
+    }
+  }
+
   if (!ranking && message) return <main className="match-page"><section className="match-card match-hero"><h1>{message}</h1><a className="match-button" href={`/match/c/${challengeCode}`}>초대 화면으로</a></section></main>;
   if (!ranking) return <main className="match-page"><section className="match-card match-hero"><p>궁합 랭킹을 불러오는 중이에요…</p></section></main>;
 
@@ -145,7 +154,7 @@ export function ChallengeRankingView({ challengeCode }: { challengeCode: string 
     </section> : null}
 
     {message ? <p className="match-notice" role="status">{message}</p> : null}
-    <div className="match-result-actions"><a className="match-button match-button--secondary" href={`/match/c/${challengeCode}`}>초대 화면으로</a></div>
+    <div className="match-result-actions"><a className="match-button" href={`/match/share/ranking?challengeCode=${challengeCode}`}>현재 랭킹 Threads에 공유</a><button className="match-button match-button--secondary" type="button" onClick={() => void copyInvitationLink()}>초대 링크 복사</button><a className="match-button match-button--secondary" href={`/match/c/${challengeCode}`}>초대 화면으로</a></div>
   </main>;
 }
 

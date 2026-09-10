@@ -395,6 +395,33 @@
 .match-module .match-hidden-entries > div { display: flex; justify-content: space-between; gap: 8px; align-items: center; margin-top: 8px; }
 .match-module .match-hidden-entries button { padding: 5px 8px; border: 1px solid var(--match-line); border-radius: 7px; background: #fff; color: var(--match-purple-dark); font-size: .64rem; cursor: pointer; }
 
+.match-module .match-share-page { display: grid; align-content: start; gap: 14px; }
+.match-module .match-share-heading { padding: 8px 4px 2px; }
+.match-module .match-share-heading h1 { margin: 0; font-size: 1.6rem; line-height: 1.2; letter-spacing: -.045em; }
+.match-module .match-share-heading > p:last-child { margin: 9px 0 0; color: var(--match-muted); font-size: .76rem; line-height: 1.5; }
+.match-module .match-share-card { display: flex; width: 100%; aspect-ratio: 4 / 5; flex-direction: column; padding: 24px 22px 20px; overflow: hidden; border: 1px solid rgba(104,71,232,.16); border-radius: 27px; background: radial-gradient(circle at 95% 4%,rgba(255,198,49,.28),transparent 38%),radial-gradient(circle at 0 100%,rgba(104,71,232,.14),transparent 40%),linear-gradient(145deg,#fff,#f8f4ff); box-shadow: 0 18px 48px rgba(49,32,91,.11); }
+.match-module .match-share-brand { display: flex; align-items: center; justify-content: space-between; color: var(--match-purple); font-size: .73rem; }
+.match-module .match-share-card > p { margin: 28px 0 8px; color: var(--match-purple); font-size: .72rem; font-weight: 850; letter-spacing: .035em; }
+.match-module .match-share-card h2 { margin: 0; color: var(--match-ink); font-size: clamp(1.55rem,7vw,2rem); font-weight: 900; line-height: 1.18; letter-spacing: -.055em; }
+.match-module .match-share-card h3 { margin: 9px 0 0; color: var(--match-muted); font-size: .82rem; font-weight: 600; line-height: 1.4; }
+.match-module .match-share-metric { margin-top: 12px; color: var(--match-purple-dark); font-size: 2.8rem; line-height: 1; letter-spacing: -.06em; }
+.match-module .match-share-rows { display: grid; gap: 7px; margin-top: auto; }
+.match-module .match-share-rows > div { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; align-items: center; min-height: 47px; padding: 9px 11px; border-radius: 13px; background: rgba(255,255,255,.78); box-shadow: inset 0 0 0 1px rgba(104,71,232,.08); }
+.match-module .match-share-rows > div:first-child { background: var(--match-purple-soft); }
+.match-module .match-share-rows strong { overflow: hidden; font-size: .75rem; text-overflow: ellipsis; white-space: nowrap; }
+.match-module .match-share-rows span { color: var(--match-purple-dark); font-size: .72rem; font-weight: 850; white-space: nowrap; }
+.match-module .match-share-card footer { display: flex; gap: 12px; justify-content: space-between; margin-top: 17px; color: var(--match-muted); font-size: .62rem; line-height: 1.35; }
+.match-module .match-share-card footer span { max-width: 70%; }
+.match-module .match-share-card footer strong { color: var(--match-purple); white-space: nowrap; }
+.match-module .match-share-actions { display: grid; gap: 8px; }
+.match-module .match-share-actions > div { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+.match-module .match-share-actions > div button { min-height: 45px; border: 1px solid var(--match-line); border-radius: 13px; background: #fff; color: var(--match-purple-dark); font-weight: 800; cursor: pointer; }
+.match-module .match-topic-guide { margin: 0 4px; padding: 12px 13px; border-radius: 13px; background: #fff8de; color: #6e5a20; font-size: .7rem; line-height: 1.5; }
+.match-module .match-share-copy { padding: 13px; border: 1px solid var(--match-line); border-radius: 13px; background: rgba(255,255,255,.8); color: var(--match-muted); font-size: .7rem; }
+.match-module .match-share-copy summary { color: var(--match-ink); font-weight: 800; cursor: pointer; }
+.match-module .match-share-copy pre { margin: 12px 0 0; overflow-wrap: anywhere; color: #554d66; font: inherit; line-height: 1.55; white-space: pre-wrap; }
+.match-module .match-share-page > .match-text-link { justify-self: center; border: 0; background: transparent; color: var(--match-muted); font-weight: 750; cursor: pointer; }
+
 @media (max-width: 380px) {
   .match-module .match-page { padding: 18px 10px 36px; }
   .match-module .match-card { padding: 24px 15px 14px; border-radius: 22px; }
@@ -406,4 +433,9 @@
   .match-module .match-top-genres article > div > strong { font-size: .75rem; }
   .match-module .match-ranking-row { grid-template-columns: 29px minmax(0,1fr) auto; }
   .match-module .match-ranking-hide { grid-column: 2 / -1; justify-self: end; }
+  .match-module .match-share-card { padding: 21px 18px 17px; border-radius: 23px; }
+  .match-module .match-share-card > p { margin-top: 22px; }
+  .match-module .match-share-card h2 { font-size: 1.5rem; }
+  .match-module .match-share-metric { font-size: 2.35rem; }
+  .match-module .match-share-rows > div { min-height: 42px; padding: 7px 9px; }
 }
