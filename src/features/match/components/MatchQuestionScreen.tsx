@@ -138,8 +138,10 @@ export function MatchQuestionScreen({ screen }: { screen: Screen }) {
     const meta = screenMeta[screen.kind];
     const question = getMatchQuestion(meta.questionId);
     const selected = answers[screen.kind] ?? [];
+    const maxSelect = question.maxSelect ?? 2;
     return <QuestionShell {...question}>
-      <div className="match-feature-grid">{question.optionFeatureKeys?.map((key) => { const feature = getFeature(key); const rank = selected.indexOf(key) + 1; return <button type="button" key={key} className={`match-ranked-card ${rank ? "is-selected" : ""}`} onClick={() => update({ ...answers, [screen.kind]: toggleRankedSelection(selected, key, 2) })}><span className="match-rank-badge">{rank || ""}</span><strong>{feature.displayLabel}</strong><small>{feature.description}</small></button>; })}</div>
+      <div className="match-feature-grid">{question.optionFeatureKeys?.map((key) => { const feature = getFeature(key); const rank = selected.indexOf(key) + 1; return <button type="button" key={key} className={`match-ranked-card ${rank ? "is-selected" : ""}`} onClick={() => { const next = toggleRankedSelection(selected, key, maxSelect); if (next.length === selected.length && !selected.includes(key)) setNotice(`최대 ${maxSelect}개까지 고를 수 있어요.`); else setNotice(""); update({ ...answers, [screen.kind]: next }); }}><span className="match-rank-badge">{rank || ""}</span><strong>{feature.displayLabel}</strong><small>{feature.description}</small></button>; })}</div>
+      {notice ? <p className="match-notice" role="alert">{notice}</p> : null}
       <Navigation previous={meta.previous} disabled={selected.length < 1} onNext={() => router.push(meta.next)} />
     </QuestionShell>;
   }

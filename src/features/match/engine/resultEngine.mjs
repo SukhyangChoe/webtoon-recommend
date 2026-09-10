@@ -70,16 +70,16 @@ export function allocateGenreStars({ genres, rawGenreAffinity, baseGenreScore = 
 }
 
 function rankedScores(selected = [], config = MATCH_SCORING_CONFIG) {
-  if (selected.length === 1) return { [selected[0]]: 1 };
-  if (selected.length >= 2) return { [selected[0]]: config.rankedPositive.first, [selected[1]]: config.rankedPositive.second };
-  return {};
+  const count = Math.min(selected.length, 4);
+  const weights = config.rankedPositive.weightsBySelectionCount[count] ?? [];
+  return Object.fromEntries(selected.slice(0, weights.length).map((key, index) => [key, weights[index]]));
 }
 
 function labelFor(seed, featureKey) {
   return [...seed.positiveFeatureCatalog, ...seed.avoidanceFeatureCatalog].find((item) => item.featureKey === featureKey)?.publicShortLabel ?? null;
 }
 
-export function buildTasteSnapshot({ seed, answers, anonymousId, profileId, publicProfileId, completedAt = new Date().toISOString() }) {
+export function buildTasteSnapshot({ seed, answers, anonymousId, profileId, snapshotId, publicProfileId, completedAt = new Date().toISOString() }) {
   const genre = calculateGenreResult(seed, answers);
   const settingState = answers.setting?.indifferent ? "indifferent" : answers.setting?.selected?.length ? "specific" : "missing";
   const settingScores = settingState === "specific" ? getSettingWeights(answers.setting) : {};
@@ -94,6 +94,7 @@ export function buildTasteSnapshot({ seed, answers, anonymousId, profileId, publ
 
   return {
     profileId,
+    snapshotId,
     publicProfileId,
     anonymousId,
     testVersion: MATCH_VERSIONS.test,

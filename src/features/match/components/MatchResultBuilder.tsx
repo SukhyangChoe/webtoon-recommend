@@ -38,7 +38,7 @@ export function MatchResultBuilder() {
           if (!resultResponse.ok) throw new Error("완성된 결과를 불러오지 못했어요.");
         }
         writePublicResult(window.localStorage, publicResult);
-        writeMatchDraft(window.localStorage, { ...draft, resultPublicId: created.publicProfileId, currentPath: `/match/result/${created.publicProfileId}` });
+        writeMatchDraft(window.localStorage, { ...draft, resultPublicId: created.publicProfileId, snapshotId: created.snapshotId, currentPath: `/match/result/${created.publicProfileId}` });
         router.replace(`/match/result/${created.publicProfileId}`);
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : "결과를 만들지 못했어요.");

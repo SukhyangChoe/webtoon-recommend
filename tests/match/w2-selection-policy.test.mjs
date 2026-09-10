@@ -45,6 +45,14 @@ test("ranked choices preserve order, promote rank 2, and block a third", () => {
   assert.deepEqual(toggleRankedSelection(selected, "a", 2), ["b"]);
 });
 
+test("ranked choices can preserve four ranks and block a fifth", () => {
+  let selected = [];
+  for (const key of ["a", "b", "c", "d"]) selected = toggleRankedSelection(selected, key, 4);
+  assert.deepEqual(selected, ["a", "b", "c", "d"]);
+  assert.deepEqual(toggleRankedSelection(selected, "e", 4), selected);
+  assert.deepEqual(toggleRankedSelection(selected, "b", 4), ["a", "c", "d"]);
+});
+
 test("avoid-none is exclusive and regular avoidance is capped at three", () => {
   assert.deepEqual(toggleExclusiveSelection(["a"], "avoid_none", "avoid_none", 3), ["avoid_none"]);
   assert.deepEqual(toggleExclusiveSelection(["avoid_none"], "a", "avoid_none", 3), ["a"]);

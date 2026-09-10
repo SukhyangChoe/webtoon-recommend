@@ -304,6 +304,27 @@
       ],
       "ui": "첫 선택에 ①, 두 번째 선택에 ②를 표시한다. 1순위 취소 시 2순위를 1순위로 승격한다."
     },
+    "positive_rank_1_to_4": {
+      "single": [
+        { "rank": 1, "weight": 1.0 }
+      ],
+      "double": [
+        { "rank": 1, "weight": 0.7 },
+        { "rank": 2, "weight": 0.3 }
+      ],
+      "triple": [
+        { "rank": 1, "weight": 0.5 },
+        { "rank": 2, "weight": 0.3 },
+        { "rank": 3, "weight": 0.2 }
+      ],
+      "quadruple": [
+        { "rank": 1, "weight": 0.4 },
+        { "rank": 2, "weight": 0.3 },
+        { "rank": 3, "weight": 0.2 },
+        { "rank": 4, "weight": 0.1 }
+      ],
+      "ui": "선택 순서대로 ①~④를 표시한다. 앞 순위를 취소하면 뒤 순위를 차례로 승격한다."
+    },
     "setting_primary_plus_secondary_up_to_4": {
       "selectionModel": "primary_plus_secondary",
       "minSelect": 1,
@@ -1277,9 +1298,9 @@
       ],
       "selectMode": "ranked_multi_select",
       "minSelect": 1,
-      "maxSelect": 2,
-      "rankPolicyKey": "positive_rank_1_or_2",
-      "helperText": "하나만 골라도 되고, 두 개면 먼저 고른 게 1순위야."
+      "maxSelect": 4,
+      "rankPolicyKey": "positive_rank_1_to_4",
+      "helperText": "최대 4개까지, 끌리는 순서대로 골라줘. 먼저 고른 게 1순위야."
     },
     {
       "questionId": "wm_positive_03_character_relationship",
@@ -1382,7 +1403,7 @@
       },
       "groupScoring": {
         "setting": "setting_primary_plus_secondary_up_to_4의 정규화 weight를 feature별로 누적",
-        "appeal": "positive_rank_1_or_2의 rankWeight를 feature별로 누적",
+        "appeal": "positive_rank_1_to_4의 rankWeight를 feature별로 누적",
         "character_relationship": "positive_rank_1_or_2의 rankWeight를 feature별로 누적"
       },
       "settingEvidenceRule": "setting_indifferent 선택 시 설정 벡터를 0으로 만들지 않고 positiveTasteEvidenceStates.setting=\"indifferent\"로 저장한다."
@@ -1522,7 +1543,7 @@
     "각 첫 화 대결은 정확히 하나의 선택만 저장한다.",
     "설정 화면은 일반 설정 1~4개 또는 배타 선택 ‘설정은 크게 안 따짐’ 중 하나를 저장한다.",
     "일반 설정이 1개면 자동 대표, 2~4개면 선택된 설정 중 대표 1개가 반드시 있어야 하며 normalized weight 합은 1이다.",
-    "재미·인물관계 화면은 최소 1개, 최대 2개이며 1순위/2순위와 기존 0.7/0.3 weight를 보존한다.",
+    "재미 화면은 최소 1개, 최대 4개이며 선택 수별 정규화 순위 weight를 적용한다. 인물관계 화면은 최소 1개, 최대 2개이며 기존 0.7/0.3 weight를 보존한다.",
     "회피 화면은 최소 1개, 최대 3개다. avoid_none은 다른 선택과 공존할 수 없다.",
     "genreStars 합계는 항상 18이다.",
     "낮은 장르 점수만으로 avoidanceTasteScores를 만들지 않는다.",

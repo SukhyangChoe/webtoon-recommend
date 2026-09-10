@@ -7,16 +7,26 @@ export type AccuracyFeedback = "almost_exact" | "mostly_right" | "slightly_off" 
 type StoredSnapshot = ReturnType<typeof buildTasteSnapshot> & { accuracyFeedback?: AccuracyFeedback };
 
 const resultStore = new Map<string, StoredSnapshot>();
+const snapshotStore = new Map<string, StoredSnapshot>();
+const profileIdsByAnonymousId = new Map<string, string>();
 
 export function createTasteSnapshot(anonymousId: string, answers: MatchAnswers) {
   const publicProfileId = randomBytes(12).toString("base64url");
-  const snapshot = buildTasteSnapshot({ seed: questionSeed, answers, anonymousId, profileId: randomUUID(), publicProfileId });
+  const profileId = profileIdsByAnonymousId.get(anonymousId) ?? randomUUID();
+  const snapshotId = randomUUID();
+  profileIdsByAnonymousId.set(anonymousId, profileId);
+  const snapshot = buildTasteSnapshot({ seed: questionSeed, answers, anonymousId, profileId, snapshotId, publicProfileId });
   resultStore.set(publicProfileId, snapshot);
+  snapshotStore.set(snapshotId, snapshot);
   return snapshot;
 }
 
 export function getTasteSnapshot(publicProfileId: string) {
   return resultStore.get(publicProfileId) ?? null;
+}
+
+export function getTasteSnapshotById(snapshotId: string) {
+  return snapshotStore.get(snapshotId) ?? null;
 }
 
 export function getPublicTasteResult(publicProfileId: string) {

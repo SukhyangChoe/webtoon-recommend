@@ -51,3 +51,17 @@ test("public result excludes raw answers, affinities, and internal scores", () =
   assert.equal("rawGenreAffinity" in publicResult, false);
   assert.equal("positiveTasteScores" in publicResult, false);
 });
+
+test("four ranked appeal choices all contribute normalized taste scores", () => {
+  const answers = {
+    genre: Object.fromEntries(genres.map((genre) => [genre.genreKey, genre.genreKey === "fantasy" ? "high" : "low"])),
+    duels: {},
+    setting: { selected: [], primary: null, indifferent: true },
+    appeal: ["appeal_growth_training", "appeal_action_catharsis", "appeal_revenge_justice", "appeal_strategy_powerplay"],
+    characterRelationship: ["character_effortful_protagonist"],
+    avoidance: ["avoid_none"],
+  };
+  const snapshot = buildTasteSnapshot({ seed, answers, anonymousId: "11111111-1111-4111-8111-111111111111", profileId: "p1", snapshotId: "s1", publicProfileId: "public1" });
+  assert.deepEqual(Object.values(snapshot.positiveTasteScores.appeal), [0.4, 0.3, 0.2, 0.1]);
+  assert.ok(Math.abs(Object.values(snapshot.positiveTasteScores.appeal).reduce((sum, weight) => sum + weight, 0) - 1) < 1e-9);
+});

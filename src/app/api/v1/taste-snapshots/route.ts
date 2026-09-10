@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     }
     const snapshot = createTasteSnapshot(body.anonymousId, body.answers);
     return NextResponse.json(
-      { publicProfileId: snapshot.publicProfileId, result: toPublicTasteResult(snapshot) },
+      { publicProfileId: snapshot.publicProfileId, snapshotId: snapshot.snapshotId, result: toPublicTasteResult(snapshot) },
       { status: 201 },
     );
   } catch (error) {

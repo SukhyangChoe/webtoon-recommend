@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { requestActiveChallenge, type ActiveChallengeInfo } from "../api/activeChallenge";
 import { ensureAnonymousId } from "../storage/anonymousIdentity.mjs";
 import { readPublicResult, writePublicResult } from "../storage/resultStorage.mjs";
+import { ChallengeEntryPrompt } from "./ChallengeEntryPrompt";
 
 type DisplayGenre = { genreKey: string; displayLabel: string; stars: number };
 type PublicResult = { publicProfileId: string; displayGenres: DisplayGenre[]; topGenres: DisplayGenre[]; wellMatchedLabels: string[]; lessMatchedLabels: string[] };
@@ -17,6 +19,8 @@ export function MatchResultView({ publicProfileId }: { publicProfileId: string }
   const [result, setResult] = useState<PublicResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const [activeChallenge, setActiveChallenge] = useState<ActiveChallengeInfo | null>(null);
+  const [challengeLoading, setChallengeLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
@@ -35,6 +39,15 @@ export function MatchResultView({ publicProfileId }: { publicProfileId: string }
     return () => { active = false; };
   }, [publicProfileId]);
 
+  useEffect(() => {
+    let active = true;
+    const identity = ensureAnonymousId({ cookieText: document.cookie, storage: window.localStorage });
+    void requestActiveChallenge(identity.anonymousId)
+      .then((challenge) => { if (active) setActiveChallenge(challenge); })
+      .finally(() => { if (active) setChallengeLoading(false); });
+    return () => { active = false; };
+  }, [publicProfileId]);
+
   async function submitFeedback(next: Feedback) {
     setFeedback(next);
     const identity = ensureAnonymousId({ cookieText: document.cookie, storage: window.localStorage });
@@ -45,10 +58,11 @@ export function MatchResultView({ publicProfileId }: { publicProfileId: string }
   if (!result) return <main className="match-page"><section className="match-card match-hero"><p className="match-eyebrow">결과 없음</p><h1>이 결과를 찾지 못했어요</h1><p>같은 브라우저에서 테스트를 다시 완료해 주세요.</p><a className="match-button" href="/match">처음부터 시작</a></section></main>;
 
   return <main className="match-page match-result-page"><section className="match-result-hero"><p className="match-eyebrow">내 웹툰 취향</p><h1><strong>{result.topGenres[0]?.displayLabel}</strong>에<br />별이 가장 많이 모였어요</h1><div className="match-top-genres">{result.topGenres.map((genre, index) => <article key={genre.genreKey} className={index === 0 ? "is-primary" : ""}><span className="match-top-rank">{index + 1}</span><div><strong>{genre.displayLabel}</strong><TopStarRow count={genre.stars} /></div></article>)}</div></section>
+    <ChallengeEntryPrompt publicProfileId={publicProfileId} />
     <section className="match-result-section"><h2>18개의 취향별</h2><p className="match-section-note">점수 대신 장르 사이에 나뉜 별을 보여드려요.</p><div className="match-star-list">{result.displayGenres.map((genre) => <div className={genre.stars === 0 ? "is-zero" : ""} key={genre.genreKey}><strong>{genre.displayLabel}</strong><StarRow count={genre.stars} /><span>{genre.stars}개</span></div>)}</div></section>
     <section className="match-result-section match-taste-sections"><TasteLabels title="잘 보는 쪽" labels={result.wellMatchedLabels} empty="선택한 취향을 찾지 못했어요" /><TasteLabels title="덜 맞는 쪽" labels={result.lessMatchedLabels} empty="딱히 크게 가리는 쪽 없음" /></section>
     <section className="match-result-section"><h2>결과가 얼마나 나 같아?</h2><div className="match-feedback-grid">{feedbackOptions.map((option) => <button type="button" className={feedback === option.key ? "is-selected" : ""} key={option.key} onClick={() => void submitFeedback(option.key)}>{option.label}</button>)}</div>{feedback ? <p className="match-feedback-thanks">알려줘서 고마워요. 파일럿 조정에 반영할게요.</p> : null}</section>
-    <section className="match-result-actions"><a className="match-button" href="/match/challenge/new">나랑 웹툰궁합 보기</a><button className="match-button match-button--secondary" type="button" disabled>Threads 공유 · W6에서 연결</button></section>
+    <section className="match-result-actions">{challengeLoading ? <button className="match-button" type="button" disabled>궁합 링크 확인 중…</button> : activeChallenge ? <a className="match-button" href={`/match/c/${activeChallenge.challengeCode}/ranking`}>내 궁합 링크 관리</a> : <a className="match-button" href="/match/challenge/new">나랑 웹툰궁합 보기</a>}<button className="match-button match-button--secondary" type="button" disabled>Threads 공유 · W6에서 연결</button></section>
   </main>;
 }
 

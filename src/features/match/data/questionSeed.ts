@@ -7,7 +7,7 @@ type Genre = { genreKey: GenreKey; displayLabel: string; shortScope: string; ima
 type Choice = { choiceKey: string; displayLabel: string; score?: number; leftScore?: number; rightScore?: number };
 type Question = {
   questionId: string; sectionKey: string; progressLabel: string; title: string; questionText: string;
-  helperText?: string; genreKeys?: GenreKey[]; choiceSetKey?: string; optionFeatureKeys?: string[];
+  helperText?: string; genreKeys?: GenreKey[]; choiceSetKey?: string; optionFeatureKeys?: string[]; maxSelect?: number;
   left?: { genreKey: GenreKey; imageKey: string; cardLabel: string; altText: string };
   right?: { genreKey: GenreKey; imageKey: string; cardLabel: string; altText: string };
 };
