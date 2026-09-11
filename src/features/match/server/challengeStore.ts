@@ -134,7 +134,7 @@ function trustLabel(value: number) {
   if (value >= 0.85) return "추천을 꽤 믿고 봐도 됨";
   if (value >= 0.7) return "주력 장르는 꽤 믿을 만함";
   if (value >= 0.55) return "장르를 확인하고 들으면 됨";
-  return "추천은 참고하면 좋음";
+  return "가볍게 참고하면 좋음";
 }
 
 export function createChallengeEntry(input: { challengeCode: string; anonymousId: string; challengerPublicProfileId: string; challengerNickname: string }) {

@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { MATCH_EVENT_QUEUE_KEY, recordMatchEvent } from "../../src/features/match/analytics/events.mjs";
+import { pairArchetypeFor, personalArchetypeFor } from "../../src/features/match/share/shareArchetypes.mjs";
 import { pairShareCopy, personalShareCopy, rankingShareCopy, threadsIntentUrl } from "../../src/features/match/share/sharePolicy.mjs";
 
 function memoryStorage() {
@@ -13,6 +14,7 @@ test("personal sharing uses the challenge URL and required Threads UTM", () => {
     topGenres: [{ displayLabel: "판타지" }],
     wellMatchedLabels: ["성장", "시스템"],
     lessMatchedLabels: [],
+    archetypeName: "회귀 버튼 단골손님",
     challengeUrl: "https://example.com/match/c/code123",
   });
   const url = new URL(copy.shareUrl);
@@ -20,6 +22,7 @@ test("personal sharing uses the challenge URL and required Threads UTM", () => {
   assert.equal(url.searchParams.get("utm_source"), "threads");
   assert.equal(url.searchParams.get("utm_content"), "personal");
   assert.match(copy.text, /판타지/);
+  assert.match(copy.text, /회귀 버튼 단골손님/);
   assert.ok(copy.text.length < 500);
 });
 
@@ -27,6 +30,7 @@ test("pair and ranking sharing preserve their intended destinations", () => {
   const pair = pairShareCopy({
     ownerNickname: "주인", challengerNickname: "도전자", score: 88, bandLabel: "취향 잘 맞음",
     sharedGenres: ["판타지"], differentGenres: ["로맨스"], trustSentence: "추천을 믿을 만해.",
+    archetypeName: "밤샘 정주행 메이트",
     pairUrl: "https://example.com/match/c/code/match/result",
   });
   const ranking = rankingShareCopy({
@@ -36,8 +40,31 @@ test("pair and ranking sharing preserve their intended destinations", () => {
   assert.equal(new URL(ranking.shareUrl).pathname, "/match/c/code");
   assert.equal(new URL(pair.shareUrl).searchParams.get("utm_content"), "pair");
   assert.equal(new URL(ranking.shareUrl).searchParams.get("utm_content"), "ranking_initial");
+  assert.match(pair.text, /밤샘 정주행 메이트/);
   assert.ok(pair.text.length < 500);
   assert.ok(ranking.text.length < 500);
+});
+
+test("pair relation types cover every score band and clamp outliers", () => {
+  assert.equal(pairArchetypeFor(100).name, "최애작 공동명의");
+  assert.equal(pairArchetypeFor(90).name, "최애작 공동명의");
+  assert.equal(pairArchetypeFor(89).name, "밤샘 정주행 메이트");
+  assert.equal(pairArchetypeFor(79).name, "추천 적중 보증수표");
+  assert.equal(pairArchetypeFor(69).name, "장르 교환 원정대");
+  assert.equal(pairArchetypeFor(54).name, "취향 맞다이 라이벌");
+  assert.equal(pairArchetypeFor(39).name, "반대편 서가 안내자");
+  assert.equal(pairArchetypeFor(-12).name, "반대편 서가 안내자");
+  assert.equal(pairArchetypeFor(140).name, "최애작 공동명의");
+});
+
+test("personal webtoon personas follow the leading genre", () => {
+  assert.equal(personalArchetypeFor("fantasy").name, "회귀 버튼 단골손님");
+  assert.equal(personalArchetypeFor("romance").name, "심쿵 장면 수집가");
+  assert.equal(personalArchetypeFor("unknown").name, "다음 화 버튼 수호자");
+  const genreKeys = ["fantasy", "murim", "romance", "ropan", "action", "thriller_horror", "drama_daily", "comedy", "sports"];
+  const imageSources = genreKeys.map((genreKey) => personalArchetypeFor(genreKey).imageSrc);
+  assert.equal(new Set(imageSources).size, genreKeys.length);
+  assert.ok(imageSources.every((src) => src.startsWith("/match/personas/") && src.endsWith(".png")));
 });
 
 test("Threads intent carries the complete prepared text", () => {

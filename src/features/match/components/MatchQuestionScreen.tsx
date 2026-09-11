@@ -37,6 +37,7 @@ export function MatchQuestionScreen({ screen }: { screen: Screen }) {
   const [answers, setAnswers] = useState<MatchAnswers>({});
   const [ready, setReady] = useState(false);
   const [notice, setNotice] = useState("");
+  const [duelAssist, setDuelAssist] = useState({ path: "", open: false, nudged: false });
   const path = currentPath(screen);
 
   useEffect(() => {
@@ -48,6 +49,16 @@ export function MatchQuestionScreen({ screen }: { screen: Screen }) {
     }, 0);
     return () => window.clearTimeout(timer);
   }, [path]);
+
+  useEffect(() => {
+    if (screen.type !== "duel") return;
+    const timer = window.setTimeout(() => {
+      setDuelAssist((current) => current.path === path
+        ? { ...current, nudged: true }
+        : { path, open: false, nudged: true });
+    }, 5000);
+    return () => window.clearTimeout(timer);
+  }, [path, screen.type]);
 
   function update(nextAnswers: MatchAnswers) {
     setAnswers(nextAnswers);
@@ -93,7 +104,13 @@ export function MatchQuestionScreen({ screen }: { screen: Screen }) {
     const choiceMap = Object.fromEntries(
       (matchQuestionSeed.choiceSets.duel_four_way as Array<{ choiceKey: DuelChoice; displayLabel: string }>).map((choice) => [choice.choiceKey, choice])
     ) as Record<DuelChoice, { choiceKey: DuelChoice; displayLabel: string }>;
-    const choices = [choiceMap.left, choiceMap.right, choiceMap.both, choiceMap.neither];
+    const primaryChoices = [choiceMap.left, choiceMap.right];
+    const assistChoices = [
+      { ...choiceMap.both, displayLabel: "둘 다 궁금해" },
+      { ...choiceMap.neither, displayLabel: "지금은 둘 다 안 끌려" },
+    ];
+    const currentAssist = duelAssist.path === path ? duelAssist : { path, open: false, nudged: false };
+    const assistOpen = currentAssist.open || selected === "both" || selected === "neither";
     const previous = screen.index === 1 ? MATCH_ROUTES.genreShelf(2) : MATCH_ROUTES.duel(screen.index - 1);
     const next = screen.index === 6 ? MATCH_ROUTES.setting : MATCH_ROUTES.duel(screen.index + 1);
     function selectChoice(choiceKey: DuelChoice) {
@@ -107,7 +124,21 @@ export function MatchQuestionScreen({ screen }: { screen: Screen }) {
           return <button type="button" className={`match-duel-card ${active ? "is-selected" : ""}`} aria-pressed={active} aria-label={`${index === 0 ? "왼쪽" : "오른쪽"} 이미지 선택: ${card.cardLabel}`} key={card.imageKey} onClick={() => selectChoice(toggleDuelSide(selected, side) as DuelChoice)}><div className={`match-duel-placeholder match-duel-placeholder--${card.genreKey}`}><span>{matchGenreMap[card.genreKey].displayLabel}</span></div><h2>{card.cardLabel}</h2><span className="sr-only">{card.altText}</span><span className="match-duel-side">{index === 0 ? "왼쪽" : "오른쪽"}</span><span className="match-duel-check" aria-hidden="true">✓</span></button>;
         })}
       </div>
-      <div className="match-choice-grid">{choices.map((choice) => <button type="button" className={`match-choice-button ${selected === choice.choiceKey ? "is-selected" : ""}`} key={choice.choiceKey} onClick={() => selectChoice(choice.choiceKey)}>{choice.displayLabel}</button>)}</div>
+      <div className="match-choice-grid match-duel-primary-choices">{primaryChoices.map((choice) => <button type="button" className={`match-choice-button ${selected === choice.choiceKey ? "is-selected" : ""}`} key={choice.choiceKey} onClick={() => selectChoice(choice.choiceKey)}>{choice.displayLabel}</button>)}</div>
+      <div className={`match-duel-assist ${currentAssist.nudged && !selected ? "is-nudged" : ""}`}>
+        <button
+          type="button"
+          className="match-duel-assist__toggle"
+          aria-expanded={assistOpen}
+          aria-controls={`match-duel-assist-${screen.index}`}
+          onClick={() => setDuelAssist({ path, open: !assistOpen, nudged: false })}
+        >
+          선택하기 어렵다면 <span aria-hidden="true">{assistOpen ? "▴" : "▾"}</span>
+        </button>
+        {assistOpen ? <div className="match-choice-grid match-duel-assist__choices" id={`match-duel-assist-${screen.index}`}>
+          {assistChoices.map((choice) => <button type="button" className={`match-choice-button ${selected === choice.choiceKey ? "is-selected" : ""}`} key={choice.choiceKey} onClick={() => selectChoice(choice.choiceKey)}>{choice.displayLabel}</button>)}
+        </div> : null}
+      </div>
       <Navigation previous={previous} disabled={!selected} onNext={() => router.push(next)} />
     </QuestionShell>;
   }

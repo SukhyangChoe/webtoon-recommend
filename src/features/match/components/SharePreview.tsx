@@ -1,16 +1,18 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { recordMatchEvent } from "../analytics/events.mjs";
 import { readOwnerManageToken } from "../storage/challengeStorage.mjs";
 import { downloadBlob, renderShareCardPng, type ShareCardModel } from "../share/shareCardImage";
+import { pairArchetypeFor, personalArchetypeFor } from "../share/shareArchetypes.mjs";
 import { pairShareCopy, personalShareCopy, rankingShareCopy, threadsIntentUrl } from "../share/sharePolicy.mjs";
 
 type ShareType = "personal" | "pair" | "ranking";
 type SharePayload = { card: ShareCardModel; shareText: string; shareUrl: string; templateKey: string };
 
 type PersonalResult = {
-  topGenres: Array<{ displayLabel: string; stars: number }>;
+  topGenres: Array<{ genreKey: string; displayLabel: string; stars: number }>;
   wellMatchedLabels: string[];
   lessMatchedLabels: string[];
 };
@@ -23,6 +25,8 @@ type PairResult = {
   sharedGenres: string[];
   differentGenres: string[];
   trustSentence: string;
+  rank: number;
+  entryCount: number;
 };
 
 type RankingResult = {
@@ -71,13 +75,20 @@ export function SharePreview({ type, profilePublicId, challengeCode, resultId }:
         if (!profilePublicId || !challengeCode) throw new Error("SHARE_SOURCE_MISSING");
         const result = await responseJson<PersonalResult>(`/api/v1/results/${profilePublicId}`);
         const challengeUrl = `${origin}/match/c/${challengeCode}`;
-        const copy = personalShareCopy({ ...result, challengeUrl });
+        const leadGenre = result.topGenres[0];
+        const archetype = personalArchetypeFor(leadGenre?.genreKey);
+        const copy = personalShareCopy({ ...result, challengeUrl, archetypeName: archetype.name });
         next = {
           card: {
-            eyebrow: "내 웹툰 취향",
-            title: `${result.topGenres[0]?.displayLabel ?? "웹툰"}에 별이 가장 많이 모였어요`,
-            subtitle: "9개 장르에 나뉜 나의 취향별 18개",
-            rows: result.topGenres.slice(0, 3).map((genre, index) => ({ label: `${index + 1}. ${genre.displayLabel}`, value: `별 ${genre.stars}개` })),
+            eyebrow: "나의 웹툰 본캐",
+            title: archetype.name,
+            subtitle: archetype.description,
+            badge: `취향 1위 · ${leadGenre?.displayLabel ?? "웹툰"}`,
+            symbol: archetype.symbol,
+            imageSrc: archetype.imageSrc,
+            imageAlt: archetype.imageAlt,
+            theme: archetype.theme as ShareCardModel["theme"],
+            rows: result.topGenres.slice(0, 3).map((genre, index) => ({ label: `${index + 1}위 · ${genre.displayLabel}`, value: "★".repeat(genre.stars) || "별 없음" })),
             footer: "나랑 웹툰궁합 몇 % 나오는지 해볼래?",
             fileName: "webtoon-match-personal.png",
           },
@@ -89,18 +100,23 @@ export function SharePreview({ type, profilePublicId, challengeCode, resultId }:
         if (!challengeCode || !resultId) throw new Error("SHARE_SOURCE_MISSING");
         const result = await responseJson<PairResult>(`/api/v1/challenges/${challengeCode}/results/${resultId}`);
         const pairUrl = `${origin}/match/c/${challengeCode}/match/${resultId}`;
-        const copy = pairShareCopy({ ...result, bandLabel: result.band.label, pairUrl });
+        const archetype = pairArchetypeFor(result.score);
+        const copy = pairShareCopy({ ...result, archetypeName: archetype.name, bandLabel: result.band.label, pairUrl });
         next = {
           card: {
-            eyebrow: "웹툰궁합 결과",
-            title: copy.cardTitle,
-            subtitle: result.band.label,
+            eyebrow: `${result.ownerNickname} × ${result.challengerNickname}`,
+            title: archetype.name,
+            subtitle: archetype.description,
+            badge: archetype.badge,
+            symbol: archetype.symbol,
+            theme: archetype.theme as ShareCardModel["theme"],
             metric: `${result.score}%`,
             rows: [
-              { label: "둘 다 잘 보는 장르", value: result.sharedGenres.slice(0, 2).join(" · ") || "조금 다름" },
-              { label: "여기서 갈림", value: result.differentGenres.slice(0, 2).join(" · ") || "거의 비슷" },
+              { label: "같이 달릴 장르", value: result.sharedGenres.slice(0, 2).join(" · ") || "새 장르 개척" },
+              { label: "각자 영업할 장르", value: result.differentGenres.slice(0, 2).join(" · ") || "거의 한마음" },
+              { label: "현재 랭킹", value: `${result.rank}위 / ${result.entryCount}명` },
             ],
-            footer: "웹툰 취향으로 확인한 우리 둘의 궁합",
+            footer: "웹툰 취향 한정 관계 타입 · 사람 사이를 평가하지 않아요",
             fileName: "webtoon-match-pair.png",
           },
           shareText: copy.text,
@@ -116,9 +132,12 @@ export function SharePreview({ type, profilePublicId, challengeCode, resultId }:
         const copy = rankingShareCopy({ topEntry: result.top20[0] ?? null, challengeUrl });
         next = {
           card: {
-            eyebrow: "웹툰궁합 랭킹",
-            title: `${result.ownerNickname}님과 누가 가장 잘 맞을까?`,
-            subtitle: `현재 도전자 ${result.entryCount}명`,
+            eyebrow: `${result.ownerNickname}의 웹툰궁합`,
+            title: "취향 왕좌 쟁탈전",
+            subtitle: result.entryCount ? "현재 1위를 밀어낼 웹툰 메이트를 찾는 중이에요." : "왕좌가 비었어요. 첫 번째 도전자가 주인공!",
+            badge: `현재 도전자 · ${result.entryCount}명`,
+            symbol: "♛",
+            theme: "gold",
             rows: result.top20.slice(0, 3).map((entry) => ({ label: `${entry.rank}위  ${entry.nickname}`, value: `${entry.score}%` })),
             footer: result.entryCount ? "현재 1위를 넘을 사람을 기다리는 중" : "첫 번째 도전자를 기다리는 중",
             fileName: "webtoon-match-ranking.png",
@@ -177,8 +196,10 @@ export function SharePreview({ type, profilePublicId, challengeCode, resultId }:
 
   return <main className="match-page match-share-page">
     <section className="match-share-heading"><p className="match-eyebrow">공유 미리보기</p><h1>이 카드로 공유할까요?</h1><p>Threads에서는 이미지가 자동으로 붙지 않을 수 있어요. 이미지를 저장한 뒤 직접 첨부하면 가장 정확해요.</p></section>
-    <article className="match-share-card" aria-label={`${payload.card.eyebrow} 공유 카드 미리보기`}>
-      <div className="match-share-brand"><strong>웹툰궁합</strong><span aria-hidden="true">✦ ✦</span></div>
+    <article className={`match-share-card is-${payload.card.theme ?? "violet"}${payload.card.metric ? " has-metric" : ""}${payload.card.imageSrc ? " has-character" : ""}`} aria-label={`${payload.card.eyebrow} 공유 카드 미리보기`}>
+      <div className="match-share-brand"><strong>웹툰궁합</strong><span>WEBTOON FIT</span></div>
+      {payload.card.imageSrc ? <span className="match-share-character"><Image src={payload.card.imageSrc} alt={payload.card.imageAlt ?? "웹툰 본캐"} width={360} height={540} priority /></span> : payload.card.symbol ? <span className="match-share-symbol" aria-hidden="true">{payload.card.symbol}</span> : null}
+      {payload.card.badge ? <strong className="match-share-badge">{payload.card.badge}</strong> : null}
       <p>{payload.card.eyebrow}</p>
       <h2>{payload.card.title}</h2>
       <h3>{payload.card.subtitle}</h3>

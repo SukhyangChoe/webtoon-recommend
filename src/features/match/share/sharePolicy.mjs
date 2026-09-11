@@ -20,22 +20,22 @@ export function threadsIntentUrl(text) {
   return intent.toString();
 }
 
-export function personalShareCopy({ topGenres, wellMatchedLabels, lessMatchedLabels, challengeUrl }) {
+export function personalShareCopy({ topGenres, wellMatchedLabels, lessMatchedLabels, challengeUrl, archetypeName }) {
   const shareUrl = withShareUtm(challengeUrl, "personal");
   const topGenre = topGenres[0]?.displayLabel ?? "웹툰";
   return {
     templateKey: "personal_invite_primary",
     shareUrl,
-    text: `내 웹툰 취향은 ${topGenre} 쪽에 별이 제일 많이 모였어.\n\n잘 보는 쪽\n${joined(wellMatchedLabels, "딱히 크게 가리지 않음")}\n\n덜 맞는 쪽\n${joined(lessMatchedLabels, "딱히 크게 가리는 쪽 없음")}\n\n나랑 웹툰궁합 몇 % 나오는지 해볼래?\n${shareUrl}`,
+    text: `내 웹툰 본캐는 ‘${archetypeName ?? "다음 화 버튼 수호자"}’!\n${topGenre} 쪽에 별이 제일 많이 모였어.\n\n잘 보는 쪽\n${joined(wellMatchedLabels, "딱히 크게 가리지 않음")}\n\n덜 맞는 쪽\n${joined(lessMatchedLabels, "딱히 크게 가리는 쪽 없음")}\n\n너랑은 어떤 웹툰 관계 타입일까?\n${shareUrl}`,
   };
 }
 
-export function pairShareCopy({ ownerNickname, challengerNickname, score, bandLabel, sharedGenres, differentGenres, trustSentence, pairUrl }) {
+export function pairShareCopy({ ownerNickname, challengerNickname, score, bandLabel, sharedGenres, differentGenres, trustSentence, pairUrl, archetypeName }) {
   const shareUrl = withShareUtm(pairUrl, "pair");
   return {
     templateKey: "pair_result_primary",
     shareUrl,
-    text: `${ownerNickname}님이랑 웹툰궁합 ${score}% — ${bandLabel}\n\n둘 다 잘 보는 장르\n${joined(sharedGenres, "딱 겹치는 주력 장르는 적어")}\n\n여기서 갈림\n${joined(differentGenres, "장르 분포까지 거의 비슷해")}\n\n${trustSentence}\n${shareUrl}`,
+    text: `${ownerNickname} × ${challengerNickname}\n우리 웹툰 관계 타입은 ‘${archetypeName ?? bandLabel}’! (${score}%)\n\n같이 달릴 장르\n${joined(sharedGenres, "서로의 새 장르 개척하기")}\n\n각자 영업할 장르\n${joined(differentGenres, "거의 한마음")}\n\n${trustSentence}\n${shareUrl}`,
     cardTitle: `${ownerNickname} × ${challengerNickname}`,
   };
 }
@@ -48,6 +48,6 @@ export function rankingShareCopy({ topEntry, challengeUrl }) {
   return {
     templateKey: "ranking_initial_primary",
     shareUrl,
-    text: `내 웹툰궁합 랭킹 열었어.\n${body}\n${shareUrl}`,
+    text: `내 웹툰 취향 왕좌를 열었어.\n${body}\n${shareUrl}`,
   };
 }
