@@ -346,6 +346,11 @@ export async function getPublicChallenge(challengeCode: string) {
   return challenge ? publicChallenge(challenge) : null;
 }
 
+export async function getChallengeInviteMetadata(challengeCode: string) {
+  const challenge = await findChallenge(challengeCode);
+  return challenge ? { ownerNickname: challenge.ownerNickname, status: challenge.status } : null;
+}
+
 export async function getActiveChallengeForOwner(anonymousId: string) {
   const database = getMatchDatabase();
   const rows = await database<ChallengeRow[]>`

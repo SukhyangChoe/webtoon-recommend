@@ -8,7 +8,7 @@ import { MATCH_ROUTES } from "../config/routes";
 import { ensureAnonymousId } from "../storage/anonymousIdentity.mjs";
 import { createEmptyMatchDraft, readMatchDraft, writeMatchDraft } from "../storage/draft.mjs";
 import type { DuelChoice, GenreChoice, MatchAnswers } from "../storage/draftTypes";
-import { getSettingWeights, needsGenreRecovery, normalizeSettingSelection, shouldSwapDuel, toggleDuelSide, toggleExclusiveSelection, toggleRankedSelection, validateSettingSelection } from "../engine/selectionPolicy.mjs";
+import { getSettingWeights, needsGenreRecovery, normalizeSettingSelection, promotePrimarySelection, shouldSwapDuel, toggleDuelSide, toggleExclusiveSelection, togglePrimarySelection, validateSettingSelection } from "../engine/selectionPolicy.mjs";
 
 type Screen =
   | { type: "genre"; page: 1 | 2 }
@@ -184,10 +184,34 @@ export function MatchQuestionScreen({ screen }: { screen: Screen }) {
   if (screen.type === "ranked") {
     const meta = screenMeta[screen.kind];
     const question = getMatchQuestion(meta.questionId);
-    const selected = answers[screen.kind] ?? [];
-    const maxSelect = question.maxSelect ?? 2;
+    const selected = [...new Set(answers[screen.kind] ?? [])].slice(0, 4);
+    const maxSelect = 4;
     return <QuestionShell {...question}>
-      <div className="match-feature-grid">{question.optionFeatureKeys?.map((key) => { const feature = getFeature(key); const rank = selected.indexOf(key) + 1; return <button type="button" key={key} className={`match-ranked-card ${rank ? "is-selected" : ""}`} onClick={() => { const next = toggleRankedSelection(selected, key, maxSelect); if (next.length === selected.length && !selected.includes(key)) setNotice(`최대 ${maxSelect}개까지 고를 수 있어요.`); else { setNotice(""); trackAnswer(question.questionId, key, { selected: !selected.includes(key), selectionRole: "ranked" }); } update({ ...answers, [screen.kind]: next }); }}><span className="match-rank-badge">{rank || ""}</span><strong>{feature.displayLabel}</strong><small>{feature.description}</small></button>; })}</div>
+      <div className="match-feature-grid">{question.optionFeatureKeys?.map((key) => {
+        const feature = getFeature(key);
+        const isSelected = selected.includes(key);
+        const isPrimary = selected[0] === key;
+        return <div className={`match-feature-card ${isSelected ? "is-selected" : ""}`} key={key}>
+          <button type="button" onClick={() => {
+            const next = togglePrimarySelection(selected, key, maxSelect);
+            if (next.length === selected.length && !isSelected) setNotice(`최대 ${maxSelect}개까지 고를 수 있어요.`);
+            else {
+              setNotice("");
+              trackAnswer(question.questionId, key, { selected: !isSelected, selectionRole: "option" });
+              update({ ...answers, [screen.kind]: next });
+            }
+          }}>
+            <strong>{feature.displayLabel}</strong>
+            <span>{isSelected ? "✓ 선택됨" : feature.description}</span>
+          </button>
+          {isSelected ? <button className={`match-primary-toggle ${isPrimary ? "is-primary" : ""}`} type="button" aria-label={`${feature.displayLabel} 대표 취향`} onClick={() => {
+            const next = promotePrimarySelection(selected, key, maxSelect);
+            setNotice("");
+            trackAnswer(question.questionId, key, { selected: true, selectionRole: "primary" });
+            update({ ...answers, [screen.kind]: next });
+          }}>★ 대표</button> : null}
+        </div>;
+      })}</div>
       {notice ? <p className="match-notice" role="alert">{notice}</p> : null}
       <Navigation previous={meta.previous} disabled={selected.length < 1} onNext={() => router.push(meta.next)} />
     </QuestionShell>;

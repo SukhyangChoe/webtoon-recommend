@@ -1,6 +1,6 @@
 import { MATCH_SCORING_CONFIG } from "../config/scoring.mjs";
 import { MATCH_VERSIONS } from "../config/versions.mjs";
-import { getSettingWeights } from "./selectionPolicy.mjs";
+import { getPrimarySelectionWeights, getSettingWeights } from "./selectionPolicy.mjs";
 
 const GENRE_CHOICE_SCORE = Object.freeze({ high: 3, medium: 1.5, low: 0 });
 
@@ -69,12 +69,6 @@ export function allocateGenreStars({ genres, rawGenreAffinity, baseGenreScore = 
   return { genreStars, displayGenres };
 }
 
-function rankedScores(selected = [], config = MATCH_SCORING_CONFIG) {
-  const count = Math.min(selected.length, 4);
-  const weights = config.rankedPositive.weightsBySelectionCount[count] ?? [];
-  return Object.fromEntries(selected.slice(0, weights.length).map((key, index) => [key, weights[index]]));
-}
-
 function labelFor(seed, featureKey) {
   return [...seed.positiveFeatureCatalog, ...seed.avoidanceFeatureCatalog].find((item) => item.featureKey === featureKey)?.publicShortLabel ?? null;
 }
@@ -83,8 +77,8 @@ export function buildTasteSnapshot({ seed, answers, anonymousId, profileId, snap
   const genre = calculateGenreResult(seed, answers);
   const settingState = answers.setting?.indifferent ? "indifferent" : answers.setting?.selected?.length ? "specific" : "missing";
   const settingScores = settingState === "specific" ? getSettingWeights(answers.setting) : {};
-  const appealScores = rankedScores(answers.appeal);
-  const characterScores = rankedScores(answers.characterRelationship);
+  const appealScores = getPrimarySelectionWeights(answers.appeal);
+  const characterScores = getPrimarySelectionWeights(answers.characterRelationship);
   const avoidanceKeys = (answers.avoidance ?? []).filter((key) => key !== "avoid_none");
   const wellMatchedLabels = [
     settingState === "specific" ? labelFor(seed, answers.setting.primary) : null,

@@ -55,10 +55,26 @@ export function getSettingWeights(input) {
   );
 }
 
-export function toggleRankedSelection(selected, key, max = 2) {
-  if (selected.includes(key)) return selected.filter((item) => item !== key);
-  if (selected.length >= max) return selected;
-  return [...selected, key];
+export function promotePrimarySelection(selected, key, max = 4) {
+  const limited = [...new Set(selected ?? [])].slice(0, max);
+  if (!limited.includes(key)) return limited;
+  return [key, ...limited.filter((item) => item !== key)];
+}
+
+export function getPrimarySelectionWeights(selected, max = 4) {
+  const limited = [...new Set(selected ?? [])].slice(0, max);
+  if (limited.length === 0) return {};
+  const denominator = limited.length + 1;
+  return Object.fromEntries(
+    limited.map((key, index) => [key, Number(((index === 0 ? 2 : 1) / denominator).toFixed(6))])
+  );
+}
+
+export function togglePrimarySelection(selected, key, max = 4) {
+  const limited = [...new Set(selected ?? [])].slice(0, max);
+  if (limited.includes(key)) return limited.filter((item) => item !== key);
+  if (limited.length >= max) return limited;
+  return [...limited, key];
 }
 
 export function toggleExclusiveSelection(selected, key, exclusiveKey, max) {
