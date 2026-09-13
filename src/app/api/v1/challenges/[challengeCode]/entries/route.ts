@@ -11,7 +11,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cha
     if (!body.anonymousId || !isAnonymousId(body.anonymousId) || !body.challengerPublicProfileId || !body.challengerNickname) {
       return NextResponse.json({ error: "INVALID_CHALLENGE_ENTRY_INPUT" }, { status: 400 });
     }
-    const created = createChallengeEntry({
+    const created = await createChallengeEntry({
       challengeCode,
       anonymousId: body.anonymousId,
       challengerPublicProfileId: body.challengerPublicProfileId,

@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ challengeCode: string }> }) {
   const { challengeCode } = await params;
-  const challenge = getPublicChallenge(challengeCode);
+  const challenge = await getPublicChallenge(challengeCode);
   if (!challenge) return NextResponse.json({ error: "CHALLENGE_NOT_FOUND" }, { status: 404 });
   return NextResponse.json(challenge);
 }
@@ -25,7 +25,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ch
     if (body.rankingVisibility !== undefined && typeof body.rankingVisibility !== "boolean") {
       return NextResponse.json({ error: "INVALID_RANKING_VISIBILITY" }, { status: 400 });
     }
-    const challenge = updateChallenge({
+    const challenge = await updateChallenge({
       challengeCode,
       status: body.status,
       rankingVisibility: body.rankingVisibility,

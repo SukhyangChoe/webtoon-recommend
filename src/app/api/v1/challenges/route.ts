@@ -11,7 +11,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "INVALID_CHALLENGE_OWNER" }, { status: 400 });
   }
 
-  const challenge = getActiveChallengeForOwner(anonymousId);
+  const challenge = await getActiveChallengeForOwner(anonymousId);
   if (!challenge) return NextResponse.json({ active: false });
   return NextResponse.json({
     active: true,
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     if (!body.anonymousId || !isAnonymousId(body.anonymousId) || !body.ownerPublicProfileId || !body.ownerNickname) {
       return NextResponse.json({ error: "INVALID_CHALLENGE_INPUT" }, { status: 400 });
     }
-    const created = createChallenge({
+    const created = await createChallenge({
       anonymousId: body.anonymousId,
       ownerPublicProfileId: body.ownerPublicProfileId,
       ownerNickname: body.ownerNickname,

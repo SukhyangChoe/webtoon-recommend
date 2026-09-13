@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     if (!body.anonymousId || !isAnonymousId(body.anonymousId) || !body.answers) {
       return NextResponse.json({ error: "INVALID_TASTE_SNAPSHOT_INPUT" }, { status: 400 });
     }
-    const snapshot = createTasteSnapshot(body.anonymousId, body.answers);
+    const snapshot = await createTasteSnapshot(body.anonymousId, body.answers);
     return NextResponse.json(
       { publicProfileId: snapshot.publicProfileId, snapshotId: snapshot.snapshotId, result: toPublicTasteResult(snapshot) },
       { status: 201 },

@@ -13,7 +13,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ chal
   const url = new URL(request.url);
   const requestedLimit = Number(url.searchParams.get("limit") ?? 20);
   const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(20, Math.floor(requestedLimit))) : 20;
-  const ranking = getChallengeRanking({
+  const ranking = await getChallengeRanking({
     challengeCode,
     limit,
     viewerPublicProfileId: url.searchParams.get("viewerProfileId"),

@@ -15,7 +15,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ch
     if (typeof body.hiddenByOwner !== "boolean") {
       return NextResponse.json({ error: "INVALID_ENTRY_VISIBILITY" }, { status: 400 });
     }
-    const updated = updateChallengeEntryVisibility({
+    const updated = await updateChallengeEntryVisibility({
       challengeCode,
       entryId,
       hiddenByOwner: body.hiddenByOwner,
