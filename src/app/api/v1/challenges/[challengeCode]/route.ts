@@ -1,13 +1,19 @@
 import { NextResponse } from "next/server";
 import { getPublicChallenge, updateChallenge } from "@/features/match/server/challengeStore";
+import { toMatchApiFailure } from "@/features/match/server/apiErrors";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ challengeCode: string }> }) {
-  const { challengeCode } = await params;
-  const challenge = await getPublicChallenge(challengeCode);
-  if (!challenge) return NextResponse.json({ error: "CHALLENGE_NOT_FOUND" }, { status: 404 });
-  return NextResponse.json(challenge);
+  try {
+    const { challengeCode } = await params;
+    const challenge = await getPublicChallenge(challengeCode);
+    if (!challenge) return NextResponse.json({ error: "CHALLENGE_NOT_FOUND" }, { status: 404 });
+    return NextResponse.json(challenge);
+  } catch (error) {
+    const failure = toMatchApiFailure(error, "CHALLENGE_LOAD_FAILED");
+    return NextResponse.json({ error: failure.error }, { status: failure.status });
+  }
 }
 
 function ownerToken(request: Request) {
@@ -33,9 +39,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ch
     });
     return NextResponse.json(challenge);
   } catch (error) {
-    const code = error instanceof Error ? error.message : "CHALLENGE_UPDATE_FAILED";
-    const status = code === "ACTIVE_CHALLENGE_EXISTS" ? 409 : code === "OWNER_AUTH_REQUIRED" ? 403 : code.endsWith("NOT_FOUND") ? 404 : 400;
+    const failure = toMatchApiFailure(error, "CHALLENGE_UPDATE_FAILED");
     const activeChallengeCode = error && typeof error === "object" && "challengeCode" in error && typeof error.challengeCode === "string" ? error.challengeCode : null;
-    return NextResponse.json({ error: code, ...(activeChallengeCode ? { challengeCode: activeChallengeCode } : {}) }, { status });
+    return NextResponse.json({ error: failure.error, ...(failure.error === "ACTIVE_CHALLENGE_EXISTS" && activeChallengeCode ? { challengeCode: activeChallengeCode } : {}) }, { status: failure.status });
   }
 }

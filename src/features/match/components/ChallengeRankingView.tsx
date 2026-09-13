@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { trackMatchEvent } from "../analytics/client";
 import { readMatchDraft } from "../storage/draft.mjs";
 import { readOwnerManageToken } from "../storage/challengeStorage.mjs";
 
@@ -46,6 +47,7 @@ export function ChallengeRankingView({ challengeCode }: { challengeCode: string 
   const [message, setMessage] = useState("");
   const [mutating, setMutating] = useState("");
   const [confirming, setConfirming] = useState("");
+  const rankingTracked = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -56,6 +58,15 @@ export function ChallengeRankingView({ challengeCode }: { challengeCode: string 
       setOwnerToken(token);
       setViewerProfileId(viewer);
       setRanking(body);
+      if (!rankingTracked.current) {
+        rankingTracked.current = true;
+        trackMatchEvent("wm_ranking_view", {
+          challengeCode,
+          entryCount: body.entryCount,
+          viewerRank: body.viewerEntry?.rank ?? 0,
+          canManage: body.canManage,
+        });
+      }
     }).catch(() => active && setMessage("랭킹을 불러오지 못했어요."));
     return () => { active = false; };
   }, [challengeCode]);
@@ -82,6 +93,7 @@ export function ChallengeRankingView({ challengeCode }: { challengeCode: string 
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error);
+      trackMatchEvent("wm_owner_hide_entry", { challengeCode, hidden: hiddenByOwner });
       await refresh();
       setMessage(hiddenByOwner ? "랭킹에서 숨겼어요." : "랭킹에 다시 표시했어요.");
     } catch {

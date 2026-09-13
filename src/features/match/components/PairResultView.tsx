@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { trackMatchEvent } from "../analytics/client";
 import { pairArchetypeFor } from "../share/shareArchetypes.mjs";
 
 type PairResult = { ownerNickname: string; challengerNickname: string; score: number; band: { label: string; subcopy: string }; sharedGenres: string[]; differentGenres: string[]; sharedTasteLabels: string[]; trustSentence: string; rank: number; entryCount: number };
@@ -8,13 +9,20 @@ type PairResult = { ownerNickname: string; challengerNickname: string; score: nu
 export function PairResultView({ challengeCode, resultId }: { challengeCode: string; resultId: string }) {
   const [result, setResult] = useState<PairResult | null>(null);
   const [error, setError] = useState("");
+  const resultTracked = useRef(false);
 
   useEffect(() => {
     let active = true;
     void fetch(`/api/v1/challenges/${challengeCode}/results/${resultId}`).then(async (response) => {
       const body = await response.json();
       if (!response.ok) throw new Error();
-      if (active) setResult(body);
+      if (active) {
+        setResult(body);
+        if (!resultTracked.current) {
+          resultTracked.current = true;
+          trackMatchEvent("wm_pair_result_view", { challengeCode, scoreBand: body.band?.label ?? "", rank: body.rank ?? 0 });
+        }
+      }
     }).catch(() => active && setError("이 궁합 결과를 찾지 못했어요."));
     return () => { active = false; };
   }, [challengeCode, resultId]);

@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { trackMatchEvent } from "../analytics/client";
 import { ensureAnonymousId } from "../storage/anonymousIdentity.mjs";
+import { readPendingChallenge } from "../storage/challengeStorage.mjs";
 import { readMatchDraft, writeMatchDraft } from "../storage/draft.mjs";
 import { readPublicResult, writePublicResult } from "../storage/resultStorage.mjs";
 
@@ -39,6 +41,17 @@ export function MatchResultBuilder() {
         }
         writePublicResult(window.localStorage, publicResult);
         writeMatchDraft(window.localStorage, { ...draft, resultPublicId: created.publicProfileId, snapshotId: created.snapshotId, currentPath: `/match/result/${created.publicProfileId}` });
+        const pending = readPendingChallenge(window.localStorage);
+        trackMatchEvent("wm_test_complete", {
+          durationMs: Math.max(0, Date.now() - new Date(draft.startedAt).getTime()),
+          testVersion: draft.testVersion,
+          questionSetVersion: draft.questionSetVersion,
+          entryType: pending?.challengeCode ? "challenge" : "direct",
+          topGenre: publicResult.topGenres?.[0]?.genreKey ?? "",
+          starConcentration: publicResult.topGenres?.[0]?.stars ?? 0,
+          settingSelectionCount: draft.answers.setting?.selected?.length ?? 0,
+          settingIndifferent: Boolean(draft.answers.setting?.indifferent),
+        });
         router.replace(`/match/result/${created.publicProfileId}`);
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : "결과를 만들지 못했어요.");

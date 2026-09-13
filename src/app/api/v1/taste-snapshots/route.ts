@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAnonymousId } from "@/features/match/storage/anonymousIdentity.mjs";
 import { createTasteSnapshot } from "@/features/match/server/resultStore";
+import { toMatchApiFailure } from "@/features/match/server/apiErrors";
 import { toPublicTasteResult } from "@/features/match/engine/resultEngine.mjs";
 import type { MatchAnswers } from "@/features/match/storage/draftTypes";
 
@@ -18,7 +19,7 @@ export async function POST(request: Request) {
       { status: 201 },
     );
   } catch (error) {
-    const code = error instanceof Error ? error.message : "TASTE_SNAPSHOT_BUILD_FAILED";
-    return NextResponse.json({ error: code }, { status: code === "GENRE_RECOVERY_REQUIRED" ? 422 : 400 });
+    const failure = toMatchApiFailure(error, "TASTE_SNAPSHOT_BUILD_FAILED");
+    return NextResponse.json({ error: failure.error }, { status: failure.status });
   }
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { trackMatchEvent } from "../analytics/client";
 import { requestActiveChallenge } from "../api/activeChallenge";
 import { ensureAnonymousId } from "../storage/anonymousIdentity.mjs";
 import { readMatchDraft, writeMatchDraft } from "../storage/draft.mjs";
@@ -83,6 +84,10 @@ export function ChallengeCreator() {
       }
       if (!response.ok) throw new Error(body.error === "NICKNAME_REJECTED" ? "닉네임은 개인정보 없이 2~20자로 적어 주세요." : "궁합 링크를 만들지 못했어요.");
       writeOwnerManageToken(window.localStorage, body.challengeCode, body.ownerManageToken);
+      trackMatchEvent("wm_challenge_create", {
+        challengeCode: body.challengeCode,
+        rankingVisibility,
+      });
       setCreated(body);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "궁합 링크를 만들지 못했어요.");

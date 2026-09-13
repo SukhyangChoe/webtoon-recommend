@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAnonymousId } from "@/features/match/storage/anonymousIdentity.mjs";
 import { createChallengeEntry } from "@/features/match/server/challengeStore";
+import { toMatchApiFailure } from "@/features/match/server/apiErrors";
 
 export const dynamic = "force-dynamic";
 
@@ -22,8 +23,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cha
       pairResultUrl: `/match/c/${challengeCode}/match/${created.resultId}`,
     }, { status: created.updated ? 200 : 201 });
   } catch (error) {
-    const code = error instanceof Error ? error.message : "CHALLENGE_ENTRY_FAILED";
-    const status = code === "QUESTION_VERSION_MISMATCH" || code === "COMPATIBILITY_VERSION_MISMATCH" ? 409 : code === "CHALLENGE_CLOSED" ? 410 : code === "NICKNAME_REJECTED" ? 422 : code.endsWith("NOT_FOUND") ? 404 : 400;
-    return NextResponse.json({ error: code }, { status });
+    const failure = toMatchApiFailure(error, "CHALLENGE_ENTRY_FAILED");
+    return NextResponse.json({ error: failure.error }, { status: failure.status });
   }
 }

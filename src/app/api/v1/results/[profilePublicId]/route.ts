@@ -1,20 +1,31 @@
 import { NextResponse } from "next/server";
 import { getPublicTasteResult, saveAccuracyFeedback, type AccuracyFeedback } from "@/features/match/server/resultStore";
+import { toMatchApiFailure } from "@/features/match/server/apiErrors";
 
 export const dynamic = "force-dynamic";
 const FEEDBACK = new Set<AccuracyFeedback>(["almost_exact", "mostly_right", "slightly_off", "very_off"]);
 
 export async function GET(_request: Request, { params }: { params: Promise<{ profilePublicId: string }> }) {
-  const { profilePublicId } = await params;
-  const result = await getPublicTasteResult(profilePublicId);
-  return result ? NextResponse.json(result) : NextResponse.json({ error: "RESULT_NOT_FOUND" }, { status: 404 });
+  try {
+    const { profilePublicId } = await params;
+    const result = await getPublicTasteResult(profilePublicId);
+    return result ? NextResponse.json(result) : NextResponse.json({ error: "RESULT_NOT_FOUND" }, { status: 404 });
+  } catch (error) {
+    const failure = toMatchApiFailure(error, "RESULT_LOAD_FAILED");
+    return NextResponse.json({ error: failure.error }, { status: failure.status });
+  }
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ profilePublicId: string }> }) {
-  const { profilePublicId } = await params;
-  const body = (await request.json()) as { anonymousId?: string; feedback?: AccuracyFeedback };
-  if (!body.anonymousId || !body.feedback || !FEEDBACK.has(body.feedback)) return NextResponse.json({ error: "INVALID_FEEDBACK" }, { status: 400 });
-  return await saveAccuracyFeedback(profilePublicId, body.anonymousId, body.feedback)
-    ? NextResponse.json({ saved: true })
-    : NextResponse.json({ error: "RESULT_OWNER_MISMATCH" }, { status: 403 });
+  try {
+    const { profilePublicId } = await params;
+    const body = (await request.json()) as { anonymousId?: string; feedback?: AccuracyFeedback };
+    if (!body.anonymousId || !body.feedback || !FEEDBACK.has(body.feedback)) return NextResponse.json({ error: "INVALID_FEEDBACK" }, { status: 400 });
+    return await saveAccuracyFeedback(profilePublicId, body.anonymousId, body.feedback)
+      ? NextResponse.json({ saved: true })
+      : NextResponse.json({ error: "RESULT_OWNER_MISMATCH" }, { status: 403 });
+  } catch (error) {
+    const failure = toMatchApiFailure(error, "FEEDBACK_SAVE_FAILED");
+    return NextResponse.json({ error: failure.error }, { status: failure.status });
+  }
 }

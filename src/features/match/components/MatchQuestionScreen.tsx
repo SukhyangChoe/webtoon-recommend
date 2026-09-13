@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { trackMatchEvent } from "../analytics/client";
 import { matchGenreMap, matchQuestionSeed, getFeature, getMatchQuestion } from "../data/questionSeed";
 import { MATCH_ROUTES } from "../config/routes";
 import { ensureAnonymousId } from "../storage/anonymousIdentity.mjs";
@@ -38,11 +39,20 @@ export function MatchQuestionScreen({ screen }: { screen: Screen }) {
   const [ready, setReady] = useState(false);
   const [notice, setNotice] = useState("");
   const [duelAssist, setDuelAssist] = useState({ path: "", open: false, nudged: false });
+  const trackedPath = useRef("");
   const path = currentPath(screen);
 
   useEffect(() => {
     const draft = readMatchDraft(window.localStorage) ?? createEmptyMatchDraft();
     writeMatchDraft(window.localStorage, { ...draft, currentPath: path });
+    if (trackedPath.current !== path) {
+      trackedPath.current = path;
+      trackMatchEvent("wm_section_view", {
+        sectionKey: path,
+        elapsedMs: Math.max(0, Date.now() - new Date(draft.startedAt).getTime()),
+        questionSetVersion: draft.questionSetVersion,
+      });
+    }
     const timer = window.setTimeout(() => {
       setAnswers((draft.answers ?? {}) as MatchAnswers);
       setReady(true);
@@ -66,6 +76,10 @@ export function MatchQuestionScreen({ screen }: { screen: Screen }) {
     writeMatchDraft(window.localStorage, { ...draft, currentPath: path, answers: nextAnswers });
   }
 
+  function trackAnswer(questionId: string, choiceKey: string, properties: Record<string, string | number | boolean> = {}) {
+    trackMatchEvent("wm_answer_select", { questionId, choiceKey, ...properties });
+  }
+
   if (!ready) return <QuestionShell progress="불러오는 중" title="응답을 복구하고 있어요" question="잠시만 기다려 주세요." />;
 
   if (screen.type === "genre") {
@@ -84,7 +98,7 @@ export function MatchQuestionScreen({ screen }: { screen: Screen }) {
               <div className="match-genre-card__visual" aria-hidden="true">{genre.displayLabel.slice(0, 1)}</div>
               <div><h2>{genre.displayLabel}</h2><p>{genre.shortScope}</p></div>
               <div className="match-segmented" aria-label={`${genre.displayLabel} 선택`}>
-                {choices.map((choice) => <button key={choice.choiceKey} type="button" className={genreAnswers[genreKey] === choice.choiceKey ? "is-selected" : ""} onClick={() => update({ ...answers, genre: { ...genreAnswers, [genreKey]: choice.choiceKey } })}>{choice.displayLabel}</button>)}
+                {choices.map((choice) => <button key={choice.choiceKey} type="button" className={genreAnswers[genreKey] === choice.choiceKey ? "is-selected" : ""} onClick={() => { trackAnswer(`${question.questionId}:${genreKey}`, choice.choiceKey, { selected: true }); update({ ...answers, genre: { ...genreAnswers, [genreKey]: choice.choiceKey } }); }}>{choice.displayLabel}</button>)}
               </div>
             </article>;
           })}
@@ -114,6 +128,7 @@ export function MatchQuestionScreen({ screen }: { screen: Screen }) {
     const previous = screen.index === 1 ? MATCH_ROUTES.genreShelf(2) : MATCH_ROUTES.duel(screen.index - 1);
     const next = screen.index === 6 ? MATCH_ROUTES.setting : MATCH_ROUTES.duel(screen.index + 1);
     function selectChoice(choiceKey: DuelChoice) {
+      trackAnswer(question.questionId, choiceKey, { selected: true, swapped, sidePlacementVersion: "deterministic_v1" });
       update({ ...answers, duels: { ...answers.duels, [question.questionId]: { choiceKey, swapped } } });
     }
     return <QuestionShell {...question}>
@@ -152,13 +167,14 @@ export function MatchQuestionScreen({ screen }: { screen: Screen }) {
     function select(key: string) {
       setNotice("");
       if (!setting.selected.includes(key) && setting.selected.length >= 4) { setNotice("설정은 최대 4개까지 고를 수 있어요."); return; }
+      trackAnswer(question.questionId, key, { selected: !setting.selected.includes(key), selectionRole: "option" });
       const selected = setting.selected.includes(key) ? setting.selected.filter((item: string) => item !== key) : [...setting.selected, key];
       const normalized = normalizeSettingSelection({ selected, primary: setting.primary, indifferent: false });
       update({ ...answers, setting: { ...normalized, weights: getSettingWeights(normalized) } });
     }
     return <QuestionShell {...question}>
-      <div className="match-feature-grid">{question.optionFeatureKeys?.map((key) => { const feature = getFeature(key); const selected = setting.selected.includes(key); return <div className={`match-feature-card ${selected ? "is-selected" : ""}`} key={key}><button type="button" onClick={() => select(key)}><strong>{feature.displayLabel}</strong><span>{selected ? "✓ 선택됨" : feature.description}</span></button>{selected ? <button className={`match-primary-toggle ${setting.primary === key ? "is-primary" : ""}`} type="button" aria-label={`${feature.displayLabel} 대표 설정`} onClick={() => update({ ...answers, setting: { ...setting, primary: key, weights: getSettingWeights({ ...setting, primary: key }) } })}>★ 대표</button> : null}</div>; })}</div>
-      <button type="button" className={`match-exclusive-button ${setting.indifferent ? "is-selected" : ""}`} onClick={() => update({ ...answers, setting: { selected: [], primary: null, indifferent: !setting.indifferent, weights: {} } })}>설정은 크게 안 따짐</button>
+      <div className="match-feature-grid">{question.optionFeatureKeys?.map((key) => { const feature = getFeature(key); const selected = setting.selected.includes(key); return <div className={`match-feature-card ${selected ? "is-selected" : ""}`} key={key}><button type="button" onClick={() => select(key)}><strong>{feature.displayLabel}</strong><span>{selected ? "✓ 선택됨" : feature.description}</span></button>{selected ? <button className={`match-primary-toggle ${setting.primary === key ? "is-primary" : ""}`} type="button" aria-label={`${feature.displayLabel} 대표 설정`} onClick={() => { trackAnswer(question.questionId, key, { selected: true, selectionRole: "primary" }); update({ ...answers, setting: { ...setting, primary: key, weights: getSettingWeights({ ...setting, primary: key }) } }); }}>★ 대표</button> : null}</div>; })}</div>
+      <button type="button" className={`match-exclusive-button ${setting.indifferent ? "is-selected" : ""}`} onClick={() => { trackAnswer(question.questionId, "setting_indifferent", { selected: !setting.indifferent, selectionRole: "exclusive" }); update({ ...answers, setting: { selected: [], primary: null, indifferent: !setting.indifferent, weights: {} } }); }}>설정은 크게 안 따짐</button>
       {notice ? <p className="match-notice" role="alert">{notice}</p> : null}
       {setting.selected.length >= 2 && !setting.primary ? <p className="match-notice">선택한 설정 중 대표 하나에 ★를 표시해 주세요.</p> : null}
       <Navigation previous={meta.previous} disabled={!valid} onNext={() => router.push(meta.next)} />
@@ -171,7 +187,7 @@ export function MatchQuestionScreen({ screen }: { screen: Screen }) {
     const selected = answers[screen.kind] ?? [];
     const maxSelect = question.maxSelect ?? 2;
     return <QuestionShell {...question}>
-      <div className="match-feature-grid">{question.optionFeatureKeys?.map((key) => { const feature = getFeature(key); const rank = selected.indexOf(key) + 1; return <button type="button" key={key} className={`match-ranked-card ${rank ? "is-selected" : ""}`} onClick={() => { const next = toggleRankedSelection(selected, key, maxSelect); if (next.length === selected.length && !selected.includes(key)) setNotice(`최대 ${maxSelect}개까지 고를 수 있어요.`); else setNotice(""); update({ ...answers, [screen.kind]: next }); }}><span className="match-rank-badge">{rank || ""}</span><strong>{feature.displayLabel}</strong><small>{feature.description}</small></button>; })}</div>
+      <div className="match-feature-grid">{question.optionFeatureKeys?.map((key) => { const feature = getFeature(key); const rank = selected.indexOf(key) + 1; return <button type="button" key={key} className={`match-ranked-card ${rank ? "is-selected" : ""}`} onClick={() => { const next = toggleRankedSelection(selected, key, maxSelect); if (next.length === selected.length && !selected.includes(key)) setNotice(`최대 ${maxSelect}개까지 고를 수 있어요.`); else { setNotice(""); trackAnswer(question.questionId, key, { selected: !selected.includes(key), selectionRole: "ranked" }); } update({ ...answers, [screen.kind]: next }); }}><span className="match-rank-badge">{rank || ""}</span><strong>{feature.displayLabel}</strong><small>{feature.description}</small></button>; })}</div>
       {notice ? <p className="match-notice" role="alert">{notice}</p> : null}
       <Navigation previous={meta.previous} disabled={selected.length < 1} onNext={() => router.push(meta.next)} />
     </QuestionShell>;
@@ -181,7 +197,7 @@ export function MatchQuestionScreen({ screen }: { screen: Screen }) {
     const question = getMatchQuestion("wm_avoidance_01");
     const selected = answers.avoidance ?? [];
     return <QuestionShell {...question}>
-      <div className="match-feature-grid">{question.optionFeatureKeys?.map((key) => { const feature = getFeature(key); const rank = selected.indexOf(key) + 1; return <button type="button" key={key} className={`match-ranked-card ${rank ? "is-selected" : ""}`} onClick={() => { const next = toggleExclusiveSelection(selected, key, "avoid_none", 3); if (next.length === selected.length && !selected.includes(key)) setNotice("최대 3개까지 고를 수 있어요."); else setNotice(""); update({ ...answers, avoidance: next }); }}><span className="match-check-badge">{rank ? "✓" : ""}</span><strong>{feature.displayLabel}</strong></button>; })}</div>
+      <div className="match-feature-grid">{question.optionFeatureKeys?.map((key) => { const feature = getFeature(key); const rank = selected.indexOf(key) + 1; return <button type="button" key={key} className={`match-ranked-card ${rank ? "is-selected" : ""}`} onClick={() => { const next = toggleExclusiveSelection(selected, key, "avoid_none", 3); if (next.length === selected.length && !selected.includes(key)) setNotice("최대 3개까지 고를 수 있어요."); else { setNotice(""); trackAnswer(question.questionId, key, { selected: !selected.includes(key), selectionRole: key === "avoid_none" ? "exclusive" : "option" }); } update({ ...answers, avoidance: next }); }}><span className="match-check-badge">{rank ? "✓" : ""}</span><strong>{feature.displayLabel}</strong></button>; })}</div>
       {notice ? <p className="match-notice" role="alert">{notice}</p> : null}
       <Navigation previous={MATCH_ROUTES.characterRelationship} disabled={selected.length < 1} label="결과 만들기" onNext={() => router.push(needsGenreRecovery({ genreAnswers: answers.genre, duelAnswers: answers.duels }) ? "/match/test/recovery" : MATCH_ROUTES.building)} />
     </QuestionShell>;
@@ -189,7 +205,7 @@ export function MatchQuestionScreen({ screen }: { screen: Screen }) {
 
   const question = getMatchQuestion("wm_genre_recovery_01");
   return <QuestionShell {...question}>
-    <div className="match-feature-grid">{question.genreKeys?.map((key) => <button type="button" key={key} className={`match-ranked-card ${answers.recoveryGenre === key ? "is-selected" : ""}`} onClick={() => update({ ...answers, recoveryGenre: key })}><span className="match-check-badge">{answers.recoveryGenre === key ? "✓" : ""}</span><strong>{matchGenreMap[key].displayLabel}</strong><small>{matchGenreMap[key].shortScope}</small></button>)}</div>
+    <div className="match-feature-grid">{question.genreKeys?.map((key) => <button type="button" key={key} className={`match-ranked-card ${answers.recoveryGenre === key ? "is-selected" : ""}`} onClick={() => { trackAnswer(question.questionId, key, { selected: true, selectionRole: "recovery" }); update({ ...answers, recoveryGenre: key }); }}><span className="match-check-badge">{answers.recoveryGenre === key ? "✓" : ""}</span><strong>{matchGenreMap[key].displayLabel}</strong><small>{matchGenreMap[key].shortScope}</small></button>)}</div>
     <Navigation previous={MATCH_ROUTES.avoidance} disabled={!answers.recoveryGenre} label="결과 만들기" onNext={() => router.push(MATCH_ROUTES.building)} />
   </QuestionShell>;
 }

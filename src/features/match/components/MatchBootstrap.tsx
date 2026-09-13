@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { trackMatchEvent } from "../analytics/client";
 import { MATCH_ROUTES } from "../config/routes";
 import { ensureAnonymousId, persistAnonymousCookie } from "../storage/anonymousIdentity.mjs";
 import { getMatchHomeState, readMatchDraft, resetMatchDraft } from "../storage/draft.mjs";
@@ -12,10 +13,25 @@ type BootstrapState =
 
 export function MatchBootstrap() {
   const [state, setState] = useState<BootstrapState | null>(null);
+  const landingTracked = useRef(false);
 
   useEffect(() => {
     const identity = ensureAnonymousId({ cookieText: document.cookie, storage: window.localStorage });
     document.cookie = persistAnonymousCookie(identity.anonymousId, window.location.protocol === "https:") ?? "";
+    const query = new URLSearchParams(window.location.search);
+    let referrerHost = "";
+    try { referrerHost = document.referrer ? new URL(document.referrer).hostname : ""; } catch {}
+    if (!landingTracked.current) {
+      landingTracked.current = true;
+      trackMatchEvent("wm_landing_view", {
+        entryType: "direct",
+        referrerHost,
+        utmSource: query.get("utm_source") ?? "",
+        utmMedium: query.get("utm_medium") ?? "",
+        utmCampaign: query.get("utm_campaign") ?? "",
+        utmContent: query.get("utm_content") ?? "",
+      });
+    }
     const draft = readMatchDraft(window.localStorage);
     const update = window.setTimeout(() => {
       setState(getMatchHomeState(draft) as BootstrapState);

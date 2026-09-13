@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { trackMatchEvent } from "../analytics/client";
 import { MATCH_ROUTES } from "../config/routes";
 import { readMatchDraft, resetMatchDraft } from "../storage/draft.mjs";
 import { readOwnerManageToken, writePendingChallenge } from "../storage/challengeStorage.mjs";
@@ -12,6 +13,7 @@ export function ChallengeLanding({ challengeCode }: { challengeCode: string }) {
   const [existingResultId, setExistingResultId] = useState("");
   const [isOwner, setIsOwner] = useState(false);
   const [error, setError] = useState("");
+  const landingTracked = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -22,6 +24,12 @@ export function ChallengeLanding({ challengeCode }: { challengeCode: string }) {
       if (!active) return;
       setChallenge(body);
       setIsOwner(Boolean(ownerToken));
+      if (!landingTracked.current) {
+        landingTracked.current = true;
+        let referrerHost = "";
+        try { referrerHost = document.referrer ? new URL(document.referrer).hostname : ""; } catch {}
+        trackMatchEvent("wm_challenge_landing_view", { challengeCode, referrerHost });
+      }
       const draft = readMatchDraft(window.localStorage);
       if (draft?.resultPublicId && draft.questionSetVersion === body.questionSetVersion) setExistingResultId(draft.resultPublicId);
     }).catch(() => active && setError("이 궁합 링크를 찾지 못했어요."));

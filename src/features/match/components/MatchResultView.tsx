@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { trackMatchEvent } from "../analytics/client";
 import { requestActiveChallenge, type ActiveChallengeInfo } from "../api/activeChallenge";
 import { ensureAnonymousId } from "../storage/anonymousIdentity.mjs";
 import { readPublicResult, writePublicResult } from "../storage/resultStorage.mjs";
@@ -23,6 +24,7 @@ export function MatchResultView({ publicProfileId }: { publicProfileId: string }
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [activeChallenge, setActiveChallenge] = useState<ActiveChallengeInfo | null>(null);
   const [challengeLoading, setChallengeLoading] = useState(true);
+  const resultTracked = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -42,6 +44,15 @@ export function MatchResultView({ publicProfileId }: { publicProfileId: string }
   }, [publicProfileId]);
 
   useEffect(() => {
+    if (!result || resultTracked.current) return;
+    resultTracked.current = true;
+    trackMatchEvent("wm_result_view", {
+      topGenre: result.topGenres[0]?.genreKey ?? "",
+      starConcentration: result.topGenres[0]?.stars ?? 0,
+    });
+  }, [result]);
+
+  useEffect(() => {
     let active = true;
     const identity = ensureAnonymousId({ cookieText: document.cookie, storage: window.localStorage });
     void requestActiveChallenge(identity.anonymousId)
@@ -53,7 +64,8 @@ export function MatchResultView({ publicProfileId }: { publicProfileId: string }
   async function submitFeedback(next: Feedback) {
     setFeedback(next);
     const identity = ensureAnonymousId({ cookieText: document.cookie, storage: window.localStorage });
-    await fetch(`/api/v1/results/${publicProfileId}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ anonymousId: identity.anonymousId, feedback: next }) });
+    const response = await fetch(`/api/v1/results/${publicProfileId}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ anonymousId: identity.anonymousId, feedback: next }) });
+    if (response.ok) trackMatchEvent("wm_accuracy_feedback", { rating: next });
   }
 
   if (loading) return <main className="match-page"><section className="match-card match-hero"><p>결과를 불러오는 중이에요…</p></section></main>;

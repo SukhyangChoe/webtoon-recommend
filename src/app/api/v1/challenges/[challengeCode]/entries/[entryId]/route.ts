@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { updateChallengeEntryVisibility } from "@/features/match/server/challengeStore";
+import { toMatchApiFailure } from "@/features/match/server/apiErrors";
 
 export const dynamic = "force-dynamic";
 
@@ -23,8 +24,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ch
     });
     return NextResponse.json(updated);
   } catch (error) {
-    const code = error instanceof Error ? error.message : "CHALLENGE_ENTRY_UPDATE_FAILED";
-    const status = code === "OWNER_AUTH_REQUIRED" ? 403 : code.endsWith("NOT_FOUND") ? 404 : 400;
-    return NextResponse.json({ error: code }, { status });
+    const failure = toMatchApiFailure(error, "CHALLENGE_ENTRY_UPDATE_FAILED");
+    return NextResponse.json({ error: failure.error }, { status: failure.status });
   }
 }

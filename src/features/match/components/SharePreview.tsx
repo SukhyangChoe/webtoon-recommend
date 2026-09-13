@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { recordMatchEvent } from "../analytics/events.mjs";
+import { trackMatchEvent } from "../analytics/client";
 import { readOwnerManageToken } from "../storage/challengeStorage.mjs";
 import { downloadBlob, renderShareCardPng, type ShareCardModel } from "../share/shareCardImage";
 import { pairArchetypeFor, personalArchetypeFor } from "../share/shareArchetypes.mjs";
@@ -155,7 +155,7 @@ export function SharePreview({ type, profilePublicId, challengeCode, resultId }:
   }, [type, profilePublicId, challengeCode, resultId]);
 
   function track(eventName: string, properties: Record<string, string>) {
-    recordMatchEvent(window.localStorage, eventName, properties);
+    trackMatchEvent(eventName, properties);
   }
 
   function openThreads() {

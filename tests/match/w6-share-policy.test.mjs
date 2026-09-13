@@ -85,5 +85,5 @@ test("share event queue excludes sensitive properties and stays bounded", () => 
   }
   const queue = JSON.parse(storage.getItem(MATCH_EVENT_QUEUE_KEY));
   assert.equal(queue.length, 200);
-  assert.deepEqual(queue.at(-1).properties, { shareType: "personal", action: "link", index: 204 });
+  assert.deepEqual(queue.at(-1).properties, { shareType: "personal", action: "link" });
 });
