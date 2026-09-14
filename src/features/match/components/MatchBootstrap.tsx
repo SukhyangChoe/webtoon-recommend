@@ -45,7 +45,7 @@ export function MatchBootstrap() {
   }
 
   if (!state) {
-    return <div className="match-actions"><button className="match-button" type="button" disabled>브라우저 준비 중…</button></div>;
+    return <div className="match-actions"><button className="match-button" type="button" disabled>잠시만 기다려 주세요…</button></div>;
   }
 
   if (state.status === "completed") {

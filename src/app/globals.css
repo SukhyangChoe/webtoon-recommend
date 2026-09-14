@@ -98,7 +98,6 @@ body {
 .match-button--secondary { border: 1px solid rgba(109, 77, 226, 0.22); background: var(--match-lilac); color: var(--match-violet); }
 .match-button:focus-visible, .match-text-link:focus-visible { outline: 3px solid rgba(109, 77, 226, 0.35); outline-offset: 3px; }
 .match-identity-note, .match-restore-status { margin: 2px 0 0; font-size: 0.8rem; }
-.match-version { display: block; margin-top: 20px; color: #9188a5; font-size: 0.65rem; overflow-wrap: anywhere; }
 .match-guide-list { display: grid; gap: 14px; margin: 26px 0; padding: 0; list-style: none; }
 .match-guide-list li { position: relative; padding: 16px 16px 16px 42px; border-radius: 16px; background: var(--match-lilac); line-height: 1.5; }
 .match-guide-list li::before { position: absolute; left: 16px; color: var(--match-violet); content: "✦"; }
