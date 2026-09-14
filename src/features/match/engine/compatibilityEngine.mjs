@@ -131,19 +131,22 @@ function extractExplanations(a, b, config) {
     .sort((x, y) => y.shared - x.shared || x.order - y.order)
     .slice(0, 3)
     .map((item) => item.key);
-  const differentGenreKeys = config.genre.dimensions
-    .map((key, order) => ({ key, order, difference: Math.abs((a.rawGenreAffinity?.[key] ?? 0) - (b.rawGenreAffinity?.[key] ?? 0)), any: Math.max(a.rawGenreAffinity?.[key] ?? 0, b.rawGenreAffinity?.[key] ?? 0) }))
+  const differentGenres = config.genre.dimensions
+    .map((key, order) => ({ key, order, scoreA: a.rawGenreAffinity?.[key] ?? 0, scoreB: b.rawGenreAffinity?.[key] ?? 0 }))
+    .map((item) => ({ ...item, difference: Math.abs(item.scoreA - item.scoreB), any: Math.max(item.scoreA, item.scoreB) }))
     .filter((item) => item.any >= 1.5 && item.difference > 0)
     .sort((x, y) => y.difference - x.difference || x.order - y.order)
-    .slice(0, 2)
-    .map((item) => item.key);
+    .slice(0, 2);
+  const differentGenreKeys = differentGenres.map((item) => item.key);
+  const ownerRecommendationGenreKeys = differentGenres.filter((item) => item.scoreA > item.scoreB).map((item) => item.key);
+  const challengerRecommendationGenreKeys = differentGenres.filter((item) => item.scoreB > item.scoreA).map((item) => item.key);
   const positiveA = flattenPositiveScores(a);
   const positiveB = flattenPositiveScores(b);
   const sharedTasteKeys = Object.keys(positiveA)
     .filter((key) => (positiveA[key] ?? 0) > 0 && (positiveB[key] ?? 0) > 0)
     .sort((x, y) => Math.min(positiveB[y], positiveA[y]) - Math.min(positiveB[x], positiveA[x]))
     .slice(0, 3);
-  return { sharedGenreKeys, differentGenreKeys, sharedTasteKeys };
+  return { sharedGenreKeys, differentGenreKeys, ownerRecommendationGenreKeys, challengerRecommendationGenreKeys, sharedTasteKeys };
 }
 
 export function calculateCompatibility(a, b, config = MATCH_COMPATIBILITY_CONFIG) {

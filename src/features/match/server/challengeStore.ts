@@ -408,6 +408,37 @@ function compatibilityResult(challenge: Challenge, ownerSnapshot: StoredSnapshot
   } satisfies CompatibilityResult;
 }
 
+export async function getExistingChallengeEntry(input: { challengeCode: string; anonymousId: string; challengerPublicProfileId: string }) {
+  const [challenge, challengerSnapshot] = await Promise.all([
+    findChallenge(input.challengeCode),
+    getTasteSnapshot(input.challengerPublicProfileId),
+  ]);
+  if (!challenge || !challengerSnapshot || challengerSnapshot.anonymousId !== input.anonymousId) return null;
+
+  const database = getMatchDatabase();
+  const rows = await database<ChallengeEntryRow[]>`
+    select
+      entries.entry_id::text,
+      entries.challenge_id::text,
+      entries.challenger_profile_id::text,
+      entries.challenger_snapshot_id::text,
+      entries.result_id,
+      entries.challenger_nickname,
+      entries.score,
+      entries.hidden_by_owner,
+      entries.created_at::text,
+      entries.updated_at::text,
+      results.shared_genres
+    from public.match_challenge_entries entries
+    left join public.match_compatibility_results results on results.result_id = entries.result_id
+    where entries.challenge_id = ${challenge.challengeId}::uuid
+      and entries.challenger_profile_id = ${challengerSnapshot.profileId}::uuid
+    limit 1
+  `;
+  const entry = rows[0] ? entryFromRow(rows[0]) : null;
+  return entry ? { resultId: entry.resultId, nickname: entry.challengerNickname, score: entry.score } : null;
+}
+
 export async function createChallengeEntry(input: { challengeCode: string; anonymousId: string; challengerPublicProfileId: string; challengerNickname: string }) {
   const challenge = await findChallenge(input.challengeCode);
   if (!challenge) throw new Error("CHALLENGE_NOT_FOUND");
@@ -426,6 +457,31 @@ export async function createChallengeEntry(input: { challengeCode: string; anony
   const database = getMatchDatabase();
   const persisted = await database.begin(async (sql) => {
     await sql`select challenge_id from public.match_challenges where challenge_id = ${challenge.challengeId}::uuid for update`;
+
+    const previousRows = await sql<ChallengeEntryRow[]>`
+      select
+        entry_id::text,
+        challenge_id::text,
+        challenger_profile_id::text,
+        challenger_snapshot_id::text,
+        result_id,
+        challenger_nickname,
+        score,
+        hidden_by_owner,
+        created_at::text,
+        updated_at::text,
+        null::jsonb as shared_genres
+      from public.match_challenge_entries
+      where challenge_id = ${challenge.challengeId}::uuid
+        and challenger_profile_id = ${challengerSnapshot.profileId}::uuid
+      limit 1
+    `;
+    const previous = previousRows[0] ? entryFromRow(previousRows[0]) : null;
+    const now = new Date().toISOString();
+
+    if (previous) {
+      return { entry: previous, updated: false, existing: true };
+    }
 
     await sql`
       insert into public.match_compatibility_results (
@@ -462,60 +518,6 @@ export async function createChallengeEntry(input: { challengeCode: string; anony
         ${result.createdAt}::timestamptz
       )
     `;
-
-    const previousRows = await sql<ChallengeEntryRow[]>`
-      select
-        entry_id::text,
-        challenge_id::text,
-        challenger_profile_id::text,
-        challenger_snapshot_id::text,
-        result_id,
-        challenger_nickname,
-        score,
-        hidden_by_owner,
-        created_at::text,
-        updated_at::text,
-        null::jsonb as shared_genres
-      from public.match_challenge_entries
-      where challenge_id = ${challenge.challengeId}::uuid
-        and challenger_profile_id = ${challengerSnapshot.profileId}::uuid
-      limit 1
-    `;
-    const previous = previousRows[0] ? entryFromRow(previousRows[0]) : null;
-    const now = new Date().toISOString();
-
-    if (previous) {
-      await sql`
-        insert into public.match_challenge_entry_history (
-          history_id,
-          entry_id,
-          challenger_snapshot_id,
-          result_id,
-          score,
-          recorded_at
-        ) values (
-          ${randomUUID()}::uuid,
-          ${previous.entryId}::uuid,
-          ${previous.challengerSnapshotId}::uuid,
-          ${previous.resultId},
-          ${previous.score},
-          ${previous.updatedAt}::timestamptz
-        )
-      `;
-      await sql`
-        update public.match_challenge_entries
-        set challenger_snapshot_id = ${challengerSnapshot.snapshotId}::uuid,
-            result_id = ${result.resultId},
-            challenger_nickname = ${challengerNickname},
-            score = ${result.overallScore},
-            updated_at = ${now}::timestamptz
-        where entry_id = ${previous.entryId}::uuid
-      `;
-      return {
-        entry: { ...previous, challengerSnapshotId: challengerSnapshot.snapshotId, resultId: result.resultId, challengerNickname, score: result.overallScore, updatedAt: now, sharedGenres: result.sharedGenres },
-        updated: true,
-      };
-    }
 
     const entry: ChallengeEntry = {
       entryId: randomUUID(),
@@ -555,11 +557,11 @@ export async function createChallengeEntry(input: { challengeCode: string; anony
         ${entry.updatedAt}::timestamptz
       )
     `;
-    return { entry, updated: false };
+    return { entry, updated: false, existing: false };
   });
 
   const rank = (await rankedEntries(challenge.challengeId)).find((item) => item.entryId === persisted.entry.entryId)?.rank ?? null;
-  return { resultId: result.resultId, score: result.overallScore, rank, updated: persisted.updated };
+  return { resultId: persisted.entry.resultId, score: persisted.entry.score, rank, updated: persisted.updated, existing: persisted.existing };
 }
 
 export async function getPublicPairResult(challengeCode: string, resultId: string) {
@@ -593,6 +595,11 @@ export async function getPublicPairResult(challengeCode: string, resultId: strin
   const ranking = await rankedEntries(challenge.challengeId);
   const entry = ranking.find((item) => item.resultId === resultId);
   if (!entry) return null;
+  const [ownerSnapshot, challengerSnapshot] = await Promise.all([
+    getTasteSnapshotById(result.ownerSnapshotId),
+    getTasteSnapshotById(result.challengerSnapshotId),
+  ]);
+  const explanations = ownerSnapshot && challengerSnapshot ? calculateCompatibility(ownerSnapshot, challengerSnapshot).explanations : null;
   return {
     resultId,
     challengeCode,
@@ -602,6 +609,8 @@ export async function getPublicPairResult(challengeCode: string, resultId: strin
     band: result.band,
     sharedGenres: result.sharedGenres,
     differentGenres: result.differentGenres,
+    ownerRecommendedGenres: explanations?.ownerRecommendationGenreKeys.map((key: string) => genreLabels[key]).filter(Boolean) ?? [],
+    challengerRecommendedGenres: explanations?.challengerRecommendationGenreKeys.map((key: string) => genreLabels[key]).filter(Boolean) ?? [],
     sharedTasteLabels: result.sharedTasteLabels,
     trustSentence: result.trustSentence,
     rank: entry.rank,

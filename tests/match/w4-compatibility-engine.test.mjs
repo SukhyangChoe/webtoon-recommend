@@ -45,6 +45,14 @@ test("directional trust is private and does not alter symmetric overall score", 
   assert.equal("ownerToChallengerTrust" in forward, false);
 });
 
+test("different genres identify which person should recommend them", () => {
+  const result = calculateCompatibility(profiles.P01, profiles.P03);
+  const { differentGenreKeys, ownerRecommendationGenreKeys, challengerRecommendationGenreKeys } = result.explanations;
+  assert.deepEqual([...ownerRecommendationGenreKeys, ...challengerRecommendationGenreKeys].sort(), [...differentGenreKeys].sort());
+  for (const key of ownerRecommendationGenreKeys) assert.ok((profiles.P01.rawGenreAffinity[key] ?? 0) > (profiles.P03.rawGenreAffinity[key] ?? 0));
+  for (const key of challengerRecommendationGenreKeys) assert.ok((profiles.P03.rawGenreAffinity[key] ?? 0) > (profiles.P01.rawGenreAffinity[key] ?? 0));
+});
+
 test("public nicknames are normalized and reject contact or script-like input", () => {
   assert.equal(sanitizeMatchNickname("  웹툰   친구  "), "웹툰 친구");
   assert.throws(() => sanitizeMatchNickname("A"), /NICKNAME_REJECTED/);

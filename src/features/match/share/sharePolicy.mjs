@@ -30,12 +30,14 @@ export function personalShareCopy({ topGenres, wellMatchedLabels, lessMatchedLab
   };
 }
 
-export function pairShareCopy({ ownerNickname, challengerNickname, score, bandLabel, sharedGenres, differentGenres, trustSentence, pairUrl, archetypeName }) {
+export function pairShareCopy({ ownerNickname, challengerNickname, score, bandLabel, sharedGenres, differentGenres, ownerRecommendedGenres, challengerRecommendedGenres, trustSentence, pairUrl, archetypeName }) {
   const shareUrl = withShareUtm(pairUrl, "pair");
+  const ownerPicks = ownerRecommendedGenres ?? differentGenres;
+  const challengerPicks = challengerRecommendedGenres ?? [];
   return {
     templateKey: "pair_result_primary",
     shareUrl,
-    text: `${ownerNickname} × ${challengerNickname}\n우리 웹툰 관계 타입은 ‘${archetypeName ?? bandLabel}’! (${score}%)\n\n같이 달릴 장르\n${joined(sharedGenres, "서로의 새 장르 개척하기")}\n\n각자 영업할 장르\n${joined(differentGenres, "거의 한마음")}\n\n${trustSentence}\n${shareUrl}`,
+    text: `${ownerNickname} × ${challengerNickname}\n우리 웹툰 관계 타입은 ‘${archetypeName ?? bandLabel}’! (${score}%)\n\n같이 달릴 장르\n${joined(sharedGenres, "서로의 새 장르 개척하기")}\n\n${ownerNickname}님이 ${challengerNickname}님에게 영업할 장르\n${joined(ownerPicks, "뚜렷한 장르 없음")}\n\n${challengerNickname}님이 ${ownerNickname}님에게 영업할 장르\n${joined(challengerPicks, "뚜렷한 장르 없음")}\n\n${trustSentence}\n${shareUrl}`,
     cardTitle: `${ownerNickname} × ${challengerNickname}`,
   };
 }

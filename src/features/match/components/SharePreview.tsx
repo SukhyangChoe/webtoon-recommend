@@ -24,6 +24,8 @@ type PairResult = {
   band: { label: string };
   sharedGenres: string[];
   differentGenres: string[];
+  ownerRecommendedGenres: string[];
+  challengerRecommendedGenres: string[];
   trustSentence: string;
   rank: number;
   entryCount: number;
@@ -113,8 +115,8 @@ export function SharePreview({ type, profilePublicId, challengeCode, resultId }:
             metric: `${result.score}%`,
             rows: [
               { label: "같이 달릴 장르", value: result.sharedGenres.slice(0, 2).join(" · ") || "새 장르 개척" },
-              { label: "각자 영업할 장르", value: result.differentGenres.slice(0, 2).join(" · ") || "거의 한마음" },
-              { label: "현재 랭킹", value: `${result.rank}위 / ${result.entryCount}명` },
+              { label: `${result.ownerNickname}님이 영업`, value: result.ownerRecommendedGenres.slice(0, 2).join(" · ") || "뚜렷한 장르 없음" },
+              { label: `${result.challengerNickname}님이 영업`, value: result.challengerRecommendedGenres.slice(0, 2).join(" · ") || "뚜렷한 장르 없음" },
             ],
             footer: "웹툰 취향 한정 관계 타입 · 사람 사이를 평가하지 않아요",
             fileName: "webtoon-match-pair.png",

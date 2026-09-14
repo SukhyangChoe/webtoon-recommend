@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { trackMatchEvent } from "../analytics/client";
 import { MATCH_ROUTES } from "../config/routes";
+import { ensureAnonymousId } from "../storage/anonymousIdentity.mjs";
 import { readMatchDraft, resetMatchDraft } from "../storage/draft.mjs";
-import { readOwnerManageToken, writePendingChallenge } from "../storage/challengeStorage.mjs";
+import { clearPendingChallenge, readChallengeResult, readOwnerManageToken, writeChallengeResult, writePendingChallenge } from "../storage/challengeStorage.mjs";
 
 type ChallengeInfo = { ownerNickname: string; entryCount: number; topScore: number | null; questionSetVersion: string; status: string };
 
@@ -18,12 +19,16 @@ export function ChallengeLanding({ challengeCode }: { challengeCode: string }) {
   useEffect(() => {
     let active = true;
     const ownerToken = readOwnerManageToken(window.localStorage, challengeCode);
+    const savedResult = readChallengeResult(window.localStorage, challengeCode);
+    if (!ownerToken && savedResult?.resultId) {
+      clearPendingChallenge(window.localStorage);
+      window.location.replace(`/match/c/${challengeCode}/match/${savedResult.resultId}`);
+      return () => { active = false; };
+    }
     void fetch(`/api/v1/challenges/${challengeCode}`).then(async (response) => {
       const body = await response.json();
       if (!response.ok) throw new Error(body.error ?? "CHALLENGE_NOT_FOUND");
       if (!active) return;
-      setChallenge(body);
-      setIsOwner(Boolean(ownerToken));
       if (!landingTracked.current) {
         landingTracked.current = true;
         let referrerHost = "";
@@ -31,7 +36,27 @@ export function ChallengeLanding({ challengeCode }: { challengeCode: string }) {
         trackMatchEvent("wm_challenge_landing_view", { challengeCode, referrerHost });
       }
       const draft = readMatchDraft(window.localStorage);
-      if (draft?.resultPublicId && draft.questionSetVersion === body.questionSetVersion) setExistingResultId(draft.resultPublicId);
+      if (!ownerToken && draft?.resultPublicId && draft.questionSetVersion === body.questionSetVersion) {
+        const identity = ensureAnonymousId({ cookieText: document.cookie, storage: window.localStorage });
+        const existingResponse = await fetch(`/api/v1/challenges/${challengeCode}/entries`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ anonymousId: identity.anonymousId, challengerPublicProfileId: draft.resultPublicId, lookupOnly: true }),
+        });
+        const existing = await existingResponse.json();
+        if (!active) return;
+        if (existingResponse.ok && existing.resultId) {
+          writeChallengeResult(window.localStorage, challengeCode, existing.resultId);
+          clearPendingChallenge(window.localStorage);
+          window.location.replace(`/match/c/${challengeCode}/match/${existing.resultId}`);
+          return;
+        }
+        setExistingResultId(draft.resultPublicId);
+      } else if (draft?.resultPublicId && draft.questionSetVersion === body.questionSetVersion) {
+        setExistingResultId(draft.resultPublicId);
+      }
+      setChallenge(body);
+      setIsOwner(Boolean(ownerToken));
     }).catch(() => active && setError("이 궁합 링크를 찾지 못했어요."));
     return () => { active = false; };
   }, [challengeCode]);

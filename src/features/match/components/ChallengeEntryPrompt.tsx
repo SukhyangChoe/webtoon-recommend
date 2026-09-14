@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ensureAnonymousId } from "../storage/anonymousIdentity.mjs";
-import { clearPendingChallenge, readPendingChallenge } from "../storage/challengeStorage.mjs";
+import { clearPendingChallenge, readPendingChallenge, writeChallengeResult } from "../storage/challengeStorage.mjs";
 import { validateMatchNickname } from "../server/nickname.mjs";
 
 export function ChallengeEntryPrompt({ publicProfileId }: { publicProfileId: string }) {
@@ -44,6 +44,7 @@ export function ChallengeEntryPrompt({ publicProfileId }: { publicProfileId: str
         if (body.error === "NICKNAME_REJECTED") throw new Error("닉네임은 개인정보 없이 2~20자로 적어 주세요.");
         throw new Error("궁합 결과를 만들지 못했어요.");
       }
+      writeChallengeResult(window.localStorage, challengeCode, body.resultId);
       clearPendingChallenge(window.localStorage);
       window.location.assign(body.pairResultUrl);
     } catch (error) {

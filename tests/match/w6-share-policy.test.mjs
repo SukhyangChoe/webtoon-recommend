@@ -29,7 +29,7 @@ test("personal sharing uses the challenge URL and required Threads UTM", () => {
 test("pair and ranking sharing preserve their intended destinations", () => {
   const pair = pairShareCopy({
     ownerNickname: "주인", challengerNickname: "도전자", score: 88, bandLabel: "취향 잘 맞음",
-    sharedGenres: ["판타지"], differentGenres: ["로맨스"], trustSentence: "추천을 믿을 만해.",
+    sharedGenres: ["판타지"], differentGenres: ["로맨스"], ownerRecommendedGenres: ["로맨스"], challengerRecommendedGenres: ["무협"], trustSentence: "추천을 믿을 만해.",
     archetypeName: "밤샘 정주행 메이트",
     pairUrl: "https://example.com/match/c/code/match/result",
   });
@@ -41,6 +41,8 @@ test("pair and ranking sharing preserve their intended destinations", () => {
   assert.equal(new URL(pair.shareUrl).searchParams.get("utm_content"), "pair");
   assert.equal(new URL(ranking.shareUrl).searchParams.get("utm_content"), "ranking_initial");
   assert.match(pair.text, /밤샘 정주행 메이트/);
+  assert.match(pair.text, /주인님이 도전자님에게 영업할 장르\n로맨스/);
+  assert.match(pair.text, /도전자님이 주인님에게 영업할 장르\n무협/);
   assert.ok(pair.text.length < 500);
   assert.ok(ranking.text.length < 500);
 });

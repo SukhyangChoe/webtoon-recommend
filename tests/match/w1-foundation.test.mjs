@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { MATCH_VERSIONS } from "../../src/features/match/config/versions.mjs";
 import { ensureAnonymousId, MATCH_ANONYMOUS_STORAGE_KEY } from "../../src/features/match/storage/anonymousIdentity.mjs";
+import { readChallengeResult, writeChallengeResult } from "../../src/features/match/storage/challengeStorage.mjs";
 import { createEmptyMatchDraft, getMatchHomeState, isCompatibleMatchDraft, readMatchDraft, resetMatchDraft, writeMatchDraft } from "../../src/features/match/storage/draft.mjs";
 
 function memoryStorage() {
@@ -65,4 +66,13 @@ test("starting again clears previous answers and result linkage", () => {
   assert.deepEqual(reset.answers, {});
   assert.equal(reset.resultPublicId, undefined);
   assert.equal(readMatchDraft(storage).currentPath, "/match/test/intro");
+});
+
+test("completed challenge results are remembered per invite link", () => {
+  const storage = memoryStorage();
+  writeChallengeResult(storage, "invite-a", "result-a");
+  writeChallengeResult(storage, "invite-b", "result-b");
+  assert.equal(readChallengeResult(storage, "invite-a").resultId, "result-a");
+  assert.equal(readChallengeResult(storage, "invite-b").resultId, "result-b");
+  assert.equal(readChallengeResult(storage, "invite-c"), null);
 });
