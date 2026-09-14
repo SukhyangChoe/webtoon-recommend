@@ -369,6 +369,8 @@
 .match-module .match-pair-type-label { margin: 18px 0 4px; color: var(--match-card-accent); font-size: .68rem; font-weight: 850; letter-spacing: .025em; }
 .match-module .match-pair-hero h2 { margin: 0; font-size: 1.42rem; letter-spacing: -.045em; }
 .match-module .match-pair-hero .match-pair-archetype-copy { max-width: 340px; margin: 8px auto 0; color: var(--match-muted); font-size: .84rem; line-height: 1.55; }
+.match-module .match-sentence-line { display: block; text-wrap: pretty; }
+.match-module .match-sentence-line + .match-sentence-line { margin-top: 3px; }
 .match-module .match-trust-card { background: linear-gradient(145deg,#fffaf0,#fff); }
 .match-module .match-trust-card p { margin: 9px 0 0; color: #5b526b; font-size: .9rem; line-height: 1.5; }
 .match-module .match-rank-summary { display: grid; grid-template-columns: 1fr auto; align-items: end; }
