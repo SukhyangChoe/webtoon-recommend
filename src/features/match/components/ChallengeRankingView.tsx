@@ -7,6 +7,7 @@ import { readOwnerManageToken } from "../storage/challengeStorage.mjs";
 
 type RankingEntry = {
   entryId: string;
+  resultId: string;
   nickname: string;
   score: number;
   rank: number | null;
@@ -154,9 +155,9 @@ export function ChallengeRankingView({ challengeCode }: { challengeCode: string 
 
     {mutationAction ? <div className="match-ranking-progress" role="status" aria-live="polite"><strong>{mutationAction === "hide" ? "랭킹에서 숨기는 중이에요…" : "랭킹으로 복원하는 중이에요…"}</strong><div aria-hidden="true"><span /></div></div> : null}
 
-    {rankingIsPrivate ? <section className="match-result-section match-ranking-empty"><h2>랭킹을 공개하지 않은 링크예요</h2><p>링크 주인만 이 기기에서 전체 랭킹을 볼 수 있어요.</p></section> : <RankingList entries={ranking.top20} canManage={ranking.canManage} mutating={mutating} onRequestHide={setHideCandidate} />}
+    {rankingIsPrivate ? <section className="match-result-section match-ranking-empty"><h2>랭킹을 공개하지 않은 링크예요</h2><p>링크 주인만 이 기기에서 전체 랭킹을 볼 수 있어요.</p></section> : <RankingList challengeCode={challengeCode} entries={ranking.top20} canManage={ranking.canManage} mutating={mutating} onRequestHide={setHideCandidate} />}
 
-    {!rankingIsPrivate && ranking.viewerEntry ? <section className="match-result-section match-viewer-rank"><p>내 현재 위치</p><RankingRow entry={ranking.viewerEntry} /></section> : null}
+    {!rankingIsPrivate && ranking.viewerEntry ? <section className="match-result-section match-viewer-rank"><p>내 현재 위치</p><RankingRow challengeCode={challengeCode} entry={ranking.viewerEntry} /></section> : null}
 
     {ranking.canManage ? <section className="match-result-section match-owner-panel">
       <p className="match-eyebrow">링크 주인 관리</p>
@@ -181,16 +182,19 @@ export function ChallengeRankingView({ challengeCode }: { challengeCode: string 
   </main>;
 }
 
-function RankingList({ entries, canManage, mutating, onRequestHide }: { entries: RankingEntry[]; canManage: boolean; mutating: string; onRequestHide: (entry: RankingEntry) => void }) {
+function RankingList({ challengeCode, entries, canManage, mutating, onRequestHide }: { challengeCode: string; entries: RankingEntry[]; canManage: boolean; mutating: string; onRequestHide: (entry: RankingEntry) => void }) {
   if (!entries.length) return <section className="match-result-section match-ranking-empty"><div aria-hidden="true">✦</div><h2>아직 도전자가 없어요</h2><p>첫 번째 궁합을 기다리는 중이에요.</p></section>;
-  return <section className="match-result-section match-ranking-list"><h2>현재 랭킹</h2><p className="match-section-note">같은 점수는 공동 순위로 표시해요.</p><div>{entries.map((entry) => <RankingRow key={entry.entryId} entry={entry} canManage={canManage} mutating={mutating} onRequestHide={onRequestHide} />)}</div></section>;
+  return <section className="match-result-section match-ranking-list"><h2>현재 랭킹</h2><p className="match-section-note">상위 20명까지 보여요. 도전자를 누르면 둘의 궁합 결과를 볼 수 있어요.</p><div>{entries.map((entry) => <RankingRow key={entry.entryId} challengeCode={challengeCode} entry={entry} canManage={canManage} mutating={mutating} onRequestHide={onRequestHide} />)}</div></section>;
 }
 
-function RankingRow({ entry, canManage = false, mutating = "", onRequestHide }: { entry: RankingEntry; canManage?: boolean; mutating?: string; onRequestHide?: (entry: RankingEntry) => void }) {
-  return <article className={`match-ranking-row ${entry.rank && entry.rank <= 3 ? `is-top-${entry.rank}` : ""} ${entry.isViewer ? "is-viewer" : ""}`}>
-    <span className="match-ranking-position">{entry.rank}</span>
-    <div><strong>{entry.nickname}{entry.isViewer ? <small> 나</small> : null}</strong><p>{entry.sharedGenres.length ? entry.sharedGenres.join(" · ") : "겹치는 장르를 찾는 중"}</p></div>
-    <strong className="match-ranking-score">{entry.score}%</strong>
-    {canManage && onRequestHide ? <button className="match-ranking-hide" type="button" disabled={Boolean(mutating)} onClick={() => onRequestHide(entry)}>{mutating === entry.entryId ? "처리 중…" : "숨김"}</button> : null}
+function RankingRow({ challengeCode, entry, canManage = false, mutating = "", onRequestHide }: { challengeCode: string; entry: RankingEntry; canManage?: boolean; mutating?: string; onRequestHide?: (entry: RankingEntry) => void }) {
+  const canHide = canManage && onRequestHide;
+  return <article className={`match-ranking-row ${canHide ? "has-actions" : ""} ${entry.rank && entry.rank <= 3 ? `is-top-${entry.rank}` : ""} ${entry.isViewer ? "is-viewer" : ""}`}>
+    <a className="match-ranking-result-link" href={`/match/c/${challengeCode}/match/${entry.resultId}`} aria-label={`${entry.nickname}님과의 웹툰궁합 결과 보기`}>
+      <span className="match-ranking-position">{entry.rank}</span>
+      <div><strong>{entry.nickname}{entry.isViewer ? <small> 나</small> : null}</strong><p>{entry.sharedGenres.length ? entry.sharedGenres.join(" · ") : "겹치는 장르를 찾는 중"}</p></div>
+      <strong className="match-ranking-score">{entry.score}% <span aria-hidden="true">›</span></strong>
+    </a>
+    {canHide ? <button className="match-ranking-hide" type="button" disabled={Boolean(mutating)} onClick={() => onRequestHide(entry)}>{mutating === entry.entryId ? "처리 중…" : "숨김"}</button> : null}
   </article>;
 }

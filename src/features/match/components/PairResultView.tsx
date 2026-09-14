@@ -40,13 +40,14 @@ function SentenceLines({ text }: { text: string }) {
 }
 
 function RecommendationSections({ result }: { result: PairResult }) {
-  if (!result.ownerRecommendedGenres.length && !result.challengerRecommendedGenres.length) {
-    return <PairSection title="서로 영업할 장르" items={[]} empty="서로 더 잘 아는 장르가 뚜렷하지 않아요" />;
-  }
-  return <>
-    {result.ownerRecommendedGenres.length ? <PairSection title={`${result.ownerNickname}님이 ${result.challengerNickname}님에게 영업할 장르`} items={result.ownerRecommendedGenres} empty="" /> : null}
-    {result.challengerRecommendedGenres.length ? <PairSection title={`${result.challengerNickname}님이 ${result.ownerNickname}님에게 영업할 장르`} items={result.challengerRecommendedGenres} empty="" /> : null}
-  </>;
+  return <section className="match-result-section match-recommendations"><h2>각자 영업할 장르</h2><div>
+    <RecommendationRow from={result.ownerNickname} to={result.challengerNickname} genres={result.ownerRecommendedGenres} />
+    <RecommendationRow from={result.challengerNickname} to={result.ownerNickname} genres={result.challengerRecommendedGenres} />
+  </div></section>;
+}
+
+function RecommendationRow({ from, to, genres }: { from: string; to: string; genres: string[] }) {
+  return <div><strong>{from} → {to}</strong><span>{genres.length ? genres.join(" · ") : "뚜렷한 장르 없음"}</span></div>;
 }
 
 function PairSection({ title, items, empty }: { title: string; items: string[]; empty: string }) {

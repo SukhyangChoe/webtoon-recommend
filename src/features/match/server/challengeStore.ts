@@ -230,6 +230,7 @@ function hasOwnerAccess(challenge: Challenge, ownerManageToken?: string | null) 
 function publicRankingEntry(entry: ChallengeEntry & { rank?: number }, viewerProfileId?: string | null) {
   return {
     entryId: entry.entryId,
+    resultId: entry.resultId,
     nickname: entry.challengerNickname,
     score: entry.score,
     rank: entry.rank ?? null,
