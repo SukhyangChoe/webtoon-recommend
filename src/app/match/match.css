@@ -223,10 +223,13 @@
 .match-module .match-duel-card:hover { transform: translateY(-1px); }
 .match-module .match-duel-card.is-selected { border-color: var(--match-purple); box-shadow: 0 0 0 2px rgba(104,71,232,.14), 0 9px 22px rgba(58,38,116,.12); }
 .match-module .match-duel-card h2 { min-height: 66px; margin: 0; padding: 12px 10px; font-size: .9rem; line-height: 1.4; }
-.match-module .match-duel-placeholder { display: grid; aspect-ratio: 4 / 5; place-items: center; background: linear-gradient(145deg, #3b2e63, #9474ed); color: #fff; }
-.match-module .match-duel-placeholder span { max-width: 80%; font-weight: 900; text-align: center; }
-.match-module .match-duel-side { position: absolute; top: 8px; left: 8px; padding: 4px 8px; border-radius: 999px; background: rgba(255,255,255,.9); color: #33294e; font-size: .71rem; font-weight: 800; }
-.match-module .match-duel-check { position: absolute; top: 8px; right: 8px; display: grid; width: 23px; height: 23px; place-items: center; border-radius: 50%; background: #fff; color: var(--match-purple); font-size: .72rem; font-weight: 950; opacity: 0; transform: scale(.7); transition: opacity .16s ease, transform .16s ease; }
+.match-module .match-duel-image { position: relative; aspect-ratio: 4 / 5; overflow: hidden; background: #eeeafd; }
+.match-module .match-duel-image::after { position: absolute; inset: auto 0 0; z-index: 1; height: 34%; background: linear-gradient(to bottom, transparent, rgba(22,15,41,.72)); content: ""; pointer-events: none; }
+.match-module .match-duel-image img { object-fit: cover; object-position: center; transition: transform .22s ease; }
+.match-module .match-duel-card:hover .match-duel-image img { transform: scale(1.015); }
+.match-module .match-duel-genre { position: absolute; bottom: 9px; left: 10px; z-index: 2; color: #fff; font-size: .78rem; font-weight: 900; text-shadow: 0 1px 6px rgba(0,0,0,.55); }
+.match-module .match-duel-side { position: absolute; top: 8px; left: 8px; z-index: 3; padding: 4px 8px; border-radius: 999px; background: rgba(255,255,255,.92); color: #33294e; font-size: .71rem; font-weight: 800; box-shadow: 0 2px 8px rgba(23,15,42,.12); }
+.match-module .match-duel-check { position: absolute; top: 8px; right: 8px; z-index: 3; display: grid; width: 23px; height: 23px; place-items: center; border-radius: 50%; background: #fff; color: var(--match-purple); font-size: .72rem; font-weight: 950; opacity: 0; transform: scale(.7); transition: opacity .16s ease, transform .16s ease; }
 .match-module .match-duel-card.is-selected .match-duel-check { opacity: 1; transform: scale(1); }
 .match-module .match-choice-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin-top: 12px; }
 .match-module .match-duel-primary-choices { margin-top: 12px; }

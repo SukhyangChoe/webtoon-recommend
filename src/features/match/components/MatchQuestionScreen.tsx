@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { trackMatchEvent } from "../analytics/client";
@@ -136,7 +137,21 @@ export function MatchQuestionScreen({ screen }: { screen: Screen }) {
         {[left, right].map((card, index) => {
           const side = index === 0 ? "left" : "right";
           const active = selected === side || selected === "both";
-          return <button type="button" className={`match-duel-card ${active ? "is-selected" : ""}`} aria-pressed={active} aria-label={`${index === 0 ? "왼쪽" : "오른쪽"} 이미지 선택: ${card.cardLabel}`} key={card.imageKey} onClick={() => selectChoice(toggleDuelSide(selected, side) as DuelChoice)}><div className={`match-duel-placeholder match-duel-placeholder--${card.genreKey}`}><span>{matchGenreMap[card.genreKey].displayLabel}</span></div><h2>{card.cardLabel}</h2><span className="sr-only">{card.altText}</span><span className="match-duel-side">{index === 0 ? "왼쪽" : "오른쪽"}</span><span className="match-duel-check" aria-hidden="true">✓</span></button>;
+          return <button type="button" className={`match-duel-card ${active ? "is-selected" : ""}`} aria-pressed={active} aria-label={`${index === 0 ? "왼쪽" : "오른쪽"} 이미지 선택: ${card.cardLabel}`} key={card.imageKey} onClick={() => selectChoice(toggleDuelSide(selected, side) as DuelChoice)}>
+            <div className="match-duel-image">
+              <Image
+                src={`/match/duels/${card.imageKey}.png`}
+                alt={card.altText}
+                fill
+                priority
+                sizes="(max-width: 520px) 42vw, 260px"
+              />
+              <span className="match-duel-genre">{matchGenreMap[card.genreKey].displayLabel}</span>
+            </div>
+            <h2>{card.cardLabel}</h2>
+            <span className="match-duel-side">{index === 0 ? "왼쪽" : "오른쪽"}</span>
+            <span className="match-duel-check" aria-hidden="true">✓</span>
+          </button>;
         })}
       </div>
       <div className="match-choice-grid match-duel-primary-choices">{primaryChoices.map((choice) => <button type="button" className={`match-choice-button ${selected === choice.choiceKey ? "is-selected" : ""}`} key={choice.choiceKey} onClick={() => selectChoice(choice.choiceKey)}>{choice.displayLabel}</button>)}</div>
