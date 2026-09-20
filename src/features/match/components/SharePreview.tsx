@@ -115,9 +115,9 @@ export function SharePreview({ type, profilePublicId, challengeCode, resultId }:
             metric: `${result.score}%`,
             rows: [
               { label: "같이 달릴 장르", value: result.sharedGenres.slice(0, 2).join(" · ") || "새 장르 개척" },
-              { label: `${result.ownerNickname}님이 영업`, value: result.ownerRecommendedGenres.slice(0, 2).join(" · ") || "뚜렷한 장르 없음" },
-              { label: `${result.challengerNickname}님이 영업`, value: result.challengerRecommendedGenres.slice(0, 2).join(" · ") || "뚜렷한 장르 없음" },
-            ],
+              { label: `${result.ownerNickname} → ${result.challengerNickname}`, value: result.ownerRecommendedGenres.slice(0, 2).join(" · ") },
+              { label: `${result.challengerNickname} → ${result.ownerNickname}`, value: result.challengerRecommendedGenres.slice(0, 2).join(" · ") },
+            ].filter((row) => row.value),
             footer: "웹툰 취향 한정 관계 타입 · 사람 사이를 평가하지 않아요",
             fileName: "webtoon-match-pair.png",
           },
@@ -141,6 +141,10 @@ export function SharePreview({ type, profilePublicId, challengeCode, resultId }:
             symbol: "♛",
             theme: "gold",
             rows: result.top20.slice(0, 3).map((entry) => ({ label: `${entry.rank}위  ${entry.nickname}`, value: `${entry.score}%` })),
+            callout: {
+              title: result.entryCount ? "다음 순위의 주인공은?" : "첫 번째 자리는 비어 있어요",
+              body: "링크로 들어와 테스트하면 바로 랭킹에 합류해요.",
+            },
             footer: result.entryCount ? "현재 1위를 넘을 사람을 기다리는 중" : "첫 번째 도전자를 기다리는 중",
             fileName: "webtoon-match-ranking.png",
           },
@@ -155,6 +159,12 @@ export function SharePreview({ type, profilePublicId, challengeCode, resultId }:
     void load().catch(() => active && setError("공유할 결과를 불러오지 못했어요."));
     return () => { active = false; };
   }, [type, profilePublicId, challengeCode, resultId]);
+
+  useEffect(() => {
+    if (!message) return;
+    const timeout = window.setTimeout(() => setMessage(""), 2400);
+    return () => window.clearTimeout(timeout);
+  }, [message]);
 
   function track(eventName: string, properties: Record<string, string>) {
     trackMatchEvent(eventName, properties);
@@ -198,7 +208,7 @@ export function SharePreview({ type, profilePublicId, challengeCode, resultId }:
 
   return <main className="match-page match-share-page">
     <section className="match-share-heading"><p className="match-eyebrow">공유 미리보기</p><h1>이 카드로 공유할까요?</h1><p>Threads에서는 이미지가 자동으로 붙지 않을 수 있어요. 이미지를 저장한 뒤 직접 첨부하면 가장 정확해요.</p></section>
-    <article className={`match-share-card is-${payload.card.theme ?? "violet"}${payload.card.metric ? " has-metric" : ""}${payload.card.imageSrc ? " has-character" : ""}`} aria-label={`${payload.card.eyebrow} 공유 카드 미리보기`}>
+    <article className={`match-share-card is-${payload.card.theme ?? "violet"}${payload.card.metric ? " has-metric" : ""}${payload.card.imageSrc ? " has-character" : ""}${payload.card.callout ? " has-callout" : ""}`} aria-label={`${payload.card.eyebrow} 공유 카드 미리보기`}>
       <div className="match-share-brand"><strong>웹툰궁합</strong><span>WEBTOON FIT</span></div>
       {payload.card.imageSrc ? <span className="match-share-character"><Image src={payload.card.imageSrc} alt={payload.card.imageAlt ?? "웹툰 본캐"} width={360} height={540} priority /></span> : payload.card.symbol ? <span className="match-share-symbol" aria-hidden="true">{payload.card.symbol}</span> : null}
       {payload.card.badge ? <strong className="match-share-badge">{payload.card.badge}</strong> : null}
@@ -207,6 +217,7 @@ export function SharePreview({ type, profilePublicId, challengeCode, resultId }:
       <h3>{payload.card.subtitle}</h3>
       {payload.card.metric ? <strong className="match-share-metric">{payload.card.metric}</strong> : null}
       <div className="match-share-rows">{payload.card.rows.length ? payload.card.rows.map((row, index) => <div key={`${row.label}-${index}`}><strong>{row.label}</strong>{row.value ? <span>{row.value}</span> : null}</div>) : <div><strong>아직 첫 번째 도전자를 기다리는 중</strong></div>}</div>
+      {payload.card.callout ? <div className="match-share-callout"><strong>{payload.card.callout.title}</strong><span>{payload.card.callout.body}</span></div> : null}
       <footer><span>{payload.card.footer}</span><strong>webtoon fit</strong></footer>
     </article>
     <section className="match-share-actions">
@@ -215,7 +226,7 @@ export function SharePreview({ type, profilePublicId, challengeCode, resultId }:
       <div><button type="button" onClick={() => void copyText("text")}>문구 복사</button><button type="button" onClick={() => void copyText("link")}>링크 복사</button></div>
     </section>
     <p className="match-topic-guide">Threads 작성 화면에서 ‘웹툰’이나 ‘웹툰추천’ 관련 토픽을 하나 골라 주세요. 자동으로 게시되지는 않아요.</p>
-    {message ? <p className="match-notice" role="status">{message}</p> : null}
+    {message ? <p className="match-toast" role="status" aria-live="polite">{message}</p> : null}
     <details className="match-share-copy"><summary>공유 문구 미리보기</summary><pre>{payload.shareText}</pre></details>
     <button className="match-text-link" type="button" onClick={() => history.back()}>이전 화면으로</button>
   </main>;

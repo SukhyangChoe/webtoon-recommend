@@ -8,6 +8,7 @@ export function createEmptyMatchDraft(now = new Date().toISOString()) {
     testVersion: MATCH_VERSIONS.test,
     questionSetVersion: MATCH_VERSIONS.questions,
     currentPath: "/match/test/intro",
+    nickname: "",
     answers: {},
     startedAt: now,
     updatedAt: now,

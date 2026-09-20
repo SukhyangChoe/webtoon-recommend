@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { MATCH_EVENT_QUEUE_KEY, recordMatchEvent } from "../../src/features/match/analytics/events.mjs";
 import { pairArchetypeFor, personalArchetypeFor } from "../../src/features/match/share/shareArchetypes.mjs";
+import { pairTrustSentence } from "../../src/features/match/share/pairTrustCopy.mjs";
 import { pairShareCopy, personalShareCopy, rankingShareCopy, threadsIntentUrl } from "../../src/features/match/share/sharePolicy.mjs";
 
 function memoryStorage() {
@@ -41,10 +42,28 @@ test("pair and ranking sharing preserve their intended destinations", () => {
   assert.equal(new URL(pair.shareUrl).searchParams.get("utm_content"), "pair");
   assert.equal(new URL(ranking.shareUrl).searchParams.get("utm_content"), "ranking_initial");
   assert.match(pair.text, /밤샘 정주행 메이트/);
-  assert.match(pair.text, /주인님이 도전자님에게 영업할 장르\n로맨스/);
-  assert.match(pair.text, /도전자님이 주인님에게 영업할 장르\n무협/);
+  assert.match(pair.text, /주인 → 도전자: 로맨스/);
+  assert.match(pair.text, /도전자 → 주인: 무협/);
   assert.ok(pair.text.length < 500);
   assert.ok(ranking.text.length < 500);
+});
+
+test("pair recommendation copy omits empty directions", () => {
+  const pair = pairShareCopy({
+    ownerNickname: "주인", challengerNickname: "도전자", score: 60, bandLabel: "장르 따라 잘 맞음",
+    sharedGenres: ["판타지"], ownerRecommendedGenres: ["로맨스"], challengerRecommendedGenres: [],
+    trustSentence: "추천 문구", pairUrl: "https://example.com/match/c/code/match/result",
+  });
+  assert.match(pair.text, /주인 → 도전자: 로맨스/);
+  assert.doesNotMatch(pair.text, /도전자 → 주인/);
+  assert.doesNotMatch(pair.text, /뚜렷한 장르 없음/);
+});
+
+test("pair trust copy gets stronger with the compatibility score", () => {
+  assert.match(pairTrustSentence({ score: 92, recommenderNickname: "주인" }), /최근 본 목록/);
+  assert.match(pairTrustSentence({ score: 84, recommenderNickname: "주인" }), /첫 3화/);
+  assert.match(pairTrustSentence({ score: 74, recommenderNickname: "주인", genre: "무협" }), /무협/);
+  assert.match(pairTrustSentence({ score: 28, recommenderNickname: "주인" }), /각자 볼 것/);
 });
 
 test("pair relation types cover every score band and clamp outliers", () => {

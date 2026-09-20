@@ -2,12 +2,18 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { MATCH_VERSIONS } from "../../src/features/match/config/versions.mjs";
 import { ensureAnonymousId, MATCH_ANONYMOUS_STORAGE_KEY } from "../../src/features/match/storage/anonymousIdentity.mjs";
-import { readChallengeResult, writeChallengeResult } from "../../src/features/match/storage/challengeStorage.mjs";
+import { readChallengeResult, readLatestChallengeResult, readPairResultPrompt, readPendingChallenge, writeChallengeResult, writePairResultPrompt, writePendingChallenge } from "../../src/features/match/storage/challengeStorage.mjs";
 import { createEmptyMatchDraft, getMatchHomeState, isCompatibleMatchDraft, readMatchDraft, resetMatchDraft, writeMatchDraft } from "../../src/features/match/storage/draft.mjs";
 
 function memoryStorage() {
   const values = new Map();
-  return { getItem: (key) => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) };
+  return {
+    get length() { return values.size; },
+    key: (index) => [...values.keys()][index] ?? null,
+    getItem: (key) => values.get(key) ?? null,
+    setItem: (key, value) => values.set(key, value),
+    removeItem: (key) => values.delete(key),
+  };
 }
 
 test("version constants match the v0.4 source of truth", () => {
@@ -61,18 +67,45 @@ test("home distinguishes new, in-progress, and completed tests", () => {
 
 test("starting again clears previous answers and result linkage", () => {
   const storage = memoryStorage();
-  writeMatchDraft(storage, { ...createEmptyMatchDraft(), answers: { genre: { fantasy: "high" } }, resultPublicId: "old-result" });
+  writeMatchDraft(storage, { ...createEmptyMatchDraft(), nickname: "향향", answers: { genre: { fantasy: "high" } }, resultPublicId: "old-result" });
   const reset = resetMatchDraft(storage, "2026-09-09T00:00:00.000Z");
   assert.deepEqual(reset.answers, {});
+  assert.equal(reset.nickname, "");
   assert.equal(reset.resultPublicId, undefined);
   assert.equal(readMatchDraft(storage).currentPath, "/match/test/intro");
 });
 
+test("test nickname stays with the draft from intro through result creation", () => {
+  const storage = memoryStorage();
+  writeMatchDraft(storage, { ...createEmptyMatchDraft(), nickname: "향향", currentPath: "/match/test/genre-shelf/1" });
+  assert.equal(readMatchDraft(storage).nickname, "향향");
+});
+
 test("completed challenge results are remembered per invite link", () => {
   const storage = memoryStorage();
-  writeChallengeResult(storage, "invite-a", "result-a");
-  writeChallengeResult(storage, "invite-b", "result-b");
+  writeChallengeResult(storage, "invite-a", "result-a", "profile-a");
+  writeChallengeResult(storage, "invite-b", "result-b", "profile-b");
   assert.equal(readChallengeResult(storage, "invite-a").resultId, "result-a");
   assert.equal(readChallengeResult(storage, "invite-b").resultId, "result-b");
   assert.equal(readChallengeResult(storage, "invite-c"), null);
+  assert.equal(readLatestChallengeResult(storage, "profile-a").challengeCode, "invite-a");
+  assert.equal(readLatestChallengeResult(storage, "profile-b").resultId, "result-b");
+});
+
+test("challenge nickname and consent are remembered before the test starts", () => {
+  const storage = memoryStorage();
+  writePendingChallenge(storage, "invite-a", "향향");
+  const pending = readPendingChallenge(storage);
+  assert.equal(pending.challengeCode, "invite-a");
+  assert.equal(pending.challengerNickname, "향향");
+  assert.ok(pending.agreedAt);
+});
+
+test("a completed invite comparison remains available from the personal result", () => {
+  const storage = memoryStorage();
+  writePairResultPrompt(storage, "invite-a", "pair-a", "profile-a");
+  assert.deepEqual(
+    Object.fromEntries(Object.entries(readPairResultPrompt(storage)).filter(([key]) => key !== "savedAt")),
+    { challengeCode: "invite-a", resultId: "pair-a", publicProfileId: "profile-a" },
+  );
 });

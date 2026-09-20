@@ -3,6 +3,7 @@ import questionSeed from "../data/questionSeed.v0.4.json";
 import { MATCH_COMPATIBILITY_CONFIG } from "../config/compatibility.mjs";
 import { calculateCompatibility } from "../engine/compatibilityEngine.mjs";
 import { denseRankEntries, selectRankingWindow } from "../engine/rankingPolicy.mjs";
+import { pairTrustSentence } from "../share/pairTrustCopy.mjs";
 import { getMatchDatabase, isPostgresError } from "./database";
 import { getTasteSnapshot, getTasteSnapshotById, type StoredSnapshot } from "./resultStore";
 import { sanitizeMatchNickname } from "./nickname.mjs";
@@ -220,11 +221,22 @@ function hashToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
 }
 
-function hasOwnerAccess(challenge: Challenge, ownerManageToken?: string | null) {
-  if (!ownerManageToken) return false;
-  const actual = Buffer.from(challenge.ownerManageTokenHash, "hex");
-  const candidate = Buffer.from(hashToken(ownerManageToken), "hex");
-  return actual.length === candidate.length && timingSafeEqual(actual, candidate);
+async function hasOwnerAccess(challenge: Challenge, ownerManageToken?: string | null, ownerAnonymousId?: string | null) {
+  if (ownerManageToken) {
+    const actual = Buffer.from(challenge.ownerManageTokenHash, "hex");
+    const candidate = Buffer.from(hashToken(ownerManageToken), "hex");
+    if (actual.length === candidate.length && timingSafeEqual(actual, candidate)) return true;
+  }
+  if (!ownerAnonymousId) return false;
+  const database = getMatchDatabase();
+  const rows = await database<{ profile_id: string }[]>`
+    select profile_id::text
+    from public.match_profiles
+    where profile_id = ${challenge.ownerProfileId}::uuid
+      and anonymous_id = ${ownerAnonymousId}::uuid
+    limit 1
+  `;
+  return rows.length > 0;
 }
 
 function publicRankingEntry(entry: ChallengeEntry & { rank?: number }, viewerProfileId?: string | null) {
@@ -374,14 +386,13 @@ export async function getActiveChallengeForOwner(anonymousId: string) {
       and challenges.status = 'active'
     limit 1
   `;
-  return rows[0] ? publicChallenge(challengeFromRow(rows[0])) : null;
-}
-
-function trustLabel(value: number) {
-  if (value >= 0.85) return "추천을 꽤 믿고 봐도 됨";
-  if (value >= 0.7) return "주력 장르는 꽤 믿을 만함";
-  if (value >= 0.55) return "장르를 확인하고 들으면 됨";
-  return "가볍게 참고하면 좋음";
+  if (!rows[0]) return null;
+  const challenge = challengeFromRow(rows[0]);
+  const ownerSnapshot = await getTasteSnapshotById(challenge.ownerSnapshotId);
+  return {
+    ...await publicChallenge(challenge),
+    ownerPublicProfileId: ownerSnapshot?.publicProfileId ?? null,
+  };
 }
 
 function compatibilityResult(challenge: Challenge, ownerSnapshot: StoredSnapshot, challengerSnapshot: StoredSnapshot) {
@@ -404,7 +415,7 @@ function compatibilityResult(challenge: Challenge, ownerSnapshot: StoredSnapshot
     sharedGenres,
     differentGenres,
     sharedTasteLabels,
-    trustSentence: `${challenge.ownerNickname}님의 ${trustGenre} 추천은 ${trustLabel(calculated.private.ownerToChallengerTrust)}.`,
+    trustSentence: pairTrustSentence({ score: calculated.score, recommenderNickname: challenge.ownerNickname, genre: trustGenre }),
     createdAt: new Date().toISOString(),
   } satisfies CompatibilityResult;
 }
@@ -613,17 +624,17 @@ export async function getPublicPairResult(challengeCode: string, resultId: strin
     ownerRecommendedGenres: explanations?.ownerRecommendationGenreKeys.map((key: string) => genreLabels[key]).filter(Boolean) ?? [],
     challengerRecommendedGenres: explanations?.challengerRecommendationGenreKeys.map((key: string) => genreLabels[key]).filter(Boolean) ?? [],
     sharedTasteLabels: result.sharedTasteLabels,
-    trustSentence: result.trustSentence,
+    trustSentence: pairTrustSentence({ score: result.overallScore, recommenderNickname: challenge.ownerNickname, genre: result.sharedGenres[0] }),
     rank: entry.rank,
     entryCount: ranking.length,
   };
 }
 
-export async function getChallengeRanking(input: { challengeCode: string; limit?: number; viewerPublicProfileId?: string | null; ownerManageToken?: string | null }) {
+export async function getChallengeRanking(input: { challengeCode: string; limit?: number; viewerPublicProfileId?: string | null; ownerManageToken?: string | null; ownerAnonymousId?: string | null }) {
   const challenge = await findChallenge(input.challengeCode);
   if (!challenge) return null;
 
-  const canManage = hasOwnerAccess(challenge, input.ownerManageToken);
+  const canManage = await hasOwnerAccess(challenge, input.ownerManageToken, input.ownerAnonymousId);
   const allEntries = await challengeEntries(challenge.challengeId);
   const ranked = denseRankEntries(allEntries) as Array<ChallengeEntry & { rank: number }>;
   const viewerSnapshot = input.viewerPublicProfileId ? await getTasteSnapshot(input.viewerPublicProfileId) : null;
@@ -664,10 +675,10 @@ export async function getChallengeRanking(input: { challengeCode: string; limit?
   };
 }
 
-export async function updateChallengeEntryVisibility(input: { challengeCode: string; entryId: string; hiddenByOwner: boolean; ownerManageToken?: string | null }) {
+export async function updateChallengeEntryVisibility(input: { challengeCode: string; entryId: string; hiddenByOwner: boolean; ownerManageToken?: string | null; ownerAnonymousId?: string | null }) {
   const challenge = await findChallenge(input.challengeCode);
   if (!challenge) throw new Error("CHALLENGE_NOT_FOUND");
-  if (!hasOwnerAccess(challenge, input.ownerManageToken)) throw new Error("OWNER_AUTH_REQUIRED");
+  if (!await hasOwnerAccess(challenge, input.ownerManageToken, input.ownerAnonymousId)) throw new Error("OWNER_AUTH_REQUIRED");
 
   const database = getMatchDatabase();
   const rows = await database<{ entry_id: string; hidden_by_owner: boolean }[]>`
@@ -681,10 +692,10 @@ export async function updateChallengeEntryVisibility(input: { challengeCode: str
   return { entryId: rows[0].entry_id, hiddenByOwner: rows[0].hidden_by_owner };
 }
 
-export async function updateChallenge(input: { challengeCode: string; status?: "active" | "closed"; rankingVisibility?: boolean; ownerManageToken?: string | null }) {
+export async function updateChallenge(input: { challengeCode: string; status?: "active" | "closed"; rankingVisibility?: boolean; ownerManageToken?: string | null; ownerAnonymousId?: string | null }) {
   const challenge = await findChallenge(input.challengeCode);
   if (!challenge) throw new Error("CHALLENGE_NOT_FOUND");
-  if (!hasOwnerAccess(challenge, input.ownerManageToken)) throw new Error("OWNER_AUTH_REQUIRED");
+  if (!await hasOwnerAccess(challenge, input.ownerManageToken, input.ownerAnonymousId)) throw new Error("OWNER_AUTH_REQUIRED");
 
   const status = input.status ?? challenge.status;
   const rankingVisibility = typeof input.rankingVisibility === "boolean"

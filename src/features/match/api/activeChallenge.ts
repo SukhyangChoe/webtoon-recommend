@@ -3,6 +3,7 @@ export type ActiveChallengeInfo = {
   challengeUrl: string;
   ownerNickname: string;
   entryCount: number;
+  ownerPublicProfileId: string | null;
 };
 
 export async function requestActiveChallenge(anonymousId: string) {

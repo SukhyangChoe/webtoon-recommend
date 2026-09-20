@@ -110,6 +110,7 @@ export function buildTasteSnapshot({ seed, answers, anonymousId, profileId, snap
 export function toPublicTasteResult(snapshot) {
   return {
     publicProfileId: snapshot.publicProfileId,
+    accuracyFeedback: snapshot.accuracyFeedback ?? null,
     completedAt: snapshot.completedAt,
     genreStars: snapshot.genreStars,
     displayGenres: snapshot.displayGenres,

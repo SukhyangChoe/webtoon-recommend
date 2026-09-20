@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPublicChallenge, updateChallenge } from "@/features/match/server/challengeStore";
 import { toMatchApiFailure } from "@/features/match/server/apiErrors";
+import { isAnonymousId } from "@/features/match/storage/anonymousIdentity.mjs";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,11 @@ function ownerToken(request: Request) {
   return authorization?.startsWith("Bearer ") ? authorization.slice(7) : null;
 }
 
+function ownerAnonymousId(request: Request) {
+  const value = request.headers.get("x-match-owner-id");
+  return isAnonymousId(value) ? value : null;
+}
+
 export async function PATCH(request: Request, { params }: { params: Promise<{ challengeCode: string }> }) {
   try {
     const { challengeCode } = await params;
@@ -36,6 +42,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ch
       status: body.status,
       rankingVisibility: body.rankingVisibility,
       ownerManageToken: ownerToken(request),
+      ownerAnonymousId: ownerAnonymousId(request),
     });
     return NextResponse.json(challenge);
   } catch (error) {

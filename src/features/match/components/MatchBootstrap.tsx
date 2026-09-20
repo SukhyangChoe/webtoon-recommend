@@ -51,7 +51,7 @@ export function MatchBootstrap() {
   if (state.status === "completed") {
     return (
       <div className="match-actions">
-        <a className="match-button" href={MATCH_ROUTES.result(state.resultPublicId)}>내 웹툰 취향 결과 보기</a>
+        <a className="match-button" href={`${MATCH_ROUTES.result(state.resultPublicId)}?from=home`}>내 웹툰 취향 결과 보기</a>
         <button className="match-button match-button--secondary" type="button" onClick={startFresh}>다시 테스트하기</button>
         <p className="match-identity-note">완료한 결과를 이 브라우저에 보관하고 있어요.</p>
       </div>

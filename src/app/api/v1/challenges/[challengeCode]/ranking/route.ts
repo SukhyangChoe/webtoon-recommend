@@ -1,12 +1,18 @@
 import { NextResponse } from "next/server";
 import { getChallengeRanking } from "@/features/match/server/challengeStore";
 import { toMatchApiFailure } from "@/features/match/server/apiErrors";
+import { isAnonymousId } from "@/features/match/storage/anonymousIdentity.mjs";
 
 export const dynamic = "force-dynamic";
 
 function ownerToken(request: Request) {
   const authorization = request.headers.get("authorization");
   return authorization?.startsWith("Bearer ") ? authorization.slice(7) : null;
+}
+
+function ownerAnonymousId(request: Request) {
+  const value = request.headers.get("x-match-owner-id");
+  return isAnonymousId(value) ? value : null;
 }
 
 export async function GET(request: Request, { params }: { params: Promise<{ challengeCode: string }> }) {
@@ -20,6 +26,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ chal
       limit,
       viewerPublicProfileId: url.searchParams.get("viewerProfileId"),
       ownerManageToken: ownerToken(request),
+      ownerAnonymousId: ownerAnonymousId(request),
     });
     if (!ranking) return NextResponse.json({ error: "CHALLENGE_NOT_FOUND" }, { status: 404 });
     return NextResponse.json(ranking);

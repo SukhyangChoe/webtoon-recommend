@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ensureAnonymousId } from "../storage/anonymousIdentity.mjs";
-import { clearPendingChallenge, readPendingChallenge, writeChallengeResult } from "../storage/challengeStorage.mjs";
+import { clearPendingChallenge, readLatestChallengeResult, readPairResultPrompt, readPendingChallenge, writeChallengeResult, writePairResultPrompt } from "../storage/challengeStorage.mjs";
 import { validateMatchNickname } from "../server/nickname.mjs";
 
 export function ChallengeEntryPrompt({ publicProfileId }: { publicProfileId: string }) {
@@ -12,31 +12,23 @@ export function ChallengeEntryPrompt({ publicProfileId }: { publicProfileId: str
   const [agreed, setAgreed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
+  const [pairResultId, setPairResultId] = useState("");
+  const submissionStarted = useRef(false);
   const nicknameValidation = validateMatchNickname(nickname);
 
-  useEffect(() => {
-    const pending = readPendingChallenge(window.localStorage);
-    if (!pending?.challengeCode) return;
-    void fetch(`/api/v1/challenges/${pending.challengeCode}`).then(async (response) => {
-      const body = await response.json();
-      if (!response.ok || body.status !== "active") throw new Error();
-      setChallengeCode(pending.challengeCode);
-      setOwnerNickname(body.ownerNickname);
-    }).catch(() => {
-      clearPendingChallenge(window.localStorage);
-      setChallengeCode("");
-    });
-  }, []);
-
-  async function submit(event: React.FormEvent) {
-    event.preventDefault();
+  const completeEntry = useCallback(async (code: string, challengerNickname: string) => {
     setSubmitting(true);
     setMessage("");
     try {
       const identity = ensureAnonymousId({ cookieText: document.cookie, storage: window.localStorage });
-      const response = await fetch(`/api/v1/challenges/${challengeCode}/entries`, {
-        method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ anonymousId: identity.anonymousId, challengerPublicProfileId: publicProfileId, challengerNickname: nickname }),
+      const response = await fetch(`/api/v1/challenges/${code}/entries`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          anonymousId: identity.anonymousId,
+          challengerPublicProfileId: publicProfileId,
+          challengerNickname,
+        }),
       });
       const body = await response.json();
       if (!response.ok) {
@@ -44,15 +36,75 @@ export function ChallengeEntryPrompt({ publicProfileId }: { publicProfileId: str
         if (body.error === "NICKNAME_REJECTED") throw new Error("닉네임은 개인정보 없이 2~20자로 적어 주세요.");
         throw new Error("궁합 결과를 만들지 못했어요.");
       }
-      writeChallengeResult(window.localStorage, challengeCode, body.resultId);
+      writeChallengeResult(window.localStorage, code, body.resultId, publicProfileId);
+      writePairResultPrompt(window.localStorage, code, body.resultId, publicProfileId);
       clearPendingChallenge(window.localStorage);
-      window.location.assign(body.pairResultUrl);
+      setChallengeCode(code);
+      setPairResultId(body.resultId);
+      setSubmitting(false);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "궁합 결과를 만들지 못했어요.");
       setSubmitting(false);
+      submissionStarted.current = false;
     }
+  }, [publicProfileId]);
+
+  useEffect(() => {
+    let active = true;
+    const pending = readPendingChallenge(window.localStorage);
+    const savedPairPrompt = readPairResultPrompt(window.localStorage);
+    const matchingPairPrompt = savedPairPrompt?.publicProfileId === publicProfileId ? savedPairPrompt : null;
+    const savedChallengeResult = !pending?.challengeCode && !matchingPairPrompt ? readLatestChallengeResult(window.localStorage, publicProfileId) : null;
+    const recoverablePair = matchingPairPrompt ?? savedChallengeResult;
+    if (!pending?.challengeCode && recoverablePair) {
+      void fetch(`/api/v1/challenges/${recoverablePair.challengeCode}`).then(async (response) => {
+        const body = await response.json();
+        if (!active || !response.ok) return;
+        writePairResultPrompt(window.localStorage, recoverablePair.challengeCode, recoverablePair.resultId, publicProfileId);
+        setChallengeCode(recoverablePair.challengeCode);
+        setPairResultId(recoverablePair.resultId);
+        setOwnerNickname(body.ownerNickname);
+      }).catch(() => {});
+      return () => { active = false; };
+    }
+    if (!pending?.challengeCode) return;
+
+    void fetch(`/api/v1/challenges/${pending.challengeCode}`).then(async (response) => {
+      const body = await response.json();
+      if (!response.ok || body.status !== "active") throw new Error();
+      if (!active) return;
+
+      const savedNickname = typeof pending.challengerNickname === "string" ? pending.challengerNickname : "";
+      const savedValidation = validateMatchNickname(savedNickname);
+      const hasPreTestConsent = Boolean(pending.agreedAt && savedValidation.valid);
+      setChallengeCode(pending.challengeCode);
+      setOwnerNickname(body.ownerNickname);
+      setNickname(savedNickname);
+      setAgreed(hasPreTestConsent);
+
+      if (hasPreTestConsent && !submissionStarted.current) {
+        submissionStarted.current = true;
+        await completeEntry(pending.challengeCode, savedValidation.nickname);
+      }
+    }).catch(() => {
+      if (!active) return;
+      clearPendingChallenge(window.localStorage);
+      setChallengeCode("");
+    });
+
+    return () => { active = false; };
+  }, [completeEntry, publicProfileId]);
+
+  function submit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!agreed || !nicknameValidation.valid || submissionStarted.current) return;
+    submissionStarted.current = true;
+    void completeEntry(challengeCode, nicknameValidation.nickname);
   }
 
   if (!challengeCode || !ownerNickname) return null;
-  return <section className="match-result-section match-entry-prompt"><p className="match-eyebrow">초대 참여</p><h2>{ownerNickname}님과의 궁합을 확인할게요</h2><p>테스트가 끝났어요. 결과와 랭킹에 표시할 닉네임만 정해 주세요.</p><form className="match-challenge-form" onSubmit={submit}><label><span>닉네임</span><input type="text" value={nickname} onChange={(event) => setNickname(event.target.value)} minLength={2} maxLength={20} placeholder="2~20자" aria-invalid={nickname.length > 0 && !nicknameValidation.valid} aria-describedby="challenger-nickname-guide" /><small id="challenger-nickname-guide" className={`match-field-guide${nickname.length > 0 && !nicknameValidation.valid ? " is-error" : ""}`}>{nicknameValidation.message}</small></label><label className="match-check-row"><input type="checkbox" checked={agreed} onChange={(event) => setAgreed(event.target.checked)} /><span><strong>공개 범위를 확인했어요</strong><small>이 링크를 아는 사람에게 닉네임·궁합 점수·순위가 보일 수 있어요.</small></span></label>{message ? <p className="match-notice" role="alert">{message}</p> : null}<button className="match-button" type="submit" disabled={!agreed || !nicknameValidation.valid || submitting}>{submitting ? "궁합 계산 중…" : "우리 궁합 확인하기"}</button></form></section>;
+  if (pairResultId) return <section className="match-result-section match-entry-prompt"><p className="match-eyebrow">웹툰궁합</p><h2>{ownerNickname}님과의 궁합 결과도 준비됐어요</h2><a className="match-button" href={`/match/c/${challengeCode}/match/${pairResultId}`}>궁합 확인하기</a></section>;
+  if (submitting) return <section className="match-result-section match-entry-prompt"><p className="match-eyebrow">궁합 계산 중</p><h2>{ownerNickname}님과의 결과를 만들고 있어요</h2><div className="match-loading-bar" aria-label="궁합 결과 계산 중"><span /></div></section>;
+
+  return <section className="match-result-section match-entry-prompt"><p className="match-eyebrow">초대 참여</p><h2>{ownerNickname}님과의 궁합을 확인할게요</h2><p>{message || "이전 화면에서 입력한 닉네임을 확인한 뒤 다시 진행해 주세요."}</p><form className="match-challenge-form" onSubmit={submit}><label><span>닉네임</span><input type="text" value={nickname} onChange={(event) => setNickname(event.target.value)} minLength={2} maxLength={20} placeholder="2~20자" autoComplete="nickname" aria-invalid={nickname.length > 0 && !nicknameValidation.valid} aria-describedby="challenger-nickname-guide" /><small id="challenger-nickname-guide" className={`match-field-guide${nickname.length > 0 && !nicknameValidation.valid ? " is-error" : ""}`}>{nicknameValidation.message}</small></label><label className="match-check-row"><input type="checkbox" checked={agreed} onChange={(event) => setAgreed(event.target.checked)} /><span><strong>공개 범위를 확인했어요</strong><small>이 링크를 아는 사람에게 닉네임·궁합 점수·순위가 보일 수 있어요.</small></span></label><button className="match-button" type="submit" disabled={!agreed || !nicknameValidation.valid}>궁합 결과 다시 만들기</button></form></section>;
 }

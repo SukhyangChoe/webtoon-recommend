@@ -13,6 +13,7 @@ export type ShareCardModel = {
   imageAlt?: string;
   theme?: ShareCardTheme;
   rows: ShareCardRow[];
+  callout?: { title: string; body: string };
   footer: string;
   fileName: string;
 };
@@ -183,6 +184,22 @@ export async function renderShareCardPng(model: ShareCardModel) {
       context.textAlign = "left";
     }
   });
+
+  if (model.callout) {
+    const calloutY = Math.min(nextY + visibleRows.length * 110 + 30, 1040);
+    roundedRect(context, 132, calloutY, 816, 122, 26);
+    context.fillStyle = palette.soft;
+    context.fill();
+    context.strokeStyle = palette.glow;
+    context.lineWidth = 2;
+    context.stroke();
+    context.fillStyle = palette.dark;
+    context.font = "850 29px system-ui, -apple-system, sans-serif";
+    context.fillText(model.callout.title, 166, calloutY + 47);
+    context.fillStyle = "#716987";
+    context.font = "600 24px system-ui, -apple-system, sans-serif";
+    context.fillText(fitText(context, model.callout.body, 748), 166, calloutY + 88);
+  }
 
   context.fillStyle = "#716987";
   context.font = "650 26px system-ui, -apple-system, sans-serif";
