@@ -9,13 +9,13 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as { anonymousId?: string; answers?: MatchAnswers };
-    if (!body.anonymousId || !isAnonymousId(body.anonymousId) || !body.answers) {
+    const body = (await request.json()) as { anonymousId?: string; nickname?: string; answers?: MatchAnswers };
+    if (!body.anonymousId || !isAnonymousId(body.anonymousId) || !body.nickname || !body.answers) {
       return NextResponse.json({ error: "INVALID_TASTE_SNAPSHOT_INPUT" }, { status: 400 });
     }
-    const snapshot = await createTasteSnapshot(body.anonymousId, body.answers);
+    const snapshot = await createTasteSnapshot(body.anonymousId, body.nickname, body.answers);
     return NextResponse.json(
-      { publicProfileId: snapshot.publicProfileId, snapshotId: snapshot.snapshotId, result: toPublicTasteResult(snapshot) },
+      { publicProfileId: snapshot.publicProfileId, snapshotId: snapshot.snapshotId, result: { ...toPublicTasteResult(snapshot), nickname: snapshot.profileDisplayName ?? null } },
       { status: 201 },
     );
   } catch (error) {

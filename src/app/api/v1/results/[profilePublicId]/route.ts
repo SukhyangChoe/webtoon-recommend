@@ -1,15 +1,19 @@
 import { NextResponse } from "next/server";
-import { getPublicTasteResult, saveAccuracyFeedback, type AccuracyFeedback } from "@/features/match/server/resultStore";
+import { getPublicTasteResult, isTasteResultOwner, saveAccuracyFeedback, type AccuracyFeedback } from "@/features/match/server/resultStore";
 import { toMatchApiFailure } from "@/features/match/server/apiErrors";
+import { isAnonymousId } from "@/features/match/storage/anonymousIdentity.mjs";
 
 export const dynamic = "force-dynamic";
 const FEEDBACK = new Set<AccuracyFeedback>(["almost_exact", "mostly_right", "slightly_off", "very_off"]);
 
-export async function GET(_request: Request, { params }: { params: Promise<{ profilePublicId: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ profilePublicId: string }> }) {
   try {
     const { profilePublicId } = await params;
     const result = await getPublicTasteResult(profilePublicId);
-    return result ? NextResponse.json(result) : NextResponse.json({ error: "RESULT_NOT_FOUND" }, { status: 404 });
+    if (!result) return NextResponse.json({ error: "RESULT_NOT_FOUND" }, { status: 404 });
+    const anonymousId = new URL(request.url).searchParams.get("anonymousId");
+    const canManage = Boolean(anonymousId && isAnonymousId(anonymousId) && await isTasteResultOwner(profilePublicId, anonymousId));
+    return NextResponse.json({ ...result, canManage });
   } catch (error) {
     const failure = toMatchApiFailure(error, "RESULT_LOAD_FAILED");
     return NextResponse.json({ error: failure.error }, { status: failure.status });

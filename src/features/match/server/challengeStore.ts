@@ -5,8 +5,9 @@ import { calculateCompatibility } from "../engine/compatibilityEngine.mjs";
 import { denseRankEntries, selectRankingWindow } from "../engine/rankingPolicy.mjs";
 import { pairTrustSentence } from "../share/pairTrustCopy.mjs";
 import { getMatchDatabase, isPostgresError } from "./database";
-import { getTasteSnapshot, getTasteSnapshotById, type StoredSnapshot } from "./resultStore";
+import { getTasteSnapshot, getTasteSnapshotById, updateProfileNickname, type StoredSnapshot } from "./resultStore";
 import { sanitizeMatchNickname } from "./nickname.mjs";
+import { getRecommendationsForProfiles } from "./webtoonCatalogStore";
 
 type Challenge = {
   challengeId: string;
@@ -294,10 +295,11 @@ async function activeChallengeForProfile(ownerProfileId: string, excludeChalleng
 export async function createChallenge(input: { anonymousId: string; ownerPublicProfileId: string; ownerNickname: string; rankingVisibility?: boolean }) {
   const ownerSnapshot = await getTasteSnapshot(input.ownerPublicProfileId);
   if (!ownerSnapshot || ownerSnapshot.anonymousId !== input.anonymousId) throw new Error("OWNER_SNAPSHOT_NOT_FOUND");
+  const ownerNickname = sanitizeMatchNickname(input.ownerNickname);
+  await updateProfileNickname(input.ownerPublicProfileId, input.anonymousId, ownerNickname);
   const existingActiveChallenge = await activeChallengeForProfile(ownerSnapshot.profileId);
   if (existingActiveChallenge) throw new ActiveChallengeExistsError(existingActiveChallenge.challengeCode);
 
-  const ownerNickname = sanitizeMatchNickname(input.ownerNickname);
   const ownerManageToken = randomBytes(32).toString("base64url");
   const challenge: Challenge = {
     challengeId: randomUUID(),
@@ -357,6 +359,48 @@ export async function createChallenge(input: { anonymousId: string; ownerPublicP
 export async function getPublicChallenge(challengeCode: string) {
   const challenge = await findChallenge(challengeCode);
   return challenge ? publicChallenge(challenge) : null;
+}
+
+export async function isChallengeNicknameAvailable(input: { challengeCode: string; nickname: string; anonymousId?: string | null }) {
+  const challenge = await findChallenge(input.challengeCode);
+  if (!challenge) throw new Error("CHALLENGE_NOT_FOUND");
+  const nickname = sanitizeMatchNickname(input.nickname);
+  const database = getMatchDatabase();
+  if (input.anonymousId) {
+    const ownerRows = await database<{ is_owner: boolean }[]>`
+      select exists (
+        select 1
+        from public.match_profiles profiles
+        where profiles.profile_id = ${challenge.ownerProfileId}::uuid
+          and profiles.anonymous_id = ${input.anonymousId}::uuid
+      ) as is_owner
+    `;
+    if (ownerRows[0]?.is_owner) throw new Error("SELF_CHALLENGE_NOT_ALLOWED");
+  }
+  const rows = await database<{ conflict: boolean }[]>`
+    select exists (
+      select 1
+      from public.match_challenges challenges
+      where challenges.challenge_id = ${challenge.challengeId}::uuid
+        and public.match_nickname_key(challenges.owner_nickname) = public.match_nickname_key(${nickname})
+        and not exists (
+          select 1 from public.match_profiles profiles
+          where profiles.profile_id = challenges.owner_profile_id
+            and profiles.anonymous_id = ${input.anonymousId ?? null}::uuid
+        )
+      union all
+      select 1
+      from public.match_challenge_entries entries
+      where entries.challenge_id = ${challenge.challengeId}::uuid
+        and public.match_nickname_key(entries.challenger_nickname) = public.match_nickname_key(${nickname})
+        and not exists (
+          select 1 from public.match_profiles profiles
+          where profiles.profile_id = entries.challenger_profile_id
+            and profiles.anonymous_id = ${input.anonymousId ?? null}::uuid
+        )
+    ) as conflict
+  `;
+  return !rows[0]?.conflict;
 }
 
 export async function getChallengeInviteMetadata(challengeCode: string) {
@@ -461,10 +505,15 @@ export async function createChallengeEntry(input: { challengeCode: string; anony
     getTasteSnapshot(input.challengerPublicProfileId),
   ]);
   if (!ownerSnapshot || !challengerSnapshot || challengerSnapshot.anonymousId !== input.anonymousId) throw new Error("CHALLENGER_SNAPSHOT_NOT_FOUND");
+  if (challenge.ownerProfileId === challengerSnapshot.profileId) throw new Error("SELF_CHALLENGE_NOT_ALLOWED");
   if (challengerSnapshot.questionSetVersion !== challenge.questionSetVersion) throw new Error("QUESTION_VERSION_MISMATCH");
   if (challenge.compatibilityVersion !== MATCH_COMPATIBILITY_CONFIG.version) throw new Error("COMPATIBILITY_VERSION_MISMATCH");
 
   const challengerNickname = sanitizeMatchNickname(input.challengerNickname);
+  if (!await isChallengeNicknameAvailable({ challengeCode: input.challengeCode, nickname: challengerNickname, anonymousId: input.anonymousId })) {
+    throw new Error("NICKNAME_ALREADY_USED");
+  }
+  await updateProfileNickname(input.challengerPublicProfileId, input.anonymousId, challengerNickname);
   const result = compatibilityResult(challenge, ownerSnapshot, challengerSnapshot);
   const database = getMatchDatabase();
   const persisted = await database.begin(async (sql) => {
@@ -494,6 +543,21 @@ export async function createChallengeEntry(input: { challengeCode: string; anony
     if (previous) {
       return { entry: previous, updated: false, existing: true };
     }
+
+    const nicknameConflicts = await sql<{ conflict: boolean }[]>`
+      select exists (
+        select 1
+        from public.match_challenges challenges
+        where challenges.challenge_id = ${challenge.challengeId}::uuid
+          and public.match_nickname_key(challenges.owner_nickname) = public.match_nickname_key(${challengerNickname})
+        union all
+        select 1
+        from public.match_challenge_entries entries
+        where entries.challenge_id = ${challenge.challengeId}::uuid
+          and public.match_nickname_key(entries.challenger_nickname) = public.match_nickname_key(${challengerNickname})
+      ) as conflict
+    `;
+    if (nicknameConflicts[0]?.conflict) throw new Error("NICKNAME_ALREADY_USED");
 
     await sql`
       insert into public.match_compatibility_results (
@@ -544,8 +608,9 @@ export async function createChallengeEntry(input: { challengeCode: string; anony
       updatedAt: now,
       sharedGenres: result.sharedGenres,
     };
-    await sql`
-      insert into public.match_challenge_entries (
+    try {
+      await sql`
+        insert into public.match_challenge_entries (
         entry_id,
         challenge_id,
         challenger_profile_id,
@@ -556,7 +621,7 @@ export async function createChallengeEntry(input: { challengeCode: string; anony
         hidden_by_owner,
         created_at,
         updated_at
-      ) values (
+        ) values (
         ${entry.entryId}::uuid,
         ${entry.challengeId}::uuid,
         ${entry.challengerProfileId}::uuid,
@@ -567,8 +632,12 @@ export async function createChallengeEntry(input: { challengeCode: string; anony
         false,
         ${entry.createdAt}::timestamptz,
         ${entry.updatedAt}::timestamptz
-      )
-    `;
+        )
+      `;
+    } catch (error) {
+      if (isPostgresError(error, "23505")) throw new Error("NICKNAME_ALREADY_USED");
+      throw error;
+    }
     return { entry, updated: false, existing: false };
   });
 
@@ -607,9 +676,10 @@ export async function getPublicPairResult(challengeCode: string, resultId: strin
   const ranking = await rankedEntries(challenge.challengeId);
   const entry = ranking.find((item) => item.resultId === resultId);
   if (!entry) return null;
-  const [ownerSnapshot, challengerSnapshot] = await Promise.all([
+  const [ownerSnapshot, challengerSnapshot, recommendations] = await Promise.all([
     getTasteSnapshotById(result.ownerSnapshotId),
     getTasteSnapshotById(result.challengerSnapshotId),
+    getRecommendationsForProfiles([challenge.ownerProfileId, entry.challengerProfileId]),
   ]);
   const explanations = ownerSnapshot && challengerSnapshot ? calculateCompatibility(ownerSnapshot, challengerSnapshot).explanations : null;
   return {
@@ -623,6 +693,8 @@ export async function getPublicPairResult(challengeCode: string, resultId: strin
     differentGenres: result.differentGenres,
     ownerRecommendedGenres: explanations?.ownerRecommendationGenreKeys.map((key: string) => genreLabels[key]).filter(Boolean) ?? [],
     challengerRecommendedGenres: explanations?.challengerRecommendationGenreKeys.map((key: string) => genreLabels[key]).filter(Boolean) ?? [],
+    ownerRecommendations: recommendations[challenge.ownerProfileId] ?? [],
+    challengerRecommendations: recommendations[entry.challengerProfileId] ?? [],
     sharedTasteLabels: result.sharedTasteLabels,
     trustSentence: pairTrustSentence({ score: result.overallScore, recommenderNickname: challenge.ownerNickname, genre: result.sharedGenres[0] }),
     rank: entry.rank,

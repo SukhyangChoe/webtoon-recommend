@@ -46,6 +46,10 @@ test("public result excludes raw answers, affinities, and internal scores", () =
   const publicResult = toPublicTasteResult(snapshot);
   assert.equal(publicResult.genreStars.fantasy, 18);
   assert.deepEqual(publicResult.wellMatchedLabels, ["성장", "노력형"]);
+  assert.deepEqual(publicResult.wellMatchedDetails, [
+    { category: "전개", value: "성장" },
+    { category: "관계", value: "노력형" },
+  ]);
   assert.deepEqual(publicResult.lessMatchedLabels, []);
   assert.equal("answers" in publicResult, false);
   assert.equal("rawGenreAffinity" in publicResult, false);

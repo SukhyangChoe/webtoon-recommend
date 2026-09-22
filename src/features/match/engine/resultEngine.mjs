@@ -80,11 +80,12 @@ export function buildTasteSnapshot({ seed, answers, anonymousId, profileId, snap
   const appealScores = getPrimarySelectionWeights(answers.appeal);
   const characterScores = getPrimarySelectionWeights(answers.characterRelationship);
   const avoidanceKeys = (answers.avoidance ?? []).filter((key) => key !== "avoid_none");
-  const wellMatchedLabels = [
-    settingState === "specific" ? labelFor(seed, answers.setting.primary) : null,
-    labelFor(seed, answers.appeal?.[0]),
-    labelFor(seed, answers.characterRelationship?.[0]),
-  ].filter(Boolean);
+  const wellMatchedDetails = [
+    { category: "설정", value: settingState === "specific" ? labelFor(seed, answers.setting.primary) : null },
+    { category: "전개", value: labelFor(seed, answers.appeal?.[0]) },
+    { category: "관계", value: labelFor(seed, answers.characterRelationship?.[0]) },
+  ].filter((item) => Boolean(item.value));
+  const wellMatchedLabels = wellMatchedDetails.map((item) => item.value);
 
   return {
     profileId,
@@ -101,6 +102,7 @@ export function buildTasteSnapshot({ seed, answers, anonymousId, profileId, snap
     positiveTasteScores: { setting: settingScores, appeal: appealScores, character_relationship: characterScores },
     positiveTasteEvidenceStates: { setting: settingState, appeal: answers.appeal?.length ? "specific" : "missing", character_relationship: answers.characterRelationship?.length ? "specific" : "missing" },
     avoidanceTasteScores: Object.fromEntries(avoidanceKeys.map((key) => [key, 1])),
+    wellMatchedDetails,
     wellMatchedLabels,
     lessMatchedLabels: avoidanceKeys.slice(0, 3).map((key) => labelFor(seed, key)).filter(Boolean),
     answers,
@@ -108,12 +110,20 @@ export function buildTasteSnapshot({ seed, answers, anonymousId, profileId, snap
 }
 
 export function toPublicTasteResult(snapshot) {
+  const fallbackCategories = snapshot.positiveTasteEvidenceStates?.setting === "specific"
+    ? ["설정", "전개", "관계"]
+    : ["전개", "관계"];
+  const wellMatchedDetails = snapshot.wellMatchedDetails ?? snapshot.wellMatchedLabels.map((value, index) => ({
+    category: fallbackCategories[index] ?? "취향",
+    value,
+  }));
   return {
     publicProfileId: snapshot.publicProfileId,
     accuracyFeedback: snapshot.accuracyFeedback ?? null,
     completedAt: snapshot.completedAt,
     genreStars: snapshot.genreStars,
     displayGenres: snapshot.displayGenres,
+    wellMatchedDetails,
     wellMatchedLabels: snapshot.wellMatchedLabels,
     lessMatchedLabels: snapshot.lessMatchedLabels,
     topGenres: snapshot.displayGenres.slice(0, 3),

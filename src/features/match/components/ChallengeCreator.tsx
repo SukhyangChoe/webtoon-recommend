@@ -64,7 +64,7 @@ export function ChallengeCreator() {
 
         const snapshotResponse = await fetch("/api/v1/taste-snapshots", {
           method: "POST", headers: { "content-type": "application/json" },
-          body: JSON.stringify({ anonymousId: identity.anonymousId, answers: draft.answers }),
+          body: JSON.stringify({ anonymousId: identity.anonymousId, nickname: draft.nickname, answers: draft.answers }),
         });
         const snapshot = await snapshotResponse.json();
         if (!snapshotResponse.ok || !snapshot.publicProfileId || !snapshot.result) {

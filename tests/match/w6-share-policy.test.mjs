@@ -24,6 +24,8 @@ test("personal sharing uses the challenge URL and required Threads UTM", () => {
   assert.equal(url.searchParams.get("utm_content"), "personal");
   assert.match(copy.text, /판타지/);
   assert.match(copy.text, /회귀 버튼 단골손님/);
+  assert.match(copy.text, /끌리는 요소/);
+  assert.match(copy.text, /조금 망설이는 요소/);
   assert.ok(copy.text.length < 500);
 });
 

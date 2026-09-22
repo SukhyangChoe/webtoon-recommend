@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { MATCH_VERSIONS } from "../../src/features/match/config/versions.mjs";
 import { ensureAnonymousId, MATCH_ANONYMOUS_STORAGE_KEY } from "../../src/features/match/storage/anonymousIdentity.mjs";
-import { readChallengeResult, readLatestChallengeResult, readPairResultPrompt, readPendingChallenge, writeChallengeResult, writePairResultPrompt, writePendingChallenge } from "../../src/features/match/storage/challengeStorage.mjs";
+import { clearChallengeResult, clearPairResultPrompt, readChallengeResult, readLatestChallengeResult, readPairResultPrompt, readPendingChallenge, writeChallengeResult, writePairResultPrompt, writePendingChallenge } from "../../src/features/match/storage/challengeStorage.mjs";
 import { createEmptyMatchDraft, getMatchHomeState, isCompatibleMatchDraft, readMatchDraft, resetMatchDraft, writeMatchDraft } from "../../src/features/match/storage/draft.mjs";
 
 function memoryStorage() {
@@ -108,4 +108,8 @@ test("a completed invite comparison remains available from the personal result",
     Object.fromEntries(Object.entries(readPairResultPrompt(storage)).filter(([key]) => key !== "savedAt")),
     { challengeCode: "invite-a", resultId: "pair-a", publicProfileId: "profile-a" },
   );
+  clearPairResultPrompt(storage);
+  clearChallengeResult(storage, "invite-a");
+  assert.equal(readPairResultPrompt(storage), null);
+  assert.equal(readChallengeResult(storage, "invite-a"), null);
 });

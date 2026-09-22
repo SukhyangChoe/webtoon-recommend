@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test:match": "node --test tests/match/*.test.mjs",
-    "report:match-pilot": "node --env-file=.env.local scripts/webtoon-match-pilot-export.mjs"
+    "report:match-pilot": "node --env-file=.env.local scripts/webtoon-match-pilot-export.mjs",
+    "sync:webtoon-catalog": "node --env-file=.env.local scripts/sync-webtoon-catalog.mjs"
   },
   "dependencies": {
     "next": "16.2.9",

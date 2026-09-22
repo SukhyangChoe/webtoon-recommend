@@ -29,10 +29,13 @@ export function MatchResultBuilder() {
         const response = await fetch("/api/v1/taste-snapshots", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ anonymousId: identity.anonymousId, answers: draft.answers }),
+          body: JSON.stringify({ anonymousId: identity.anonymousId, nickname: draft.nickname, answers: draft.answers }),
         });
         const created = await response.json();
-        if (!response.ok || !created.publicProfileId) throw new Error(created.error ?? "결과를 만들지 못했어요.");
+        if (!response.ok || !created.publicProfileId) {
+          if (created.error === "NICKNAME_ALREADY_USED") throw new Error("참여한 링크 중 이미 같은 닉네임을 쓰는 사람이 있어요. 시작 화면에서 다른 닉네임을 골라 주세요.");
+          throw new Error(created.error ?? "결과를 만들지 못했어요.");
+        }
         let publicResult = created.result;
         if (!publicResult) {
           const resultResponse = await fetch(`/api/v1/results/${created.publicProfileId}`);

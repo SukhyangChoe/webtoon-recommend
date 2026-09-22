@@ -292,6 +292,9 @@
 .match-module .match-result-section { border: 1px solid rgba(86,57,184,.1); border-radius: 24px; background: rgba(255,255,255,.97); box-shadow: 0 12px 36px rgba(49,32,91,.065); }
 .match-module .match-result-hero { position: relative; padding: 30px 22px 22px; overflow: hidden; background: radial-gradient(circle at 96% 2%, rgba(117,84,235,.16), transparent 190px), linear-gradient(155deg,#fff 50%,#f8f5ff); }
 .match-module .match-result-hero::after { position: absolute; top: -34px; right: -24px; width: 116px; height: 116px; border: 1px solid rgba(104,71,232,.16); border-radius: 50%; content: ""; pointer-events: none; }
+.match-module .match-profile-heading { position: relative; z-index: 2; display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+.match-module .match-profile-heading .match-eyebrow { margin: 0; }
+.match-module .match-profile-heading button { flex: 0 0 auto; padding: 7px 9px; border: 1px solid var(--match-line); border-radius: 9px; background: rgba(255,255,255,.86); color: var(--match-purple-dark); font-size: .76rem; font-weight: 800; cursor: pointer; }
 .match-module .match-result-hero h1 { position: relative; z-index: 1; margin: 4px 0 26px; font-size: clamp(1.72rem, 7.7vw, 2.18rem); font-weight: 760; line-height: 1.22; letter-spacing: -.055em; }
 .match-module .match-result-hero h1 strong { color: var(--match-purple-dark); font-weight: 900; }
 .match-module .match-result-persona { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0,1fr) 155px; gap: 6px; align-items: center; min-height: 205px; margin: 5px 0 22px; }
@@ -317,6 +320,9 @@
 .match-module .match-result-section { padding: 22px 18px; }
 .match-module .match-result-section h2 { margin: 0; color: var(--match-ink); font-size: 1.15rem; letter-spacing: -.025em; }
 .match-module .match-section-note { margin: 4px 0 18px; color: var(--match-muted); font-size: .88rem; }
+.match-module .match-section-heading { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; }
+.match-module .match-section-heading .match-section-note { margin-bottom: 0; }
+.match-module .match-section-heading > strong { flex: 0 0 auto; padding: 5px 8px; border-radius: 999px; background: var(--match-purple-soft); color: var(--match-purple-dark); font-size: .8rem; }
 .match-module .match-stars { display: flex; flex-wrap: wrap; gap: 1px; color: #ffbe2e; font-size: .68rem; line-height: 1; }
 .match-module .match-stars i { font-style: normal; }
 .match-module .match-stars--empty { color: #aaa3b5; font-size: .66rem; }
@@ -326,16 +332,29 @@
 .match-module .match-star-list strong { font-size: .89rem; }
 .match-module .match-star-list > div > span:last-child { color: var(--match-muted); font-size: .78rem; text-align: right; }
 .match-module .match-star-list .is-zero { opacity: .46; }
-.match-module .match-taste-sections { display: grid; gap: 22px; }
+.match-module .match-taste-profile { overflow: hidden; }
+.match-module .match-taste-flow { display: flex; flex-wrap: wrap; gap: 10px 0; margin: 17px 0 0; padding: 14px 16px; border-radius: 15px; background: linear-gradient(135deg,#f3efff,#faf8ff); list-style: none; }
+.match-module .match-taste-flow li { display: inline-flex; align-items: baseline; gap: 7px; white-space: nowrap; }
+.match-module .match-taste-flow li:not(:last-child)::after { width: 1px; height: 17px; margin: 0 14px; align-self: center; background: #d9d1ef; content: ""; }
+.match-module .match-taste-flow span { color: var(--match-muted); font-size: .77rem; font-weight: 750; }
+.match-module .match-taste-flow strong { color: var(--match-purple-dark); font-size: .94rem; }
+.match-module .match-taste-empty { margin: 17px 0 0; padding: 14px 16px; border-radius: 15px; background: linear-gradient(135deg,#f3efff,#faf8ff); color: var(--match-muted); font-size: .77rem; font-weight: 750; }
+.match-module .match-taste-secondary-title { margin-top: 24px !important; padding-top: 20px; border-top: 1px solid #eeeaf4; }
 .match-module .match-labels { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 11px; }
 .match-module .match-labels span { padding: 8px 11px; border-radius: 999px; background: var(--match-purple-soft); color: var(--match-purple-dark); font-size: .88rem; font-weight: 750; }
-.match-module .match-taste-sections > div:last-child .match-labels span { background: #f3f1f5; color: #686171; }
-.match-module .match-empty-label { margin: 9px 0 0; color: var(--match-muted); font-size: .91rem; }
+.match-module .match-empty-label { margin: 9px 0 0; color: var(--match-muted); font-size: .91rem; line-height: 1.5; }
 .match-module .match-feedback-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px; margin-top: 14px; }
 .match-module .match-feedback-grid button { min-height: 48px; border: 1px solid var(--match-line); border-radius: 11px; background: #fff; color: #675f75; font-size: .89rem; cursor: pointer; }
 .match-module .match-feedback-grid button.is-selected { border-color: var(--match-purple); background: var(--match-purple-soft); color: var(--match-purple-dark); font-weight: 850; }
 .match-module .match-feedback-grid button:disabled { cursor: default; }
 .match-module .match-feedback-thanks { margin: 10px 0 0; color: var(--match-muted); font-size: .85rem; }
+.match-module .match-my-recommendations ol { display: grid; gap: 7px; margin: 14px 0 16px; padding: 0; list-style: none; counter-reset: match-recommendation; }
+.match-module .match-my-recommendations li { display: flex; gap: 9px; align-items: center; padding: 10px 11px; border-radius: 11px; background: #faf8fd; counter-increment: match-recommendation; }
+.match-module .match-my-recommendations li::before { display: grid; width: 25px; height: 25px; flex: 0 0 auto; place-items: center; border-radius: 50%; background: var(--match-purple-soft); color: var(--match-purple-dark); font-size: .72rem; font-weight: 900; content: counter(match-recommendation); }
+.match-module .match-my-recommendations li > div { display: grid; min-width: 0; gap: 2px; }
+.match-module .match-my-recommendations li strong { overflow: hidden; font-size: .91rem; text-overflow: ellipsis; white-space: nowrap; }
+.match-module .match-my-recommendations li span { color: var(--match-muted); font-size: .77rem; }
+.match-module .match-my-recommendations > .match-button { display: flex; margin-top: 15px; align-items: center; justify-content: center; text-decoration: none; }
 .match-module .match-result-actions { display: grid; gap: 8px; padding: 4px 2px 18px; }
 .match-module .match-challenge-form { display: grid; gap: 14px; margin-top: 24px; }
 .match-module .match-test-profile-form { margin-top: 22px; }
@@ -371,7 +390,8 @@
 .match-module .match-invite-stats strong { color: var(--match-purple-dark); font-size: .96rem; }
 .match-module .match-entry-prompt { border-color: rgba(104,71,232,.28); background: linear-gradient(145deg,#fff,#f5f1ff); }
 .match-module .match-entry-prompt > p:not(.match-eyebrow) { margin: 8px 0 0; color: var(--match-muted); font-size: .9rem; line-height: 1.5; }
-.match-module .match-pair-page { display: grid; gap: 14px; }
+.match-module .match-pair-page { display: grid; gap: 14px; overflow-x: clip; }
+.match-module .match-pair-page > * { min-width: 0; max-width: 100%; }
 .match-module .match-pair-context-back { display: inline-flex; width: fit-content; min-height: 38px; align-items: center; padding: 0 5px; color: var(--match-purple-dark); font-size: .9rem; font-weight: 800; text-decoration: none; }
 .match-module .match-pair-context-back:hover { text-decoration: underline; text-underline-offset: 3px; }
 .match-module .match-pair-hero { --match-card-accent: var(--match-purple); --match-card-dark: var(--match-purple-dark); --match-card-soft: var(--match-purple-soft); position: relative; isolation: isolate; padding: 30px 20px 26px; overflow: hidden; border: 1px solid color-mix(in srgb,var(--match-card-accent) 18%,transparent); border-radius: 26px; background: radial-gradient(circle at 88% 8%,color-mix(in srgb,var(--match-card-soft) 80%,transparent),transparent 145px),linear-gradient(150deg,#fff,color-mix(in srgb,var(--match-card-soft) 76%,#fff)); text-align: center; box-shadow: 0 15px 42px rgba(49,32,91,.08); }
@@ -402,7 +422,7 @@
 .match-module .match-recommendations strong { overflow: hidden; font-size: .86rem; text-overflow: ellipsis; white-space: nowrap; }
 .match-module .match-recommendations span { color: var(--match-purple-dark); font-size: .88rem; font-weight: 850; text-align: right; }
 .match-module .match-trust-card { background: linear-gradient(145deg,#fffaf0,#fff); }
-.match-module .match-trust-card p { margin: 9px 0 0; color: #5b526b; font-size: .96rem; line-height: 1.5; }
+.match-module .match-trust-card p { margin: 9px 0 0; color: #5b526b; font-size: .91rem; line-height: 1.5; }
 .match-module .match-rank-summary { display: grid; grid-template-columns: 1fr auto; align-items: end; }
 .match-module .match-rank-summary span { color: var(--match-muted); font-size: .78rem; font-weight: 700; }
 .match-module .match-rank-summary strong { grid-row: span 2; color: var(--match-purple-dark); font-size: 2rem; line-height: 1; }
@@ -429,6 +449,7 @@
 .match-module .match-ranking-row.is-viewer { border-color: var(--match-purple); box-shadow: 0 0 0 2px rgba(104,71,232,.1); }
 .match-module .match-ranking-position { display: grid; width: 29px; height: 29px; place-items: center; border-radius: 50%; background: var(--match-purple-soft); color: var(--match-purple-dark); font-size: .75rem; font-weight: 900; }
 .match-module .match-ranking-result-link { display: grid; grid-template-columns: 32px minmax(0,1fr) auto; gap: 8px; align-items: center; min-width: 0; border-radius: 10px; color: inherit; text-decoration: none; }
+.match-module .match-ranking-result-link.is-static { cursor: default; }
 .match-module .match-ranking-result-link:focus-visible { outline: 3px solid rgba(104,71,232,.24); outline-offset: 3px; }
 .match-module .match-ranking-result-link > div { min-width: 0; }
 .match-module .match-ranking-result-link > div > strong { display: block; overflow: hidden; font-size: .96rem; text-overflow: ellipsis; white-space: nowrap; }
@@ -475,9 +496,59 @@
 .match-module .match-confirm-dialog { width: min(100%,380px); padding: 24px 22px 20px; border: 1px solid rgba(104,71,232,.18); border-radius: 22px; background: #fff; box-shadow: 0 24px 70px rgba(22,14,39,.3); }
 .match-module .match-confirm-dialog h2 { margin: 0; font-size: 1.32rem; line-height: 1.35; letter-spacing: -.035em; }
 .match-module .match-confirm-dialog > p:not(.match-eyebrow) { margin: 11px 0 0; color: var(--match-muted); font-size: .9rem; line-height: 1.55; }
+.match-module .match-nickname-dialog > label { display: grid; gap: 7px; margin-top: 17px; }
+.match-module .match-nickname-dialog > label > span { font-size: .86rem; font-weight: 800; }
+.match-module .match-nickname-dialog input { width: 100%; min-height: 48px; padding: 0 13px; border: 1px solid var(--match-line); border-radius: 12px; color: var(--match-ink); font: inherit; outline: none; }
+.match-module .match-nickname-dialog input:focus { border-color: var(--match-purple); box-shadow: 0 0 0 3px rgba(104,71,232,.12); }
 .match-module .match-confirm-progress { display: grid; gap: 8px; margin-top: 16px; color: var(--match-purple-dark); font-size: .85rem; font-weight: 800; }
 .match-module .match-confirm-actions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; margin-top: 20px; }
 .match-module .match-confirm-actions .match-button { min-width: 0; padding: 0 10px; }
+
+.match-module .match-recommendation-manager { display: grid; align-content: start; gap: 14px; }
+.match-module .match-recommendation-manager > header { padding: 12px 4px 5px; }
+.match-module .match-recommendation-manager > header h1 { margin: 0; font-size: clamp(1.7rem,7.5vw,2.15rem); line-height: 1.22; letter-spacing: -.05em; }
+.match-module .match-recommendation-manager > header > p:last-child { margin: 10px 0 0; color: var(--match-muted); font-size: .91rem; line-height: 1.55; }
+.match-module .match-selected-webtoons { display: grid; gap: 7px; margin: 15px 0 0; padding: 0; list-style: none; }
+.match-module .match-selected-webtoons li { display: grid; grid-template-columns: 25px minmax(0,1fr) auto; gap: 9px; align-items: center; min-height: 58px; padding: 9px; border: 1px solid var(--match-line); border-radius: 12px; }
+.match-module .match-selected-webtoons li > span { display: grid; width: 25px; height: 25px; place-items: center; border-radius: 50%; background: var(--match-purple-soft); color: var(--match-purple-dark); font-size: .72rem; font-weight: 900; }
+.match-module .match-selected-webtoons li > div:nth-child(2) { display: grid; min-width: 0; gap: 2px; }
+.match-module .match-selected-webtoons strong { overflow: hidden; font-size: .9rem; text-overflow: ellipsis; white-space: nowrap; }
+.match-module .match-selected-webtoons small { color: var(--match-muted); font-size: .76rem; }
+.match-module .match-selected-webtoons li > div:last-child { display: flex; gap: 3px; }
+.match-module .match-selected-webtoons button,
+.match-module .match-webtoon-search-results button { min-height: 32px; padding: 0 8px; border: 1px solid var(--match-line); border-radius: 8px; background: #fff; color: var(--match-purple-dark); font-weight: 750; cursor: pointer; }
+.match-module .match-selected-webtoons button:disabled,
+.match-module .match-webtoon-search-results button:disabled { color: #aaa3b5; cursor: default; }
+.match-module .match-selected-webtoons button:last-child { color: #b42c44; }
+.match-module .match-webtoon-search { display: grid; grid-template-columns: minmax(0,1fr) 96px; gap: 7px; align-items: start; margin-top: 14px; }
+.match-module .match-webtoon-search .match-button { display: inline-flex; height: 49px; min-height: 49px; align-items: center; justify-content: center; padding: 0 10px; line-height: 1; white-space: nowrap; }
+.match-module .match-webtoon-search input { min-width: 0; min-height: 49px; padding: 0 13px; border: 1px solid var(--match-line); border-radius: 12px; color: var(--match-ink); font: inherit; outline: none; }
+.match-module .match-webtoon-search input:focus { border-color: var(--match-purple); box-shadow: 0 0 0 3px rgba(104,71,232,.12); }
+.match-module .match-webtoon-search-results { display: grid; gap: 6px; max-height: 390px; margin: 13px 0 0; padding: 0; overflow-y: auto; list-style: none; }
+.match-module .match-webtoon-search-results li { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 9px; align-items: center; padding: 10px; border-radius: 11px; background: #faf8fd; }
+.match-module .match-webtoon-search-results li > div { display: grid; min-width: 0; gap: 3px; }
+.match-module .match-webtoon-search-results strong { overflow: hidden; font-size: .9rem; text-overflow: ellipsis; white-space: nowrap; }
+.match-module .match-webtoon-search-results span { overflow: hidden; color: var(--match-muted); font-size: .75rem; text-overflow: ellipsis; white-space: nowrap; }
+.match-module .match-save-success { margin: 0; padding: 11px 13px; border-radius: 12px; background: #e8f7f0; color: #176c55; font-size: .88rem; font-weight: 800; }
+.match-module .match-recommendation-manager .match-result-actions { align-self: start; }
+.match-module .match-recommendation-manager .match-result-actions .match-button { display: flex; height: 50px; min-height: 50px; align-items: center; justify-content: center; padding: 0 14px; line-height: 1; text-decoration: none; }
+
+.match-module .match-pair-webtoons > div { display: grid; gap: 18px; margin-top: 14px; }
+.match-module .match-pair-webtoons > div > div { min-width: 0; max-width: 100%; }
+.match-module .match-pair-webtoons h3 { margin: 0 0 8px; color: var(--match-purple-dark); font-size: .92rem; }
+.match-module .match-recommendation-carousel { position: relative; width: 100%; min-width: 0; max-width: 100%; }
+.match-module .match-pair-webtoons ol { display: grid; width: 100%; max-width: 100%; grid-auto-flow: column; grid-auto-columns: max(145px,calc((100% - 16px)/3)); gap: 8px; margin: 0; padding: 0 0 5px; overflow-x: auto; list-style: none; scrollbar-width: none; scroll-behavior: smooth; scroll-snap-type: x proximity; }
+.match-module .match-pair-webtoons ol::-webkit-scrollbar { display: none; }
+.match-module .match-pair-webtoons li { min-width: 0; scroll-snap-align: start; }
+.match-module .match-pair-webtoons :is(a,li > div) { display: grid; gap: 4px; min-height: 70px; padding: 12px; border: 1px solid var(--match-line); border-radius: 13px; background: #faf8fd; color: inherit; text-decoration: none; }
+.match-module .match-pair-webtoons strong { overflow: hidden; font-size: .91rem; text-overflow: ellipsis; white-space: nowrap; }
+.match-module .match-pair-webtoons span { color: var(--match-muted); font-size: .76rem; }
+.match-module .match-pair-webtoons p { margin: 0; color: var(--match-muted); font-size: .87rem; }
+.match-module .match-carousel-arrow { position: absolute; z-index: 3; top: 50%; display: grid; width: 34px; height: 34px; place-items: center; padding: 0 0 3px; border: 1px solid rgba(104,71,232,.2); border-radius: 50%; background: rgba(255,255,255,.96); color: var(--match-purple-dark); font-size: 1.65rem; font-weight: 800; line-height: 1; box-shadow: 0 7px 18px rgba(61,39,121,.18); cursor: pointer; transform: translateY(-50%); }
+.match-module .match-carousel-arrow.is-left { left: -10px; }
+.match-module .match-carousel-arrow.is-right { right: -10px; }
+.match-module .match-carousel-arrow:hover { background: var(--match-purple-soft); }
+.match-module .match-carousel-arrow:focus-visible { outline: 3px solid rgba(104,71,232,.24); outline-offset: 2px; }
 
 .match-module .match-share-page { display: grid; align-content: start; gap: 14px; }
 .match-module .match-share-heading { padding: 8px 4px 2px; }

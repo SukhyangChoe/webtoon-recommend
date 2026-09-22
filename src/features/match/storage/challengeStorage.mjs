@@ -52,6 +52,10 @@ export function readChallengeResult(storage, challengeCode) {
   }
 }
 
+export function clearChallengeResult(storage, challengeCode) {
+  storage?.removeItem(`${MATCH_CHALLENGE_RESULT_PREFIX}${challengeCode}`);
+}
+
 export function readLatestChallengeResult(storage, publicProfileId = "") {
   if (!storage || typeof storage.length !== "number" || typeof storage.key !== "function") return null;
   const results = [];

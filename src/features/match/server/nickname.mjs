@@ -21,3 +21,7 @@ export function sanitizeMatchNickname(input) {
   if (!validation.valid) throw new Error("NICKNAME_REJECTED");
   return validation.nickname;
 }
+
+export function matchNicknameKey(input) {
+  return sanitizeMatchNickname(input).toLocaleLowerCase("ko-KR");
+}
