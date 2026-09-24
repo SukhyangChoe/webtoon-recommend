@@ -29,6 +29,21 @@ test("personal sharing uses the challenge URL and required Threads UTM", () => {
   assert.ok(copy.text.length < 500);
 });
 
+test("personal result sharing can link directly to the taste result", () => {
+  const copy = personalShareCopy({
+    topGenres: [{ displayLabel: "로맨스" }],
+    wellMatchedLabels: ["성장"],
+    lessMatchedLabels: [],
+    archetypeName: "심쿵 장면 수집가",
+    resultUrl: "https://example.com/match/result/profile123",
+  });
+  const url = new URL(copy.shareUrl);
+  assert.equal(url.pathname, "/match/result/profile123");
+  assert.equal(url.searchParams.get("utm_content"), "personal");
+  assert.match(copy.text, /내 웹툰 취향 결과 보기/);
+  assert.equal(copy.templateKey, "personal_result_primary");
+});
+
 test("pair and ranking sharing preserve their intended destinations", () => {
   const pair = pairShareCopy({
     ownerNickname: "주인", challengerNickname: "도전자", score: 88, bandLabel: "취향 잘 맞음",

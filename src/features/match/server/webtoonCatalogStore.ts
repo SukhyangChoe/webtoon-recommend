@@ -20,6 +20,13 @@ type WebtoonRow = {
 
 type RecommendationRow = WebtoonRow & { profile_id: string; sort_order: number };
 
+type SearchCacheEntry = { expiresAt: number; items: WebtoonSummary[] };
+const globalCatalogCache = globalThis as typeof globalThis & {
+  __webtoonSearchCache?: Map<string, SearchCacheEntry>;
+};
+const searchCache = globalCatalogCache.__webtoonSearchCache ??= new Map<string, SearchCacheEntry>();
+const SEARCH_CACHE_TTL_MS = 10 * 60 * 1000;
+
 function toSummary(row: WebtoonRow): WebtoonSummary {
   return {
     canonicalWebtoonId: row.canonical_webtoon_id,
@@ -37,6 +44,10 @@ export function normalizeWebtoonTitle(value: string) {
 export async function searchWebtoons(query: string, limit = 20) {
   const normalized = normalizeWebtoonTitle(query);
   if (normalized.length < 1) return [];
+  const boundedLimit = Math.max(1, Math.min(30, limit));
+  const cacheKey = `${normalized}:${boundedLimit}`;
+  const cached = searchCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.items;
   const database = getMatchDatabase();
   const rows = await database<WebtoonRow[]>`
     select canonical_webtoon_id, title, platform, official_url, main_genre
@@ -50,12 +61,18 @@ export async function searchWebtoons(query: string, limit = 20) {
         when normalized_title like ${`${normalized}%`} then 1
         else 2
       end,
-      similarity(normalized_title, ${normalized}) desc,
+      char_length(normalized_title) asc,
       title asc,
       platform asc
-    limit ${Math.max(1, Math.min(30, limit))}
+    limit ${boundedLimit}
   `;
-  return rows.map(toSummary);
+  const items = rows.map(toSummary);
+  searchCache.set(cacheKey, { expiresAt: Date.now() + SEARCH_CACHE_TTL_MS, items });
+  if (searchCache.size > 100) {
+    const oldestKey = searchCache.keys().next().value;
+    if (oldestKey) searchCache.delete(oldestKey);
+  }
+  return items;
 }
 
 export async function getProfileRecommendations(publicProfileId: string) {

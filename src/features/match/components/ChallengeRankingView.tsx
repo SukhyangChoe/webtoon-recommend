@@ -14,6 +14,7 @@ type RankingEntry = {
   rank: number | null;
   sharedGenres: string[];
   isViewer: boolean;
+  isReciprocal: boolean;
   updatedAt: string;
 };
 
@@ -220,7 +221,7 @@ function RankingRow({ challengeCode, entry, canManage = false, mutating = "", on
   const canOpenResult = canManage || entry.isViewer;
   const rowContent = <>
     <span className="match-ranking-position">{entry.rank}</span>
-    <div><strong>{entry.nickname}{entry.isViewer ? <small> 나</small> : null}</strong><p>{entry.sharedGenres.length ? entry.sharedGenres.join(" · ") : "겹치는 장르를 찾는 중"}</p></div>
+    <div><strong>{entry.nickname}{entry.isViewer ? <small> 나</small> : null}{entry.isReciprocal ? <span className="match-ranking-origin">이전에 본 궁합</span> : null}</strong><p>{entry.sharedGenres.length ? entry.sharedGenres.join(" · ") : "겹치는 장르를 찾는 중"}</p></div>
     <strong className="match-ranking-score">{entry.score}% {canOpenResult ? <span aria-hidden="true">›</span> : null}</strong>
   </>;
   return <article className={`match-ranking-row ${canHide ? "has-actions" : ""} ${entry.rank && entry.rank <= 3 ? `is-top-${entry.rank}` : ""} ${entry.isViewer ? "is-viewer" : ""}`}>

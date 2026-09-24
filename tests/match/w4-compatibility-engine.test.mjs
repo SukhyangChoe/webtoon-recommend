@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { calculateCompatibility } from "../../src/features/match/engine/compatibilityEngine.mjs";
-import { matchNicknameKey, sanitizeMatchNickname } from "../../src/features/match/server/nickname.mjs";
+import { sanitizeMatchNickname } from "../../src/features/match/server/nickname.mjs";
 
 const fixtures = JSON.parse(readFileSync(new URL("../../src/features/match/data/syntheticProfiles.v0.2.json", import.meta.url), "utf8"));
 const profiles = Object.fromEntries(fixtures.profiles.map((profile) => [profile.profileKey, profile]));
@@ -59,9 +59,4 @@ test("public nicknames are normalized and reject contact or script-like input", 
   assert.throws(() => sanitizeMatchNickname("<script>"), /NICKNAME_REJECTED/);
   assert.throws(() => sanitizeMatchNickname("010-1234-5678"), /NICKNAME_REJECTED/);
   assert.throws(() => sanitizeMatchNickname("me@example.com"), /NICKNAME_REJECTED/);
-});
-
-test("nickname keys treat spacing and latin letter case as the same link nickname", () => {
-  assert.equal(matchNicknameKey("  Webtoon   Mate  "), "webtoon mate");
-  assert.equal(matchNicknameKey(" 향향 "), "향향");
 });

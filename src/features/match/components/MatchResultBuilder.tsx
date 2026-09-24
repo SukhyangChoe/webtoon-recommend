@@ -33,10 +33,9 @@ export function MatchResultBuilder() {
         });
         const created = await response.json();
         if (!response.ok || !created.publicProfileId) {
-          if (created.error === "NICKNAME_ALREADY_USED") throw new Error("참여한 링크 중 이미 같은 닉네임을 쓰는 사람이 있어요. 시작 화면에서 다른 닉네임을 골라 주세요.");
           throw new Error(created.error ?? "결과를 만들지 못했어요.");
         }
-        let publicResult = created.result;
+        let publicResult = created.result ? { ...created.result, accuracyFeedback: null } : null;
         if (!publicResult) {
           const resultResponse = await fetch(`/api/v1/results/${created.publicProfileId}`);
           publicResult = await resultResponse.json();

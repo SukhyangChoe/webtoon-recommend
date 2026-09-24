@@ -20,13 +20,14 @@ export function threadsIntentUrl(text) {
   return intent.toString();
 }
 
-export function personalShareCopy({ topGenres, wellMatchedLabels, lessMatchedLabels, challengeUrl, archetypeName }) {
-  const shareUrl = withShareUtm(challengeUrl, "personal");
+export function personalShareCopy({ topGenres, wellMatchedLabels, lessMatchedLabels, challengeUrl, resultUrl, archetypeName }) {
+  const isInvitation = Boolean(challengeUrl);
+  const shareUrl = withShareUtm(challengeUrl ?? resultUrl, "personal");
   const topGenre = topGenres[0]?.displayLabel ?? "웹툰";
   return {
-    templateKey: "personal_invite_primary",
+    templateKey: isInvitation ? "personal_invite_primary" : "personal_result_primary",
     shareUrl,
-    text: `내 웹툰 본캐는 ‘${archetypeName ?? "다음 화 버튼 수호자"}’!\n${topGenre} 쪽에 별이 제일 많이 모였어.\n\n끌리는 요소\n${joined(wellMatchedLabels, "딱히 크게 가리지 않음")}\n\n조금 망설이는 요소\n${joined(lessMatchedLabels, "딱히 망설이는 요소 없음")}\n\n너랑은 어떤 웹툰 관계 타입일까?\n${shareUrl}`,
+    text: `내 웹툰 본캐는 ‘${archetypeName ?? "다음 화 버튼 수호자"}’!\n${topGenre} 쪽에 별이 제일 많이 모였어.\n\n끌리는 요소\n${joined(wellMatchedLabels, "딱히 크게 가리지 않음")}\n\n조금 망설이는 요소\n${joined(lessMatchedLabels, "딱히 망설이는 요소 없음")}\n\n${isInvitation ? "너랑은 어떤 웹툰 관계 타입일까?" : "내 웹툰 취향 결과 보기"}\n${shareUrl}`,
   };
 }
 

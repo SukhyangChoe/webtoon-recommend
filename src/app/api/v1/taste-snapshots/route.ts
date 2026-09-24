@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     }
     const snapshot = await createTasteSnapshot(body.anonymousId, body.nickname, body.answers);
     return NextResponse.json(
-      { publicProfileId: snapshot.publicProfileId, snapshotId: snapshot.snapshotId, result: { ...toPublicTasteResult(snapshot), nickname: snapshot.profileDisplayName ?? null } },
+      { publicProfileId: snapshot.publicProfileId, snapshotId: snapshot.snapshotId, result: { ...toPublicTasteResult(snapshot), nickname: snapshot.profileDisplayName ?? null, accuracyFeedback: null } },
       { status: 201 },
     );
   } catch (error) {

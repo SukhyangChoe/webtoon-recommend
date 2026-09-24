@@ -74,12 +74,13 @@ export function SharePreview({ type, profilePublicId, challengeCode, resultId }:
       let next: SharePayload;
 
       if (type === "personal") {
-        if (!profilePublicId || !challengeCode) throw new Error("SHARE_SOURCE_MISSING");
+        if (!profilePublicId) throw new Error("SHARE_SOURCE_MISSING");
         const result = await responseJson<PersonalResult>(`/api/v1/results/${profilePublicId}`);
-        const challengeUrl = `${origin}/match/c/${challengeCode}`;
+        const challengeUrl = challengeCode ? `${origin}/match/c/${challengeCode}` : undefined;
+        const resultUrl = `${origin}/match/result/${profilePublicId}`;
         const leadGenre = result.topGenres[0];
         const archetype = personalArchetypeFor(leadGenre?.genreKey);
-        const copy = personalShareCopy({ ...result, challengeUrl, archetypeName: archetype.name });
+        const copy = personalShareCopy({ ...result, challengeUrl, resultUrl, archetypeName: archetype.name });
         next = {
           card: {
             eyebrow: "나의 웹툰 본캐",

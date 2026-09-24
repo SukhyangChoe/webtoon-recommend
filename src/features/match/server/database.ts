@@ -27,7 +27,11 @@ export function getMatchDatabase(): MatchDatabaseClient {
     max: 1,
     prepare: false,
     ssl: "require",
-    idle_timeout: 20,
+    // Keep the single pooled connection around while a user moves from their
+    // result to recommendations and then searches. Reconnecting for each of
+    // those screens was the largest avoidable part of the perceived delay.
+    idle_timeout: 300,
+    max_lifetime: 1800,
     connect_timeout: 10,
     onnotice: () => undefined,
   });

@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { trackMatchEvent } from "../analytics/client";
 import { requestActiveChallenge, type ActiveChallengeInfo } from "../api/activeChallenge";
@@ -129,7 +130,6 @@ export function MatchResultView({ publicProfileId, showPairResultPrompt = true }
       });
       const body = await response.json();
       if (!response.ok) {
-        if (body.error === "NICKNAME_ALREADY_USED") throw new Error("참여한 링크 중 이미 같은 닉네임을 쓰는 사람이 있어요.");
         throw new Error("닉네임을 변경하지 못했어요.");
       }
       const nextResult = { ...result, nickname: body.nickname };
@@ -153,9 +153,9 @@ export function MatchResultView({ publicProfileId, showPairResultPrompt = true }
     {showPairResultPrompt ? <ChallengeEntryPrompt publicProfileId={publicProfileId} /> : null}
     <section className="match-result-section"><h2>장르별 취향</h2><p className="match-section-note">내 취향이 장르 사이에 어떻게 나뉘었는지 보여드려요.</p><div className="match-star-list">{result.displayGenres.map((genre) => <div className={genre.stars === 0 ? "is-zero" : ""} key={genre.genreKey}><strong>{genre.displayLabel}</strong><StarRow count={genre.stars} /><span>{genre.stars}개</span></div>)}</div></section>
     <TasteProfile details={result.wellMatchedDetails ?? result.wellMatchedLabels.map((value) => ({ category: "취향", value }))} lessMatchedLabels={result.lessMatchedLabels} />
-    <section className="match-result-section match-my-recommendations"><div className="match-section-heading"><div><h2>{result.canManage ? "내 추천작" : `${result.nickname ?? "이 사용자"}님의 추천작`}</h2><p className="match-section-note">궁합을 본 친구에게 보여줄 작품이에요.</p></div><strong>{recommendations.length}/10</strong></div>{recommendations.length ? <ol>{recommendations.map((item) => <li key={item.canonicalWebtoonId}><div><strong>{item.title}</strong><span>{item.platform}</span></div></li>)}</ol> : <p className="match-empty-label">아직 등록한 추천작이 없어요.</p>}{result.canManage ? <a className="match-button match-button--secondary" href={`/match/result/${publicProfileId}/recommendations`}>추천작 관리</a> : null}</section>
+    <section className="match-result-section match-my-recommendations"><div className="match-section-heading"><div><h2>{result.canManage ? "내 추천작" : `${result.nickname ?? "이 사용자"}님의 추천작`}</h2><p className="match-section-note">궁합을 본 친구에게 보여줄 작품이에요.</p></div><strong>{recommendations.length}/10</strong></div>{recommendations.length ? <ol>{recommendations.map((item) => <li key={item.canonicalWebtoonId}><div><strong>{item.title}</strong><span>{item.platform}</span></div></li>)}</ol> : <p className="match-empty-label">아직 등록한 추천작이 없어요.</p>}{result.canManage ? <Link className="match-button match-button--secondary" href={`/match/result/${publicProfileId}/recommendations`}>추천작 관리</Link> : null}</section>
     <section className="match-result-section"><h2>결과가 얼마나 나 같아?</h2><div className="match-feedback-grid">{feedbackOptions.map((option) => <button type="button" disabled={feedbackSaving || feedbackSubmitted} className={feedback === option.key ? "is-selected" : ""} key={option.key} onClick={() => void submitFeedback(option.key)}>{option.label}</button>)}</div>{feedbackSubmitted ? <p className="match-feedback-thanks">알려줘서 고마워요.</p> : null}</section>
-    <section className="match-result-actions">{challengeLoading ? <button className="match-button" type="button" disabled>궁합 확인 중…</button> : activeChallenge ? <a className="match-button" href={`/match/c/${activeChallenge.challengeCode}/ranking`}>궁합 관리</a> : <a className="match-button" href="/match/challenge/new">내 궁합 링크 만들기</a>}</section>
+    <section className="match-result-actions">{challengeLoading ? <button className="match-button" type="button" disabled>궁합 확인 중…</button> : activeChallenge ? <a className="match-button" href={`/match/c/${activeChallenge.challengeCode}/ranking`}>궁합 관리</a> : <a className="match-button" href="/match/challenge/new">내 궁합 링크 만들기</a>}<a className="match-button match-button--secondary" href={`/match/share/personal?profilePublicId=${publicProfileId}`}>내 취향 결과 Threads에 공유</a></section>
     {result.canManage && nicknameOpen ? <div className="match-confirm-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target && !nicknameSaving) setNicknameOpen(false); }}><form className="match-confirm-dialog match-nickname-dialog" role="dialog" aria-modal="true" aria-labelledby="match-nickname-title" onSubmit={saveNickname}><p className="match-eyebrow">내 프로필</p><h2 id="match-nickname-title">닉네임 변경</h2><label><span>새 닉네임</span><input autoFocus type="text" minLength={2} maxLength={20} value={nicknameInput} onChange={(event) => { setNicknameInput(event.target.value); setNicknameMessage(""); }} /></label><small className={`match-field-guide${nicknameMessage ? " is-error" : ""}`}>{nicknameMessage || validateMatchNickname(nicknameInput).message}</small><div className="match-confirm-actions"><button className="match-button match-button--secondary" type="button" disabled={nicknameSaving} onClick={() => setNicknameOpen(false)}>취소</button><button className="match-button" type="submit" disabled={nicknameSaving || !validateMatchNickname(nicknameInput).valid}>{nicknameSaving ? "변경 중…" : "저장"}</button></div></form></div> : null}
   </main>;
 }

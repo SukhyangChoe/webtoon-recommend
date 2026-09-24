@@ -2,13 +2,8 @@ import { randomBytes, randomUUID } from "node:crypto";
 import questionSeed from "../data/questionSeed.v0.4.json";
 import { buildTasteSnapshot, toPublicTasteResult } from "../engine/resultEngine.mjs";
 import type { MatchAnswers } from "../storage/draftTypes";
-import { getMatchDatabase, isPostgresError } from "./database";
+import { getMatchDatabase } from "./database";
 import { sanitizeMatchNickname } from "./nickname.mjs";
-
-function isNicknameConflictError(error: unknown) {
-  return isPostgresError(error, "23505", "match_challenge_entries_unique_nickname_idx")
-    || isPostgresError(error, "23505", "match_challenge_nickname_owner_conflict");
-}
 
 export type AccuracyFeedback = "almost_exact" | "mostly_right" | "slightly_off" | "very_off";
 export type StoredSnapshot = ReturnType<typeof buildTasteSnapshot> & { accuracyFeedback?: AccuracyFeedback; profileDisplayName?: string | null };
@@ -79,8 +74,7 @@ export async function createTasteSnapshot(anonymousId: string, nickname: string,
   const database = getMatchDatabase();
   const displayName = sanitizeMatchNickname(nickname);
 
-  try {
-    return await database.begin(async (sql) => {
+  return database.begin(async (sql) => {
       const profiles = await sql<{ profile_id: string }[]>`
         insert into public.match_profiles (profile_id, anonymous_id, display_name)
         values (${randomUUID()}::uuid, ${anonymousId}::uuid, ${displayName})
@@ -138,12 +132,8 @@ export async function createTasteSnapshot(anonymousId: string, nickname: string,
         )
       `;
 
-      return snapshot;
-    });
-  } catch (error) {
-    if (isNicknameConflictError(error)) throw new Error("NICKNAME_ALREADY_USED");
-    throw error;
-  }
+    return snapshot;
+  });
 }
 
 export async function getTasteSnapshot(publicProfileId: string) {
@@ -180,8 +170,7 @@ export async function isTasteResultOwner(publicProfileId: string, anonymousId: s
 export async function updateProfileNickname(publicProfileId: string, anonymousId: string, nickname: string) {
   const displayName = sanitizeMatchNickname(nickname);
   const database = getMatchDatabase();
-  try {
-    return await database.begin(async (sql) => {
+  return database.begin(async (sql) => {
       const profiles = await sql<{ profile_id: string }[]>`
         select profiles.profile_id::text
         from public.match_profiles profiles
@@ -209,12 +198,8 @@ export async function updateProfileNickname(publicProfileId: string, anonymousId
       await sql`update public.match_profiles set display_name = ${displayName} where profile_id = ${profileId}::uuid`;
       await sql`update public.match_challenges set owner_nickname = ${displayName} where owner_profile_id = ${profileId}::uuid`;
       await sql`update public.match_challenge_entries set challenger_nickname = ${displayName}, updated_at = now() where challenger_profile_id = ${profileId}::uuid`;
-      return { nickname: displayName };
-    });
-  } catch (error) {
-    if (isNicknameConflictError(error)) throw new Error("NICKNAME_ALREADY_USED");
-    throw error;
-  }
+    return { nickname: displayName };
+  });
 }
 
 export async function saveAccuracyFeedback(publicProfileId: string, anonymousId: string, feedback: AccuracyFeedback) {

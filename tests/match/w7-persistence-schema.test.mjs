@@ -6,6 +6,8 @@ const migrationPath = new URL("../../supabase/migrations/202609110001_webtoon_ma
 const catalogMigrationPath = new URL("../../supabase/migrations/202609220001_webtoon_catalog_profile_recommendations.sql", import.meta.url);
 const nicknameRepairMigrationPath = new URL("../../supabase/migrations/202609230001_allow_same_profile_nickname.sql", import.meta.url);
 const selfChallengeRepairMigrationPath = new URL("../../supabase/migrations/202609230002_remove_self_challenge_entries.sql", import.meta.url);
+const reciprocalEntriesMigrationPath = new URL("../../supabase/migrations/202609230003_reciprocal_match_entries.sql", import.meta.url);
+const duplicateNicknameMigrationPath = new URL("../../supabase/migrations/202609240001_allow_duplicate_match_nicknames.sql", import.meta.url);
 const resultStorePath = new URL("../../src/features/match/server/resultStore.ts", import.meta.url);
 const challengeStorePath = new URL("../../src/features/match/server/challengeStore.ts", import.meta.url);
 const catalogStorePath = new URL("../../src/features/match/server/webtoonCatalogStore.ts", import.meta.url);
@@ -15,6 +17,8 @@ const migration = readFileSync(migrationPath, "utf8");
 const catalogMigration = readFileSync(catalogMigrationPath, "utf8");
 const nicknameRepairMigration = readFileSync(nicknameRepairMigrationPath, "utf8");
 const selfChallengeRepairMigration = readFileSync(selfChallengeRepairMigrationPath, "utf8");
+const reciprocalEntriesMigration = readFileSync(reciprocalEntriesMigrationPath, "utf8");
+const duplicateNicknameMigration = readFileSync(duplicateNicknameMigrationPath, "utf8");
 const resultStore = readFileSync(resultStorePath, "utf8");
 const challengeStore = readFileSync(challengeStorePath, "utf8");
 const catalogStore = readFileSync(catalogStorePath, "utf8");
@@ -83,8 +87,27 @@ test("catalog migration supports profile nicknames, unique link names, and ten o
 
 test("catalog store searches server-side and replaces a bounded owner recommendation list", () => {
   assert.match(catalogStore, /import "server-only"/);
-  assert.match(catalogStore, /limit \$\{Math\.max\(1, Math\.min\(30, limit\)\)\}/);
+  assert.match(catalogStore, /const boundedLimit = Math\.max\(1, Math\.min\(30, limit\)\)/);
+  assert.match(catalogStore, /limit \$\{boundedLimit\}/);
   assert.match(catalogStore, /ids\.length > 10/);
   assert.match(catalogStore, /delete from public\.match_profile_recommendations/);
   assert.match(catalogStore, /RESULT_OWNER_MISMATCH/);
+});
+
+test("reciprocal rankings only carry forward a directly viewed match from the same taste snapshot", () => {
+  assert.match(reciprocalEntriesMigration, /entry_origin text not null default 'direct'/);
+  assert.match(reciprocalEntriesMigration, /entry_origin in \('direct', 'reciprocal'\)/);
+  assert.match(reciprocalEntriesMigration, /source_result_id text/);
+  assert.match(challengeStore, /previous_entries\.challenger_snapshot_id = \$\{ownerSnapshot\.snapshotId\}::uuid/);
+  assert.match(challengeStore, /previous_entries\.entry_origin = 'direct'/);
+  assert.match(challengeStore, /'reciprocal', \$\{reciprocalEntry\.sourceResultId\}/);
+  assert.match(challengeStore, /isReciprocal: entry\.entryOrigin === "reciprocal"/);
+});
+
+test("display nicknames may be duplicated while profiles remain internally distinct", () => {
+  assert.match(duplicateNicknameMigration, /drop trigger if exists match_challenge_entry_nickname_conflict/);
+  assert.match(duplicateNicknameMigration, /drop trigger if exists match_challenge_owner_nickname_conflict/);
+  assert.match(duplicateNicknameMigration, /drop index if exists public\.match_challenge_entries_unique_nickname_idx/);
+  assert.match(duplicateNicknameMigration, /drop function if exists public\.enforce_match_challenge_nickname_conflict\(\)/);
+  assert.doesNotMatch(challengeStore, /isChallengeNicknameAvailable|match_nickname_key|NICKNAME_ALREADY_USED/);
 });

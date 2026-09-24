@@ -84,6 +84,8 @@ type ChallengeEntry = {
   challengerNickname: string;
   score: number;
   hiddenByOwner: boolean;
+  entryOrigin: "direct" | "reciprocal";
+  sourceResultId: string | null;
   createdAt: string;
   updatedAt: string;
   sharedGenres: string[];
@@ -98,9 +100,18 @@ type ChallengeEntryRow = {
   challenger_nickname: string;
   score: number;
   hidden_by_owner: boolean;
+  entry_origin: ChallengeEntry["entryOrigin"];
+  source_result_id: string | null;
   created_at: string;
   updated_at: string;
   shared_genres: string[] | null;
+};
+
+type ReciprocalSourceRow = {
+  counterpart_profile_id: string;
+  counterpart_snapshot_id: string;
+  counterpart_nickname: string;
+  source_result_id: string;
 };
 
 const genreLabels = Object.fromEntries(questionSeed.publicGenrePolicy.publicGenres.map((genre) => [genre.genreKey, genre.displayLabel]));
@@ -163,6 +174,8 @@ function entryFromRow(row: ChallengeEntryRow): ChallengeEntry {
     challengerNickname: row.challenger_nickname,
     score: row.score,
     hiddenByOwner: row.hidden_by_owner,
+    entryOrigin: row.entry_origin,
+    sourceResultId: row.source_result_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     sharedGenres: row.shared_genres ?? [],
@@ -204,6 +217,8 @@ async function challengeEntries(challengeId: string) {
       entries.challenger_nickname,
       entries.score,
       entries.hidden_by_owner,
+      entries.entry_origin,
+      entries.source_result_id,
       entries.created_at::text,
       entries.updated_at::text,
       results.shared_genres
@@ -249,6 +264,7 @@ function publicRankingEntry(entry: ChallengeEntry & { rank?: number }, viewerPro
     rank: entry.rank ?? null,
     sharedGenres: entry.sharedGenres.slice(0, 2),
     isViewer: Boolean(viewerProfileId && entry.challengerProfileId === viewerProfileId),
+    isReciprocal: entry.entryOrigin === "reciprocal",
     updatedAt: entry.updatedAt,
   };
 }
@@ -292,6 +308,43 @@ async function activeChallengeForProfile(ownerProfileId: string, excludeChalleng
   return rows[0] ? challengeFromRow(rows[0]) : null;
 }
 
+async function reciprocalEntriesForSnapshot(ownerSnapshot: StoredSnapshot) {
+  const database = getMatchDatabase();
+  const rows = await database<ReciprocalSourceRow[]>`
+    select distinct on (previous_challenges.owner_profile_id)
+      previous_challenges.owner_profile_id::text as counterpart_profile_id,
+      previous_challenges.owner_snapshot_id::text as counterpart_snapshot_id,
+      coalesce(counterpart_profiles.display_name, previous_challenges.owner_nickname) as counterpart_nickname,
+      previous_entries.result_id as source_result_id
+    from public.match_challenge_entries previous_entries
+    join public.match_challenges previous_challenges
+      on previous_challenges.challenge_id = previous_entries.challenge_id
+    join public.match_profiles counterpart_profiles
+      on counterpart_profiles.profile_id = previous_challenges.owner_profile_id
+    where previous_entries.challenger_profile_id = ${ownerSnapshot.profileId}::uuid
+      and previous_entries.challenger_snapshot_id = ${ownerSnapshot.snapshotId}::uuid
+      and previous_entries.entry_origin = 'direct'
+      and previous_challenges.owner_profile_id <> ${ownerSnapshot.profileId}::uuid
+      and previous_challenges.status <> 'deleted'
+      and previous_challenges.question_set_version = ${ownerSnapshot.questionSetVersion}
+      and previous_challenges.compatibility_version = ${MATCH_COMPATIBILITY_CONFIG.version}
+    order by previous_challenges.owner_profile_id, previous_entries.updated_at desc
+  `;
+
+  const candidates = await Promise.all(rows.map(async (row) => ({
+    row,
+    snapshot: await getTasteSnapshotById(row.counterpart_snapshot_id),
+  })));
+  return candidates.flatMap(({ row, snapshot }) => {
+    if (!snapshot || snapshot.profileId !== row.counterpart_profile_id || snapshot.questionSetVersion !== ownerSnapshot.questionSetVersion) return [];
+    return [{
+      snapshot,
+      nickname: sanitizeMatchNickname(row.counterpart_nickname),
+      sourceResultId: row.source_result_id,
+    }];
+  });
+}
+
 export async function createChallenge(input: { anonymousId: string; ownerPublicProfileId: string; ownerNickname: string; rankingVisibility?: boolean }) {
   const ownerSnapshot = await getTasteSnapshot(input.ownerPublicProfileId);
   if (!ownerSnapshot || ownerSnapshot.anonymousId !== input.anonymousId) throw new Error("OWNER_SNAPSHOT_NOT_FOUND");
@@ -315,36 +368,71 @@ export async function createChallenge(input: { anonymousId: string; ownerPublicP
     createdAt: new Date().toISOString(),
     closedAt: null,
   };
+  const reciprocalEntries = await reciprocalEntriesForSnapshot(ownerSnapshot);
 
   try {
     const database = getMatchDatabase();
-    await database`
-      insert into public.match_challenges (
-        challenge_id,
-        challenge_code,
-        owner_profile_id,
-        owner_snapshot_id,
-        owner_nickname,
-        question_set_version,
-        compatibility_version,
-        status,
-        ranking_visibility,
-        owner_manage_token_hash,
-        created_at
-      ) values (
-        ${challenge.challengeId}::uuid,
-        ${challenge.challengeCode},
-        ${challenge.ownerProfileId}::uuid,
-        ${challenge.ownerSnapshotId}::uuid,
-        ${challenge.ownerNickname},
-        ${challenge.questionSetVersion},
-        ${challenge.compatibilityVersion},
-        ${challenge.status},
-        ${challenge.rankingVisibility},
-        ${challenge.ownerManageTokenHash},
-        ${challenge.createdAt}::timestamptz
-      )
-    `;
+    await database.begin(async (sql) => {
+      await sql`
+        insert into public.match_challenges (
+          challenge_id,
+          challenge_code,
+          owner_profile_id,
+          owner_snapshot_id,
+          owner_nickname,
+          question_set_version,
+          compatibility_version,
+          status,
+          ranking_visibility,
+          owner_manage_token_hash,
+          created_at
+        ) values (
+          ${challenge.challengeId}::uuid,
+          ${challenge.challengeCode},
+          ${challenge.ownerProfileId}::uuid,
+          ${challenge.ownerSnapshotId}::uuid,
+          ${challenge.ownerNickname},
+          ${challenge.questionSetVersion},
+          ${challenge.compatibilityVersion},
+          ${challenge.status},
+          ${challenge.rankingVisibility},
+          ${challenge.ownerManageTokenHash},
+          ${challenge.createdAt}::timestamptz
+        )
+      `;
+
+      for (const reciprocalEntry of reciprocalEntries) {
+        const result = compatibilityResult(challenge, ownerSnapshot, reciprocalEntry.snapshot);
+        const entryId = randomUUID();
+        await sql`
+          insert into public.match_compatibility_results (
+            result_id, challenge_id, owner_snapshot_id, challenger_snapshot_id,
+            compatibility_version, overall_score, band, component_scores_private,
+            owner_to_challenger_trust_private, challenger_to_owner_trust_private,
+            shared_genres, different_genres, shared_taste_labels, trust_sentence, created_at
+          ) values (
+            ${result.resultId}, ${result.challengeId}::uuid, ${result.ownerSnapshotId}::uuid,
+            ${result.challengerSnapshotId}::uuid, ${result.compatibilityVersion}, ${result.overallScore},
+            ${sql.json(result.band)}, ${sql.json(result.componentScoresPrivate)},
+            ${result.ownerToChallengerTrustPrivate}, ${result.challengerToOwnerTrustPrivate},
+            ${sql.json(result.sharedGenres)}, ${sql.json(result.differentGenres)},
+            ${sql.json(result.sharedTasteLabels)}, ${result.trustSentence}, ${result.createdAt}::timestamptz
+          )
+        `;
+        await sql`
+          insert into public.match_challenge_entries (
+            entry_id, challenge_id, challenger_profile_id, challenger_snapshot_id,
+            result_id, challenger_nickname, score, hidden_by_owner,
+            entry_origin, source_result_id, created_at, updated_at
+          ) values (
+            ${entryId}::uuid, ${challenge.challengeId}::uuid, ${reciprocalEntry.snapshot.profileId}::uuid,
+            ${reciprocalEntry.snapshot.snapshotId}::uuid, ${result.resultId}, ${reciprocalEntry.nickname},
+            ${result.overallScore}, false, 'reciprocal', ${reciprocalEntry.sourceResultId},
+            ${result.createdAt}::timestamptz, ${result.createdAt}::timestamptz
+          )
+        `;
+      }
+    });
   } catch (error) {
     if (isPostgresError(error, "23505", "match_challenges_one_active_per_owner_idx")) {
       const existing = await activeChallengeForProfile(ownerSnapshot.profileId);
@@ -359,48 +447,6 @@ export async function createChallenge(input: { anonymousId: string; ownerPublicP
 export async function getPublicChallenge(challengeCode: string) {
   const challenge = await findChallenge(challengeCode);
   return challenge ? publicChallenge(challenge) : null;
-}
-
-export async function isChallengeNicknameAvailable(input: { challengeCode: string; nickname: string; anonymousId?: string | null }) {
-  const challenge = await findChallenge(input.challengeCode);
-  if (!challenge) throw new Error("CHALLENGE_NOT_FOUND");
-  const nickname = sanitizeMatchNickname(input.nickname);
-  const database = getMatchDatabase();
-  if (input.anonymousId) {
-    const ownerRows = await database<{ is_owner: boolean }[]>`
-      select exists (
-        select 1
-        from public.match_profiles profiles
-        where profiles.profile_id = ${challenge.ownerProfileId}::uuid
-          and profiles.anonymous_id = ${input.anonymousId}::uuid
-      ) as is_owner
-    `;
-    if (ownerRows[0]?.is_owner) throw new Error("SELF_CHALLENGE_NOT_ALLOWED");
-  }
-  const rows = await database<{ conflict: boolean }[]>`
-    select exists (
-      select 1
-      from public.match_challenges challenges
-      where challenges.challenge_id = ${challenge.challengeId}::uuid
-        and public.match_nickname_key(challenges.owner_nickname) = public.match_nickname_key(${nickname})
-        and not exists (
-          select 1 from public.match_profiles profiles
-          where profiles.profile_id = challenges.owner_profile_id
-            and profiles.anonymous_id = ${input.anonymousId ?? null}::uuid
-        )
-      union all
-      select 1
-      from public.match_challenge_entries entries
-      where entries.challenge_id = ${challenge.challengeId}::uuid
-        and public.match_nickname_key(entries.challenger_nickname) = public.match_nickname_key(${nickname})
-        and not exists (
-          select 1 from public.match_profiles profiles
-          where profiles.profile_id = entries.challenger_profile_id
-            and profiles.anonymous_id = ${input.anonymousId ?? null}::uuid
-        )
-    ) as conflict
-  `;
-  return !rows[0]?.conflict;
 }
 
 export async function getChallengeInviteMetadata(challengeCode: string) {
@@ -482,6 +528,8 @@ export async function getExistingChallengeEntry(input: { challengeCode: string; 
       entries.challenger_nickname,
       entries.score,
       entries.hidden_by_owner,
+      entries.entry_origin,
+      entries.source_result_id,
       entries.created_at::text,
       entries.updated_at::text,
       results.shared_genres
@@ -510,9 +558,6 @@ export async function createChallengeEntry(input: { challengeCode: string; anony
   if (challenge.compatibilityVersion !== MATCH_COMPATIBILITY_CONFIG.version) throw new Error("COMPATIBILITY_VERSION_MISMATCH");
 
   const challengerNickname = sanitizeMatchNickname(input.challengerNickname);
-  if (!await isChallengeNicknameAvailable({ challengeCode: input.challengeCode, nickname: challengerNickname, anonymousId: input.anonymousId })) {
-    throw new Error("NICKNAME_ALREADY_USED");
-  }
   await updateProfileNickname(input.challengerPublicProfileId, input.anonymousId, challengerNickname);
   const result = compatibilityResult(challenge, ownerSnapshot, challengerSnapshot);
   const database = getMatchDatabase();
@@ -529,6 +574,8 @@ export async function createChallengeEntry(input: { challengeCode: string; anony
         challenger_nickname,
         score,
         hidden_by_owner,
+        entry_origin,
+        source_result_id,
         created_at::text,
         updated_at::text,
         null::jsonb as shared_genres
@@ -543,21 +590,6 @@ export async function createChallengeEntry(input: { challengeCode: string; anony
     if (previous) {
       return { entry: previous, updated: false, existing: true };
     }
-
-    const nicknameConflicts = await sql<{ conflict: boolean }[]>`
-      select exists (
-        select 1
-        from public.match_challenges challenges
-        where challenges.challenge_id = ${challenge.challengeId}::uuid
-          and public.match_nickname_key(challenges.owner_nickname) = public.match_nickname_key(${challengerNickname})
-        union all
-        select 1
-        from public.match_challenge_entries entries
-        where entries.challenge_id = ${challenge.challengeId}::uuid
-          and public.match_nickname_key(entries.challenger_nickname) = public.match_nickname_key(${challengerNickname})
-      ) as conflict
-    `;
-    if (nicknameConflicts[0]?.conflict) throw new Error("NICKNAME_ALREADY_USED");
 
     await sql`
       insert into public.match_compatibility_results (
@@ -604,12 +636,13 @@ export async function createChallengeEntry(input: { challengeCode: string; anony
       challengerNickname,
       score: result.overallScore,
       hiddenByOwner: false,
+      entryOrigin: "direct",
+      sourceResultId: null,
       createdAt: now,
       updatedAt: now,
       sharedGenres: result.sharedGenres,
     };
-    try {
-      await sql`
+    await sql`
         insert into public.match_challenge_entries (
         entry_id,
         challenge_id,
@@ -619,6 +652,8 @@ export async function createChallengeEntry(input: { challengeCode: string; anony
         challenger_nickname,
         score,
         hidden_by_owner,
+        entry_origin,
+        source_result_id,
         created_at,
         updated_at
         ) values (
@@ -630,14 +665,12 @@ export async function createChallengeEntry(input: { challengeCode: string; anony
         ${entry.challengerNickname},
         ${entry.score},
         false,
+        'direct',
+        null,
         ${entry.createdAt}::timestamptz,
         ${entry.updatedAt}::timestamptz
         )
       `;
-    } catch (error) {
-      if (isPostgresError(error, "23505")) throw new Error("NICKNAME_ALREADY_USED");
-      throw error;
-    }
     return { entry, updated: false, existing: false };
   });
 
