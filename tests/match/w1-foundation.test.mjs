@@ -19,6 +19,7 @@ function memoryStorage() {
 test("version constants match the v0.4 source of truth", () => {
   assert.equal(MATCH_VERSIONS.questions, "webtoon_match_question_set_v0_4_candidate");
   assert.equal(MATCH_VERSIONS.scoring, "webtoon_match_compatibility_v0_2_candidate");
+  assert.equal(MATCH_VERSIONS.tasteVector, "webtoon_match_taste_vector_v0_1");
 });
 
 test("anonymous id is stable and prefers the first-party cookie", () => {

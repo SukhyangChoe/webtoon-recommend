@@ -167,6 +167,7 @@ export function ChallengeRankingView({ challengeCode }: { challengeCode: string 
       <h1><strong>{ranking.ownerNickname}</strong>님과<br />누가 가장 잘 맞을까?</h1>
       <div className="match-ranking-count"><strong>{ranking.entryCount}</strong><span>명의 도전자</span></div>
       {ranking.status === "closed" ? <span className="match-status-badge">새 참여 마감</span> : null}
+      <p className="match-live-score-note">추천작이 바뀌면 취향을 다시 반영해 궁합 점수와 순위도 새로 계산돼요.</p>
     </section>
 
     {mutationAction ? <div className="match-ranking-progress" role="status" aria-live="polite"><strong>{mutationAction === "hide" ? "랭킹에서 숨기는 중이에요…" : "랭킹으로 복원하는 중이에요…"}</strong><div aria-hidden="true"><span /></div></div> : null}

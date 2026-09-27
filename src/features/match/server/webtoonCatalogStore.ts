@@ -10,6 +10,10 @@ export type WebtoonSummary = {
   mainGenre: string;
 };
 
+export type WebtoonRecommendationRecord = WebtoonSummary & {
+  recommendationVector: Record<string, unknown> | null;
+};
+
 type WebtoonRow = {
   canonical_webtoon_id: string;
   title: string;
@@ -19,6 +23,9 @@ type WebtoonRow = {
 };
 
 type RecommendationRow = WebtoonRow & { profile_id: string; sort_order: number };
+type RecommendationVectorRow = RecommendationRow & {
+  raw_data: { recommendation?: Record<string, unknown> } | null;
+};
 
 type SearchCacheEntry = { expiresAt: number; items: WebtoonSummary[] };
 const globalCatalogCache = globalThis as typeof globalThis & {
@@ -41,11 +48,16 @@ export function normalizeWebtoonTitle(value: string) {
   return value.normalize("NFC").trim().replace(/\s+/g, " ").toLocaleLowerCase("ko-KR");
 }
 
+export function compactWebtoonTitle(value: string) {
+  return normalizeWebtoonTitle(value).replaceAll(" ", "");
+}
+
 export async function searchWebtoons(query: string, limit = 20) {
   const normalized = normalizeWebtoonTitle(query);
-  if (normalized.length < 1) return [];
+  const compact = compactWebtoonTitle(query);
+  if (compact.length < 1) return [];
   const boundedLimit = Math.max(1, Math.min(30, limit));
-  const cacheKey = `${normalized}:${boundedLimit}`;
+  const cacheKey = `${compact}:${boundedLimit}`;
   const cached = searchCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) return cached.items;
   const database = getMatchDatabase();
@@ -54,12 +66,17 @@ export async function searchWebtoons(query: string, limit = 20) {
     from public.webtoons
     where catalog_status = 'active'
       and recommendation_eligible = true
-      and normalized_title like ${`%${normalized}%`}
+      and (
+        normalized_title like ${`%${normalized}%`}
+        or replace(normalized_title, ' ', '') like ${`%${compact}%`}
+      )
     order by
       case
         when normalized_title = ${normalized} then 0
-        when normalized_title like ${`${normalized}%`} then 1
-        else 2
+        when replace(normalized_title, ' ', '') = ${compact} then 1
+        when normalized_title like ${`${normalized}%`} then 2
+        when replace(normalized_title, ' ', '') like ${`${compact}%`} then 3
+        else 4
       end,
       char_length(normalized_title) asc,
       title asc,
@@ -98,11 +115,11 @@ export async function getProfileRecommendations(publicProfileId: string) {
 
 export async function getRecommendationsForProfiles(profileIds: string[]) {
   const uniqueProfileIds = [...new Set(profileIds.filter(Boolean))];
-  const result = Object.fromEntries(uniqueProfileIds.map((profileId) => [profileId, [] as WebtoonSummary[]]));
+  const result = Object.fromEntries(uniqueProfileIds.map((profileId) => [profileId, [] as WebtoonRecommendationRecord[]]));
   if (!uniqueProfileIds.length) return result;
 
   const database = getMatchDatabase();
-  const rows = await database<RecommendationRow[]>`
+  const rows = await database<RecommendationVectorRow[]>`
     select
       recommendations.profile_id::text,
       recommendations.sort_order,
@@ -110,14 +127,20 @@ export async function getRecommendationsForProfiles(profileIds: string[]) {
       webtoons.title,
       webtoons.platform,
       webtoons.official_url,
-      webtoons.main_genre
+      webtoons.main_genre,
+      webtoons.raw_data
     from public.match_profile_recommendations recommendations
     join public.webtoons webtoons on webtoons.canonical_webtoon_id = recommendations.canonical_webtoon_id
     where recommendations.profile_id = any(${uniqueProfileIds}::uuid[])
       and webtoons.catalog_status <> 'hidden'
     order by recommendations.profile_id, recommendations.sort_order asc
   `;
-  for (const row of rows) result[row.profile_id]?.push(toSummary(row));
+  for (const row of rows) {
+    result[row.profile_id]?.push({
+      ...toSummary(row),
+      recommendationVector: row.raw_data?.recommendation ?? null,
+    });
+  }
   return result;
 }
 
@@ -160,6 +183,9 @@ export async function replaceProfileRecommendations(input: { publicProfileId: st
     }
 
     const byId = new Map(available.map((row) => [row.canonical_webtoon_id, toSummary(row)]));
-    return ids.map((id) => byId.get(id)).filter((item): item is WebtoonSummary => Boolean(item));
+    return {
+      profileId,
+      items: ids.map((id) => byId.get(id)).filter((item): item is WebtoonSummary => Boolean(item)),
+    };
   });
 }

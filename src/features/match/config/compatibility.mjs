@@ -10,6 +10,7 @@ export const MATCH_COMPATIBILITY_CONFIG = Object.freeze({
   },
   positive: {
     groups: ["setting", "appeal", "character_relationship"],
+    vectorGroupWeights: { tagScores: 0.45, contentAxisScores: 0.35, typeScores: 0.15, artStyleScores: 0.05 },
     exactWeight: 0.75,
     clusterWeight: 0.25,
     clusters: {
@@ -47,6 +48,16 @@ export const MATCH_COMPATIBILITY_CONFIG = Object.freeze({
       ["appeal_twist_reveal", "avoid_complexity", 0.35],
       ["appeal_world_mystery", "avoid_complexity", 0.35],
       ["setting_case_mystery", "avoid_complexity", 0.25],
+    ],
+    vectorConflictMap: [
+      ["humor_comedy", "tone_mismatch", 0.75],
+      ["obsessive_love", "relationship_stress", 0.8],
+      ["occult_ghost", "graphic_intensity", 0.4],
+      ["survival_battle", "graphic_intensity", 0.5],
+      ["survival_tension", "heavy_tone", 0.4],
+      ["twist_reversal", "complexity_fatigue", 0.35],
+      ["world_mystery", "complexity_fatigue", 0.35],
+      ["mystery_investigation", "entry_barrier", 0.25],
     ],
   },
   bands: [

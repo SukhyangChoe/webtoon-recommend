@@ -88,6 +88,8 @@ test("catalog migration supports profile nicknames, unique link names, and ten o
 test("catalog store searches server-side and replaces a bounded owner recommendation list", () => {
   assert.match(catalogStore, /import "server-only"/);
   assert.match(catalogStore, /const boundedLimit = Math\.max\(1, Math\.min\(30, limit\)\)/);
+  assert.match(catalogStore, /replaceAll\(" ", ""\)/);
+  assert.match(catalogStore, /replace\(normalized_title, ' ', ''\) like/);
   assert.match(catalogStore, /limit \$\{boundedLimit\}/);
   assert.match(catalogStore, /ids\.length > 10/);
   assert.match(catalogStore, /delete from public\.match_profile_recommendations/);

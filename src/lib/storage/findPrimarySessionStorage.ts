@@ -58,7 +58,7 @@ export const FIND_PRIMARY_SESSION_STORAGE_KEY =
 export const FIND_PRIMARY_SESSION_SCHEMA_VERSION = "2.1.1" as const;
 
 export const FIND_PRIMARY_SESSION_SEED_VERSION =
-  "webtoons_seed_v1_1_all_genres_integrated_v0_50";
+  "webtoons_seed_current";
 
 export type SelectedWorkSourceSnapshot = {
   canonicalWebtoonId: string;

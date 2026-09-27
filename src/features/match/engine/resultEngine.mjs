@@ -1,6 +1,7 @@
 import { MATCH_SCORING_CONFIG } from "../config/scoring.mjs";
 import { MATCH_VERSIONS } from "../config/versions.mjs";
 import { getPrimarySelectionWeights, getSettingWeights } from "./selectionPolicy.mjs";
+import { buildProfileTasteVector } from "./tasteVectorEngine.mjs";
 
 const GENRE_CHOICE_SCORE = Object.freeze({ high: 3, medium: 1.5, low: 0 });
 
@@ -87,7 +88,7 @@ export function buildTasteSnapshot({ seed, answers, anonymousId, profileId, snap
   ].filter((item) => Boolean(item.value));
   const wellMatchedLabels = wellMatchedDetails.map((item) => item.value);
 
-  return {
+  const snapshot = {
     profileId,
     snapshotId,
     publicProfileId,
@@ -107,6 +108,7 @@ export function buildTasteSnapshot({ seed, answers, anonymousId, profileId, snap
     lessMatchedLabels: avoidanceKeys.slice(0, 3).map((key) => labelFor(seed, key)).filter(Boolean),
     answers,
   };
+  return { ...snapshot, tasteVector: buildProfileTasteVector(snapshot, seed) };
 }
 
 export function toPublicTasteResult(snapshot) {
@@ -121,6 +123,7 @@ export function toPublicTasteResult(snapshot) {
     publicProfileId: snapshot.publicProfileId,
     accuracyFeedback: snapshot.accuracyFeedback ?? null,
     completedAt: snapshot.completedAt,
+    recommendationInfluence: snapshot.recommendationInfluence ?? { workCount: 0, recommendationPercent: 0, testPercent: 100 },
     genreStars: snapshot.genreStars,
     displayGenres: snapshot.displayGenres,
     wellMatchedDetails,

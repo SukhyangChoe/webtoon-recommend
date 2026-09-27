@@ -4,6 +4,7 @@ export const MATCH_VERSIONS = Object.freeze({
   questions: "webtoon_match_question_set_v0_4_candidate",
   copy: "webtoon_match_result_copy_v0_1_candidate",
   scoring: "webtoon_match_compatibility_v0_2_candidate",
+  tasteVector: "webtoon_match_taste_vector_v0_1",
   dataApi: "webtoon_match_data_api_contract_v0_2_candidate",
   visual: "webtoon_match_visual_system_v0_1_candidate",
   draft: "webtoon_match_draft_v0_1",

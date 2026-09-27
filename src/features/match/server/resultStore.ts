@@ -1,12 +1,20 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import questionSeed from "../data/questionSeed.v0.4.json";
+import { applyRecommendationTaste } from "../engine/recommendationTasteEngine.mjs";
 import { buildTasteSnapshot, toPublicTasteResult } from "../engine/resultEngine.mjs";
 import type { MatchAnswers } from "../storage/draftTypes";
 import { getMatchDatabase } from "./database";
 import { sanitizeMatchNickname } from "./nickname.mjs";
 
 export type AccuracyFeedback = "almost_exact" | "mostly_right" | "slightly_off" | "very_off";
-export type StoredSnapshot = ReturnType<typeof buildTasteSnapshot> & { accuracyFeedback?: AccuracyFeedback; profileDisplayName?: string | null };
+export type RecommendationInfluence = { workCount: number; recommendationPercent: number; testPercent: number };
+export type StoredSnapshot = ReturnType<typeof buildTasteSnapshot> & {
+  accuracyFeedback?: AccuracyFeedback;
+  profileDisplayName?: string | null;
+  recommendationInfluence?: RecommendationInfluence;
+};
+
+type RecommendationVectorRow = { raw_data: { recommendation?: Record<string, unknown> } | null };
 
 type SnapshotRow = {
   snapshot_id: string;
@@ -51,6 +59,24 @@ function storedSnapshot(row: SnapshotRow): StoredSnapshot {
     completedAt: row.completed_at,
     ...(row.accuracy_feedback ? { accuracyFeedback: row.accuracy_feedback } : {}),
   } as StoredSnapshot;
+}
+
+async function withCurrentRecommendationTaste(snapshot: StoredSnapshot) {
+  const database = getMatchDatabase();
+  const rows = await database<RecommendationVectorRow[]>`
+    select webtoons.raw_data
+    from public.match_profile_recommendations recommendations
+    join public.webtoons webtoons
+      on webtoons.canonical_webtoon_id = recommendations.canonical_webtoon_id
+    where recommendations.profile_id = ${snapshot.profileId}::uuid
+      and webtoons.catalog_status <> 'hidden'
+    order by recommendations.sort_order asc
+  `;
+  return applyRecommendationTaste(
+    snapshot,
+    rows.map((row) => row.raw_data?.recommendation).filter(Boolean),
+    questionSeed,
+  ) as StoredSnapshot;
 }
 
 const SNAPSHOT_SELECT = `
@@ -139,13 +165,13 @@ export async function createTasteSnapshot(anonymousId: string, nickname: string,
 export async function getTasteSnapshot(publicProfileId: string) {
   const database = getMatchDatabase();
   const rows = await database.unsafe<SnapshotRow[]>(`${SNAPSHOT_SELECT} where snapshots.public_profile_id = $1 limit 1`, [publicProfileId]);
-  return rows[0] ? storedSnapshot(rows[0]) : null;
+  return rows[0] ? withCurrentRecommendationTaste(storedSnapshot(rows[0])) : null;
 }
 
 export async function getTasteSnapshotById(snapshotId: string) {
   const database = getMatchDatabase();
   const rows = await database.unsafe<SnapshotRow[]>(`${SNAPSHOT_SELECT} where snapshots.snapshot_id = $1::uuid limit 1`, [snapshotId]);
-  return rows[0] ? storedSnapshot(rows[0]) : null;
+  return rows[0] ? withCurrentRecommendationTaste(storedSnapshot(rows[0])) : null;
 }
 
 export async function getPublicTasteResult(publicProfileId: string) {

@@ -30,6 +30,33 @@ test("genre stars never affect compatibility", () => {
   assert.equal(calculateCompatibility(profiles.P01, altered).score, calculateCompatibility(profiles.P01, profiles.P02).score);
 });
 
+test("catalog-compatible taste vectors drive multidimensional compatibility", () => {
+  const base = {
+    rawGenreAffinity: { fantasy: 3, comedy: 2 },
+    positiveTasteScores: {},
+    avoidanceTasteScores: {},
+    tasteVector: {
+      vectorVersion: "webtoon_match_taste_vector_v0_1",
+      genreScores: { fantasy: 3, comedy: 2 },
+      typeScores: {},
+      tagScores: { humor_comedy: 1, world_mystery: 1 },
+      avoidanceTagScores: {},
+      contentAxisScores: { comedy_sitcom: 1 },
+      artStyleScores: {},
+    },
+  };
+  const different = {
+    ...base,
+    tasteVector: {
+      ...base.tasteVector,
+      tagScores: { survival_tension: 1 },
+      contentAxisScores: { disaster_survival: 1 },
+    },
+  };
+  assert.equal(calculateCompatibility(base, base).score, 100);
+  assert.ok(calculateCompatibility(base, different).score < 100);
+});
+
 test("setting indifferent and missing are excluded instead of scored as zero", () => {
   const indifferent = { ...profiles.P01, positiveTasteEvidenceStates: { ...profiles.P01.positiveTasteEvidenceStates, setting: "indifferent" } };
   const missing = { ...profiles.P02, positiveTasteEvidenceStates: { ...profiles.P02.positiveTasteEvidenceStates, setting: "missing" } };

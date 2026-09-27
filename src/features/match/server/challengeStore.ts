@@ -3,11 +3,12 @@ import questionSeed from "../data/questionSeed.v0.4.json";
 import { MATCH_COMPATIBILITY_CONFIG } from "../config/compatibility.mjs";
 import { calculateCompatibility } from "../engine/compatibilityEngine.mjs";
 import { denseRankEntries, selectRankingWindow } from "../engine/rankingPolicy.mjs";
+import { matchingRecommendationGenreKeys } from "../engine/tasteVectorEngine.mjs";
 import { pairTrustSentence } from "../share/pairTrustCopy.mjs";
 import { getMatchDatabase, isPostgresError } from "./database";
 import { getTasteSnapshot, getTasteSnapshotById, updateProfileNickname, type StoredSnapshot } from "./resultStore";
 import { sanitizeMatchNickname } from "./nickname.mjs";
-import { getRecommendationsForProfiles } from "./webtoonCatalogStore";
+import { getRecommendationsForProfiles, type WebtoonRecommendationRecord } from "./webtoonCatalogStore";
 
 type Challenge = {
   challengeId: string;
@@ -114,8 +115,23 @@ type ReciprocalSourceRow = {
   source_result_id: string;
 };
 
+type AffectedCompatibilityRow = ChallengeRow & {
+  entry_id: string;
+  result_id: string;
+  challenger_snapshot_id: string;
+};
+
 const genreLabels = Object.fromEntries(questionSeed.publicGenrePolicy.publicGenres.map((genre) => [genre.genreKey, genre.displayLabel]));
 const featureLabels = Object.fromEntries([...questionSeed.positiveFeatureCatalog, ...questionSeed.avoidanceFeatureCatalog].map((feature) => [feature.featureKey, feature.publicShortLabel ?? feature.displayLabel]));
+
+function publicRecommendations(items: WebtoonRecommendationRecord[], targetGenreKeys: string[]) {
+  return items.map(({ recommendationVector, ...item }) => ({
+    ...item,
+    matchedSalesGenres: matchingRecommendationGenreKeys(recommendationVector, targetGenreKeys, questionSeed)
+      .map((key: string) => genreLabels[key])
+      .filter(Boolean),
+  }));
+}
 
 export class ActiveChallengeExistsError extends Error {
   challengeCode: string;
@@ -715,6 +731,8 @@ export async function getPublicPairResult(challengeCode: string, resultId: strin
     getRecommendationsForProfiles([challenge.ownerProfileId, entry.challengerProfileId]),
   ]);
   const explanations = ownerSnapshot && challengerSnapshot ? calculateCompatibility(ownerSnapshot, challengerSnapshot).explanations : null;
+  const ownerRecommendationGenreKeys = explanations?.ownerRecommendationGenreKeys ?? [];
+  const challengerRecommendationGenreKeys = explanations?.challengerRecommendationGenreKeys ?? [];
   return {
     resultId,
     challengeCode,
@@ -724,10 +742,14 @@ export async function getPublicPairResult(challengeCode: string, resultId: strin
     band: result.band,
     sharedGenres: result.sharedGenres,
     differentGenres: result.differentGenres,
-    ownerRecommendedGenres: explanations?.ownerRecommendationGenreKeys.map((key: string) => genreLabels[key]).filter(Boolean) ?? [],
-    challengerRecommendedGenres: explanations?.challengerRecommendationGenreKeys.map((key: string) => genreLabels[key]).filter(Boolean) ?? [],
-    ownerRecommendations: recommendations[challenge.ownerProfileId] ?? [],
-    challengerRecommendations: recommendations[entry.challengerProfileId] ?? [],
+    ownerRecommendedGenres: ownerRecommendationGenreKeys.map((key: string) => genreLabels[key]).filter(Boolean),
+    challengerRecommendedGenres: challengerRecommendationGenreKeys.map((key: string) => genreLabels[key]).filter(Boolean),
+    ownerRecommendations: publicRecommendations(recommendations[challenge.ownerProfileId] ?? [], ownerRecommendationGenreKeys),
+    challengerRecommendations: publicRecommendations(recommendations[entry.challengerProfileId] ?? [], challengerRecommendationGenreKeys),
+    recommendationTasteApplied: Boolean(
+      ownerSnapshot?.recommendationInfluence?.workCount
+      || challengerSnapshot?.recommendationInfluence?.workCount
+    ),
     sharedTasteLabels: result.sharedTasteLabels,
     trustSentence: pairTrustSentence({ score: result.overallScore, recommenderNickname: challenge.ownerNickname, genre: result.sharedGenres[0] }),
     rank: entry.rank,
@@ -835,4 +857,82 @@ export async function updateChallenge(input: { challengeCode: string; status?: "
   const updated = await findChallenge(challenge.challengeCode);
   if (!updated) throw new Error("CHALLENGE_NOT_FOUND");
   return publicChallenge(updated);
+}
+
+export async function refreshCompatibilityForProfile(profileId: string) {
+  const database = getMatchDatabase();
+  const rows = await database<AffectedCompatibilityRow[]>`
+    select
+      challenges.challenge_id::text,
+      challenges.challenge_code,
+      challenges.owner_profile_id::text,
+      challenges.owner_snapshot_id::text,
+      challenges.owner_nickname,
+      challenges.question_set_version,
+      challenges.compatibility_version,
+      challenges.status,
+      challenges.ranking_visibility,
+      challenges.owner_manage_token_hash,
+      challenges.created_at::text,
+      challenges.closed_at::text,
+      entries.entry_id::text,
+      entries.result_id,
+      entries.challenger_snapshot_id::text
+    from public.match_challenge_entries entries
+    join public.match_challenges challenges on challenges.challenge_id = entries.challenge_id
+    where challenges.status <> 'deleted'
+      and (
+        challenges.owner_profile_id = ${profileId}::uuid
+        or entries.challenger_profile_id = ${profileId}::uuid
+      )
+  `;
+  if (!rows.length) return { updatedCompatibilityCount: 0 };
+
+  const snapshotCache = new Map<string, Promise<StoredSnapshot | null>>();
+  const loadSnapshot = (snapshotId: string) => {
+    const cached = snapshotCache.get(snapshotId);
+    if (cached) return cached;
+    const pending = getTasteSnapshotById(snapshotId);
+    snapshotCache.set(snapshotId, pending);
+    return pending;
+  };
+  const recalculated = (await Promise.all(rows.map(async (row) => {
+    const [ownerSnapshot, challengerSnapshot] = await Promise.all([
+      loadSnapshot(row.owner_snapshot_id),
+      loadSnapshot(row.challenger_snapshot_id),
+    ]);
+    if (!ownerSnapshot || !challengerSnapshot) return null;
+    return {
+      entryId: row.entry_id,
+      persistedResultId: row.result_id,
+      result: compatibilityResult(challengeFromRow(row), ownerSnapshot, challengerSnapshot),
+    };
+  }))).filter((item): item is NonNullable<typeof item> => Boolean(item));
+
+  await database.begin(async (sql) => {
+    for (const item of recalculated) {
+      const result = item.result;
+      await sql`
+        update public.match_compatibility_results
+        set overall_score = ${result.overallScore},
+            band = ${sql.json(result.band)},
+            component_scores_private = ${sql.json(result.componentScoresPrivate)},
+            owner_to_challenger_trust_private = ${result.ownerToChallengerTrustPrivate},
+            challenger_to_owner_trust_private = ${result.challengerToOwnerTrustPrivate},
+            shared_genres = ${sql.json(result.sharedGenres)},
+            different_genres = ${sql.json(result.differentGenres)},
+            shared_taste_labels = ${sql.json(result.sharedTasteLabels)},
+            trust_sentence = ${result.trustSentence}
+        where result_id = ${item.persistedResultId}
+      `;
+      await sql`
+        update public.match_challenge_entries
+        set score = ${result.overallScore}, updated_at = now()
+        where entry_id = ${item.entryId}::uuid
+          and result_id = ${item.persistedResultId}
+      `;
+    }
+  });
+
+  return { updatedCompatibilityCount: recalculated.length };
 }

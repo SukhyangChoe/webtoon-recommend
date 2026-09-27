@@ -11,6 +11,12 @@ type Webtoon = {
   mainGenre: string;
 };
 
+type RecommendationInfluence = {
+  workCount: number;
+  recommendationPercent: number;
+  testPercent: number;
+};
+
 export function RecommendationManager({ publicProfileId, initialSelected, initialLoadFailed = false }: { publicProfileId: string; initialSelected: Webtoon[]; initialLoadFailed?: boolean }) {
   const [selected, setSelected] = useState<Webtoon[]>(initialSelected);
   const [query, setQuery] = useState("");
@@ -19,7 +25,7 @@ export function RecommendationManager({ publicProfileId, initialSelected, initia
   const [saving, setSaving] = useState(false);
   const [searched, setSearched] = useState(false);
   const [message, setMessage] = useState(initialLoadFailed ? "추천작을 불러오지 못했어요." : "");
-  const [saved, setSaved] = useState(false);
+  const [savedInfluence, setSavedInfluence] = useState<RecommendationInfluence | null>(null);
   const searchController = useRef<AbortController | null>(null);
 
   async function search(event: React.FormEvent) {
@@ -28,7 +34,7 @@ export function RecommendationManager({ publicProfileId, initialSelected, initia
     setSearching(true);
     setSearched(false);
     setMessage("");
-    setSaved(false);
+    setSavedInfluence(null);
     try {
       searchController.current?.abort();
       const controller = new AbortController();
@@ -47,7 +53,7 @@ export function RecommendationManager({ publicProfileId, initialSelected, initia
   }
 
   function add(item: Webtoon) {
-    setSaved(false);
+    setSavedInfluence(null);
     setMessage("");
     if (selected.some((selectedItem) => selectedItem.canonicalWebtoonId === item.canonicalWebtoonId)) {
       setMessage("이미 추천 목록에 있는 작품이에요.");
@@ -61,14 +67,14 @@ export function RecommendationManager({ publicProfileId, initialSelected, initia
   }
 
   function remove(canonicalWebtoonId: string) {
-    setSaved(false);
+    setSavedInfluence(null);
     setSelected((items) => items.filter((item) => item.canonicalWebtoonId !== canonicalWebtoonId));
   }
 
   function move(index: number, direction: -1 | 1) {
     const destination = index + direction;
     if (destination < 0 || destination >= selected.length) return;
-    setSaved(false);
+    setSavedInfluence(null);
     setSelected((items) => {
       const next = [...items];
       [next[index], next[destination]] = [next[destination], next[index]];
@@ -80,7 +86,7 @@ export function RecommendationManager({ publicProfileId, initialSelected, initia
     if (saving) return;
     setSaving(true);
     setMessage("");
-    setSaved(false);
+    setSavedInfluence(null);
     try {
       const identity = ensureAnonymousId({ cookieText: document.cookie, storage: window.localStorage });
       const response = await fetch(`/api/v1/results/${publicProfileId}/recommendations`, {
@@ -95,7 +101,7 @@ export function RecommendationManager({ publicProfileId, initialSelected, initia
         throw new Error("추천작을 저장하지 못했어요.");
       }
       setSelected(body.items);
-      setSaved(true);
+      setSavedInfluence(body.recommendationInfluence ?? { workCount: body.items.length, recommendationPercent: 0, testPercent: 100 });
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "추천작을 저장하지 못했어요.");
     } finally {
@@ -103,5 +109,5 @@ export function RecommendationManager({ publicProfileId, initialSelected, initia
     }
   }
 
-  return <main className="match-page match-recommendation-manager"><header><p className="match-eyebrow">내 추천작</p><h1>친구에게 권할 작품을 골라 주세요</h1><p>작품 DB에 등록된 웹툰 중 최대 10개까지 선택할 수 있어요.</p></header><section className="match-result-section"><div className="match-section-heading"><h2>선택한 작품</h2><strong>{selected.length}/10</strong></div>{selected.length ? <ol className="match-selected-webtoons">{selected.map((item, index) => <li key={item.canonicalWebtoonId}><span>{index + 1}</span><div><strong>{item.title}</strong><small>{item.platform}</small></div><div><button type="button" disabled={index === 0} onClick={() => move(index, -1)} aria-label={`${item.title} 위로`}>↑</button><button type="button" disabled={index === selected.length - 1} onClick={() => move(index, 1)} aria-label={`${item.title} 아래로`}>↓</button><button className="match-remove-webtoon" type="button" onClick={() => remove(item.canonicalWebtoonId)} aria-label={`${item.title} 추천작에서 삭제`} title="삭제">×</button></div></li>)}</ol> : <p className="match-empty-label">검색해서 추천작을 추가해 주세요.</p>}</section><section className="match-result-section"><h2>작품 검색</h2><form className="match-webtoon-search" onSubmit={search}><input type="search" value={query} onChange={(event) => { setQuery(event.target.value); setSearched(false); }} placeholder="작품명을 입력해 주세요" aria-label="추천할 웹툰 검색" /><button className="match-button" type="submit" disabled={searching || !query.trim()}>{searching ? "검색 중…" : "검색"}</button></form>{results.length ? <ul className="match-webtoon-search-results">{results.map((item) => { const added = selected.some((selectedItem) => selectedItem.canonicalWebtoonId === item.canonicalWebtoonId); return <li key={item.canonicalWebtoonId}><div><strong>{item.title}</strong><span>{item.platform} · {item.mainGenre}</span></div><button type="button" disabled={added || selected.length >= 10} onClick={() => add(item)}>{added ? "추가됨" : "추가"}</button></li>; })}</ul> : searched && !searching ? <p className="match-empty-label">검색 결과가 없어요.</p> : null}</section>{message ? <p className="match-notice is-error" role="alert">{message}</p> : null}{saved ? <p className="match-save-success" role="status">추천작을 저장했어요.</p> : null}<div className="match-result-actions"><button className="match-button" type="button" disabled={saving} onClick={() => void save()}>{saving ? "저장 중…" : "추천작 저장"}</button><a className="match-button match-button--secondary" href={`/match/result/${publicProfileId}`}>내 결과로 돌아가기</a></div></main>;
+  return <main className="match-page match-recommendation-manager"><header><p className="match-eyebrow">내 추천작</p><h1>친구에게 권할 작품을 골라 주세요</h1><p>작품 DB에 등록된 웹툰 중 최대 10개까지 선택할 수 있어요.</p></header><section className="match-result-section"><div className="match-section-heading"><h2>선택한 작품</h2><strong>{selected.length}/10</strong></div>{selected.length ? <ol className="match-selected-webtoons">{selected.map((item, index) => <li key={item.canonicalWebtoonId}><span>{index + 1}</span><div><strong>{item.title}</strong><small>{item.platform}</small></div><div><button type="button" disabled={index === 0} onClick={() => move(index, -1)} aria-label={`${item.title} 위로`}>↑</button><button type="button" disabled={index === selected.length - 1} onClick={() => move(index, 1)} aria-label={`${item.title} 아래로`}>↓</button><button className="match-remove-webtoon" type="button" onClick={() => remove(item.canonicalWebtoonId)} aria-label={`${item.title} 추천작에서 삭제`} title="삭제">×</button></div></li>)}</ol> : <p className="match-empty-label">검색해서 추천작을 추가해 주세요.</p>}</section><section className="match-result-section"><h2>작품 검색</h2><form className="match-webtoon-search" onSubmit={search}><input type="search" value={query} onChange={(event) => { setQuery(event.target.value); setSearched(false); }} placeholder="작품명을 입력해 주세요" aria-label="추천할 웹툰 검색" /><button className="match-button" type="submit" disabled={searching || !query.trim()}>{searching ? "검색 중…" : "검색"}</button></form>{results.length ? <ul className="match-webtoon-search-results">{results.map((item) => { const added = selected.some((selectedItem) => selectedItem.canonicalWebtoonId === item.canonicalWebtoonId); return <li key={item.canonicalWebtoonId}><div><strong>{item.title}</strong><span>{item.platform} · {item.mainGenre}</span></div><button type="button" disabled={added || selected.length >= 10} onClick={() => add(item)}>{added ? "추가됨" : "추가"}</button></li>; })}</ul> : searched && !searching ? <p className="match-empty-label">검색 결과가 없어요.</p> : null}</section>{message ? <p className="match-notice is-error" role="alert">{message}</p> : null}{savedInfluence ? <p className="match-save-success" role="status">{savedInfluence.workCount ? "추천작을 취향 결과와 궁합 랭킹에 반영했어요." : "추천작을 모두 비웠어요."}</p> : null}<div className="match-result-actions"><button className="match-button" type="button" disabled={saving} onClick={() => void save()}>{saving ? "취향과 궁합 갱신 중…" : "추천작 저장"}</button><a className="match-button match-button--secondary" href={`/match/result/${publicProfileId}`}>내 결과로 돌아가기</a></div></main>;
 }
