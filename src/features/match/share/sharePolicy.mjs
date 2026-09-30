@@ -36,11 +36,11 @@ export function pairShareCopy({ ownerNickname, challengerNickname, score, bandLa
   const ownerPicks = ownerRecommendedGenres ?? differentGenres;
   const challengerPicks = challengerRecommendedGenres ?? [];
   const recommendations = [
-    { from: ownerNickname, to: challengerNickname, genres: ownerPicks },
-    { from: challengerNickname, to: ownerNickname, genres: challengerPicks },
+    { nickname: ownerNickname, genres: ownerPicks },
+    { nickname: challengerNickname, genres: challengerPicks },
   ].filter((item) => item.genres?.length)
-    .map((item) => `${item.from} → ${item.to}: ${item.genres.join(" · ")}`);
-  const recommendationCopy = recommendations.length ? `\n\n각자 영업할 장르\n${recommendations.join("\n")}` : "";
+    .map((item) => `${item.nickname}에게 물어볼 장르: ${item.genres.join(" · ")}`);
+  const recommendationCopy = recommendations.length ? `\n\n서로에게 물어볼 장르\n${recommendations.join("\n")}` : "";
   return {
     templateKey: "pair_result_primary",
     shareUrl,

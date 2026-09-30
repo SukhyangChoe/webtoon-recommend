@@ -36,7 +36,7 @@ test("catalog-compatible taste vectors drive multidimensional compatibility", ()
     positiveTasteScores: {},
     avoidanceTasteScores: {},
     tasteVector: {
-      vectorVersion: "webtoon_match_taste_vector_v0_1",
+      vectorVersion: "webtoon_match_taste_vector_v0_2",
       genreScores: { fantasy: 3, comedy: 2 },
       typeScores: {},
       tagScores: { humor_comedy: 1, world_mystery: 1 },

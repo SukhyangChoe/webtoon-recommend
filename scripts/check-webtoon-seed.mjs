@@ -1,6 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import {
+  CATALOG_GENRE_SCORE_KEYS,
+  PRESERVED_ACTION_GENRE_SCORE_EXCEPTIONS,
+  isPreservedActionGenreScore,
+} from "./webtoon-catalog-schema.mjs";
 
 const DEFAULT_SEED_PATH = path.join(
   process.cwd(),
@@ -54,6 +59,19 @@ function getSourceDb(webtoon) {
   return "missing";
 }
 
+function getMainGenre(webtoon) {
+  if (!isEmpty(webtoon.mainGenre)) return webtoon.mainGenre;
+  if (webtoon.recommendationEligible === false && !isEmpty(webtoon.sourceDbGenre)) return webtoon.sourceDbGenre;
+  return "__missing__";
+}
+
+function hasApprovedVectorException(webtoon) {
+  return (
+    getRecommendation(webtoon).visualStyleMigrationStatus === "user_approved_exception" ||
+    getMetadata(webtoon).visualStyleExceptionV737?.status === "approved"
+  );
+}
+
 function countBy(items, predicate) {
   return items.filter(predicate).length;
 }
@@ -92,7 +110,7 @@ function findDuplicateIds(webtoons) {
 
 function countMainGenres(webtoons) {
   return webtoons.reduce((genreCounts, webtoon) => {
-    const genreKey = webtoon.mainGenre ?? "__missing__";
+    const genreKey = getMainGenre(webtoon);
     genreCounts[genreKey] = (genreCounts[genreKey] ?? 0) + 1;
 
     return genreCounts;
@@ -126,6 +144,22 @@ const recommendationEligibleItems = webtoons.filter(
   (webtoon) => webtoon.recommendationEligible === true
 );
 
+const catalogGenreScoreKeys = new Set(CATALOG_GENRE_SCORE_KEYS);
+const preservedActionGenreScoreItems = webtoons.filter(isPreservedActionGenreScore);
+const unexpectedGenreScoreItems = webtoons.filter((webtoon) => {
+  const genreScores = getRecommendation(webtoon).genreScores;
+  if (!isRecord(genreScores)) return false;
+  return Object.keys(genreScores).some((genreKey) => (
+    !catalogGenreScoreKeys.has(genreKey)
+    && !(genreKey === "action" && isPreservedActionGenreScore(webtoon))
+  ));
+});
+const missingPreservedActionGenreScoreExceptions = Object.keys(
+  PRESERVED_ACTION_GENRE_SCORE_EXCEPTIONS
+).filter((canonicalWebtoonId) => (
+  !preservedActionGenreScoreItems.some((webtoon) => webtoon.canonicalWebtoonId === canonicalWebtoonId)
+));
+
 const checks = {
   total: webtoons.length,
 
@@ -146,22 +180,33 @@ const checks = {
   ),
 
   missingMainGenre: countBy(webtoons, (webtoon) =>
-    isEmpty(webtoon.mainGenre)
+    getMainGenre(webtoon) === "__missing__"
   ),
 
   missingGenreScores: countBy(
     webtoons,
     (webtoon) =>
+      webtoon.recommendationEligible === true &&
       !isNonEmptyRecord(getRecommendation(webtoon).genreScores)
   ),
 
   missingTypeScores: countBy(
     webtoons,
     (webtoon) =>
+      webtoon.recommendationEligible === true &&
       !hasNonEmptyNestedScoreMap(
         getRecommendation(webtoon).typeScores
       )
   ),
+
+  canonicalGenreScoreKeys: CATALOG_GENRE_SCORE_KEYS,
+
+  preservedActionGenreScoreExceptions: preservedActionGenreScoreItems.length,
+
+  unexpectedGenreScoreKeys: unexpectedGenreScoreItems.length,
+
+  missingPreservedActionGenreScoreExceptions:
+    missingPreservedActionGenreScoreExceptions.length,
 
   sourceDbMissing: countBy(
     webtoons,
@@ -208,18 +253,21 @@ const checks = {
   eligibleQualityScoreMissing: countBy(
     recommendationEligibleItems,
     (webtoon) =>
+      !hasApprovedVectorException(webtoon) &&
       typeof getMetadata(webtoon).qualityScore !== "number"
   ),
 
   eligibleQualityFactorsMissing: countBy(
     recommendationEligibleItems,
     (webtoon) =>
+      !hasApprovedVectorException(webtoon) &&
       !isNonEmptyRecord(getMetadata(webtoon).qualityFactors)
   ),
 
   eligibleArtStyleScoresMissing: countBy(
     recommendationEligibleItems,
     (webtoon) =>
+      !hasApprovedVectorException(webtoon) &&
       !isNonEmptyRecord(
         getRecommendation(webtoon).artStyleScores
       )
@@ -280,6 +328,8 @@ const hardFailureKeys = [
   "missingMainGenre",
   "missingGenreScores",
   "missingTypeScores",
+  "unexpectedGenreScoreKeys",
+  "missingPreservedActionGenreScoreExceptions",
   "eligibleSourceMissing",
   "eligibleCoverage",
   "eligibleGateNotVerified",
@@ -300,6 +350,21 @@ console.log(JSON.stringify(checks, null, 2));
 if (duplicateCanonicalIds.length > 0) {
   console.log("\nDuplicate canonicalWebtoonId samples:");
   console.table(duplicateCanonicalIds.slice(0, 20));
+}
+
+if (preservedActionGenreScoreItems.length > 0) {
+  console.log("\nPreserved non-canonical genreScores.action exceptions:");
+  console.table(preservedActionGenreScoreItems.map((webtoon) => ({
+    canonicalWebtoonId: webtoon.canonicalWebtoonId,
+    title: webtoon.title,
+    action: getRecommendation(webtoon).genreScores.action,
+    recommendationEligible: webtoon.recommendationEligible,
+  })));
+}
+
+if (unexpectedGenreScoreItems.length > 0) {
+  console.log("\nUnexpected genreScores keys:");
+  console.table(sampleTitles(unexpectedGenreScoreItems, () => true));
 }
 
 const hardFailurePredicates = [

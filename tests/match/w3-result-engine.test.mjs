@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { allocateGenreStars, buildTasteSnapshot, calculateGenreResult, toPublicTasteResult } from "../../src/features/match/engine/resultEngine.mjs";
 import { applyRecommendationTaste, recommendationTasteWeight } from "../../src/features/match/engine/recommendationTasteEngine.mjs";
-import { MATCH_TASTE_VECTOR_VERSION, matchingRecommendationGenreKeys, projectRecommendationGenreScores } from "../../src/features/match/engine/tasteVectorEngine.mjs";
+import { MATCH_TASTE_VECTOR_VERSION, matchingRecommendationGenreKeys, projectRecommendationGenreScores, recommendationToTasteVector } from "../../src/features/match/engine/tasteVectorEngine.mjs";
+import { calculateRecommendationFit, RECOMMENDATION_FIT_HIGHLIGHT_THRESHOLD } from "../../src/features/match/engine/recommendationFitEngine.mjs";
 
 const seed = JSON.parse(readFileSync(new URL("../../src/features/match/data/questionSeed.v0.4.json", import.meta.url), "utf8"));
 const synthetic = JSON.parse(readFileSync(new URL("../../src/features/match/data/syntheticProfiles.v0.2.json", import.meta.url), "utf8"));
@@ -92,12 +93,66 @@ test("a snapshot stores a catalog-compatible multidimensional taste vector", () 
   assert.deepEqual(snapshot.tasteVector.artStyleScores, {});
 });
 
-test("recommendation influence grows by registered vector count and caps at eighty percent", () => {
+test("a stored taste vector uses zero-to-three scores instead of probability distributions", () => {
+  const answers = {
+    genre: Object.fromEntries(genres.map((genre) => [genre.genreKey, genre.genreKey === "thriller_horror" ? "high" : "low"])),
+    duels: {},
+    setting: { selected: ["setting_case_mystery", "setting_occult_uncanny"], primary: "setting_case_mystery", indifferent: false },
+    appeal: ["appeal_world_mystery", "appeal_survival_tension"],
+    characterRelationship: ["character_overpowered", "relationship_bond"],
+    avoidance: ["avoid_excessive_comedy"],
+  };
+  const snapshot = buildTasteSnapshot({ seed, answers, anonymousId: "11111111-1111-4111-8111-111111111111", profileId: "p1", snapshotId: "s1", publicProfileId: "public1" });
+  const scoreMaps = [
+    snapshot.tasteVector.genreScores,
+    ...Object.values(snapshot.tasteVector.typeScores),
+    snapshot.tasteVector.tagScores,
+    snapshot.tasteVector.avoidanceTagScores,
+    snapshot.tasteVector.contentAxisScores,
+    snapshot.tasteVector.artStyleScores,
+  ];
+  const scores = scoreMaps.flatMap((scoresByKey) => Object.values(scoresByKey));
+
+  assert.ok(scores.length > 0);
+  assert.ok(scores.every((score) => score > 0 && score <= 3));
+  assert.equal(Math.max(...Object.values(snapshot.tasteVector.tagScores)), 3);
+  assert.equal(Math.max(...Object.values(snapshot.tasteVector.contentAxisScores)), 3);
+  assert.equal(Math.max(...Object.values(snapshot.tasteVector.avoidanceTagScores)), 3);
+});
+
+test("recommendation influence is eighty percent whenever at least one work is registered", () => {
   assert.equal(recommendationTasteWeight(0), 0);
-  assert.equal(recommendationTasteWeight(1), 0.15);
-  assert.equal(recommendationTasteWeight(5), 0.55);
+  assert.equal(recommendationTasteWeight(1), 0.8);
+  assert.equal(recommendationTasteWeight(5), 0.8);
   assert.equal(recommendationTasteWeight(10), 0.8);
   assert.equal(recommendationTasteWeight(99), 0.8);
+});
+
+test("one recommendation blends its average at eighty percent across every positive axis", () => {
+  const snapshot = {
+    rawGenreAffinity: Object.fromEntries(genres.map((genre) => [genre.genreKey, genre.genreKey === "fantasy" ? 3 : 0])),
+    positiveTasteScores: { setting: {}, appeal: {}, character_relationship: {} },
+    tasteVector: {
+      vectorVersion: MATCH_TASTE_VECTOR_VERSION,
+      genreScores: { fantasy: 3 },
+      typeScores: {},
+      tagScores: { world_mystery: 3 },
+      avoidanceTagScores: { excessive_comedy: 3 },
+      contentAxisScores: {},
+      artStyleScores: { warm_soft: 3 },
+    },
+  };
+  const result = applyRecommendationTaste(snapshot, [{
+    genreScores: { drama_daily: 5 },
+    tagScores: { emotional_depth: 3 },
+  }], seed);
+
+  assert.equal(result.tasteVector.genreScores.fantasy, 0.6);
+  assert.equal(result.tasteVector.genreScores.drama_daily, 2.4);
+  assert.equal(result.tasteVector.tagScores.world_mystery, 0.6);
+  assert.equal(result.tasteVector.tagScores.emotional_depth, 2.4);
+  assert.equal(result.tasteVector.artStyleScores.warm_soft, 0.6);
+  assert.equal(result.tasteVector.avoidanceTagScores.excessive_comedy, 3);
 });
 
 test("a concentrated recommendation list can change the leading genre", () => {
@@ -122,8 +177,25 @@ test("the combined romance catalog vector is shared between romance and ropan", 
     positiveTasteScores: { setting: {}, appeal: {}, character_relationship: {} },
   };
   const result = applyRecommendationTaste(snapshot, [{ genreScores: { romance_ropan: 5 }, tagScores: {} }], seed);
+  assert.deepEqual(result.recommendationInfluence, { workCount: 1, recommendationPercent: 80, testPercent: 20 });
   assert.equal(result.rawGenreAffinity.romance, result.rawGenreAffinity.ropan);
   assert.ok(result.rawGenreAffinity.romance > result.rawGenreAffinity.fantasy);
+});
+
+test("catalog type scores are normalized by their canonical type prefix", () => {
+  const vector = recommendationToTasteVector({
+    typeScores: {
+      drama_daily: {
+        romance_emotional_growth: 3,
+        thriller_psychological_drama: 2,
+      },
+    },
+  }, seed);
+
+  assert.deepEqual(vector.typeScores, {
+    romance_ropan: { romance_emotional_growth: 3 },
+    thriller_horror: { thriller_psychological_drama: 2 },
+  });
 });
 
 test("catalog comedy signals are projected out of the broad drama genre", () => {
@@ -150,6 +222,62 @@ test("recommendation highlights follow the projected vector instead of the catal
   assert.deepEqual(matchingRecommendationGenreKeys(weakAction, ["action"], seed), []);
 });
 
+test("recommendation fit compares multidimensional user and work vectors", () => {
+  const userTasteVector = {
+    tagScores: { emotional_depth: 3, relationship_bond: 2 },
+    contentAxisScores: { family_drama: 3 },
+    typeScores: { drama_daily: { drama_family_healing: 3 } },
+    artStyleScores: { warm_soft: 3 },
+  };
+  const exactWork = {
+    genreScores: { drama_daily: 5 },
+    tagScores: { emotional_depth: 3, relationship_bond: 2 },
+    contentAxisScores: { family_drama: 3 },
+    typeScores: { drama_daily: { drama_family_healing: 3 } },
+    artStyleScores: { warm_soft: 3 },
+  };
+  const differentWork = {
+    genreScores: { thriller_horror: 5 },
+    tagScores: { survival_tension: 3 },
+    contentAxisScores: { occult_ghost: 3 },
+    typeScores: { thriller_horror: { thriller_occult: 3 } },
+    artStyleScores: { dark_moody: 3 },
+  };
+
+  const exact = calculateRecommendationFit(userTasteVector, exactWork, seed);
+  const different = calculateRecommendationFit(userTasteVector, differentWork, seed);
+
+  assert.equal(exact.score, 1);
+  assert.equal(exact.highlighted, true);
+  assert.equal(different.score, 0);
+  assert.equal(different.highlighted, false);
+  assert.equal(RECOMMENDATION_FIT_HIGHLIGHT_THRESHOLD, 0.7);
+});
+
+test("recommendation fit omits missing axes and requires at least two comparable axes", () => {
+  const userTasteVector = {
+    tagScores: { emotional_depth: 3 },
+    contentAxisScores: { family_drama: 3 },
+    typeScores: {},
+    artStyleScores: {},
+  };
+  const twoAxisWork = {
+    tagScores: { emotional_depth: 3 },
+    contentAxisScores: { family_drama: 3 },
+  };
+  const oneAxisWork = {
+    tagScores: { emotional_depth: 3 },
+  };
+
+  const twoAxes = calculateRecommendationFit(userTasteVector, twoAxisWork, seed);
+  const oneAxis = calculateRecommendationFit(userTasteVector, oneAxisWork, seed);
+
+  assert.equal(twoAxes.score, 1);
+  assert.equal(twoAxes.highlighted, true);
+  assert.equal(oneAxis.score, 1);
+  assert.equal(oneAxis.highlighted, false);
+});
+
 test("comedy-heavy recommendations can make comedy the leading public genre", () => {
   const snapshot = {
     rawGenreAffinity: Object.fromEntries(genres.map((genre) => [genre.genreKey, genre.genreKey === "ropan" ? 3 : genre.genreKey === "comedy" ? 2.9 : 0])),
@@ -163,6 +291,34 @@ test("comedy-heavy recommendations can make comedy the leading public genre", ()
   }));
   const result = applyRecommendationTaste(snapshot, recommendations, seed);
   assert.equal(result.displayGenres[0].genreKey, "comedy");
-  assert.ok(result.tasteVector.tagScores.humor_comedy > 0);
+  assert.equal(result.tasteVector.tagScores.humor_comedy, 2.4);
+  assert.equal(result.tasteVector.contentAxisScores.comedy_sitcom, 2.4);
   assert.deepEqual(result.tasteVector.avoidanceTagScores, {});
+});
+
+test("legacy ratio vectors are rebuilt on read using the zero-to-three score scale", () => {
+  const snapshot = {
+    rawGenreAffinity: Object.fromEntries(genres.map((genre) => [genre.genreKey, genre.genreKey === "fantasy" ? 3 : 0])),
+    positiveTasteScores: {
+      setting: {},
+      appeal: { appeal_world_mystery: 0.666667, appeal_survival_tension: 0.333333 },
+      character_relationship: {},
+    },
+    avoidanceTasteScores: {},
+    tasteVector: {
+      vectorVersion: "webtoon_match_taste_vector_v0_1",
+      genreScores: { fantasy: 1 },
+      typeScores: {},
+      tagScores: { world_mystery: 0.5, survival_tension: 0.5 },
+      avoidanceTagScores: {},
+      contentAxisScores: {},
+      artStyleScores: {},
+    },
+  };
+  const result = applyRecommendationTaste(snapshot, [], seed);
+
+  assert.equal(result.tasteVector.vectorVersion, MATCH_TASTE_VECTOR_VERSION);
+  assert.equal(result.tasteVector.genreScores.fantasy, 3);
+  assert.equal(result.tasteVector.tagScores.world_mystery, 3);
+  assert.ok(Math.abs(result.tasteVector.tagScores.survival_tension - 1.5) < 0.00001);
 });

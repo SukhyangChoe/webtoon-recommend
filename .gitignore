@@ -12,6 +12,8 @@
 
 # testing
 /coverage
+/.qa-tmp/
+/recommendation_regression_report_current.json
 
 # next.js
 /.next/

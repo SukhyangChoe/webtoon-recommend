@@ -1,20 +1,8 @@
 import { MATCH_SCORING_CONFIG } from "../config/scoring.mjs";
 import { allocateGenreStars } from "./resultEngine.mjs";
-import { blendTasteVectors, buildProfileTasteVector } from "./tasteVectorEngine.mjs";
+import { MATCH_TASTE_VECTOR_VERSION, blendTasteVectors, buildProfileTasteVector } from "./tasteVectorEngine.mjs";
 
-const RECOMMENDATION_WEIGHT_BY_COUNT = Object.freeze([
-  0,
-  0.15,
-  0.25,
-  0.35,
-  0.45,
-  0.55,
-  0.62,
-  0.68,
-  0.73,
-  0.77,
-  0.8,
-]);
+const RECOMMENDATION_WEIGHT = 0.8;
 
 const round = (value, digits = 6) => Number(value.toFixed(digits));
 const sum = (values) => values.reduce((total, value) => total + value, 0);
@@ -74,8 +62,6 @@ function blendPositiveTasteScores(snapshot, recommendations, recommendationWeigh
     const baseScores = snapshot.positiveTasteScores?.[group] ?? {};
     const baseDistribution = normalize(baseScores, featureKeys);
     const recommendationDistribution = recommendationFeatureDistribution(recommendations, featureKeys);
-    const hasRecommendationSignal = sum(Object.values(recommendationDistribution)) > 0;
-    if (!hasRecommendationSignal) return [group, baseScores];
     const testWeight = 1 - recommendationWeight;
     return [group, Object.fromEntries(featureKeys
       .map((key) => [key, round((baseDistribution[key] ?? 0) * testWeight + (recommendationDistribution[key] ?? 0) * recommendationWeight)])
@@ -84,8 +70,7 @@ function blendPositiveTasteScores(snapshot, recommendations, recommendationWeigh
 }
 
 export function recommendationTasteWeight(workCount) {
-  const bounded = Math.max(0, Math.min(10, Math.floor(Number(workCount) || 0)));
-  return RECOMMENDATION_WEIGHT_BY_COUNT[bounded];
+  return Math.floor(Number(workCount) || 0) > 0 ? RECOMMENDATION_WEIGHT : 0;
 }
 
 export function applyRecommendationTaste(snapshot, recommendationVectors, seed) {
@@ -93,7 +78,11 @@ export function applyRecommendationTaste(snapshot, recommendationVectors, seed) 
   const genreKeys = genres.map((genre) => genre.genreKey);
   const recommendations = Array.isArray(recommendationVectors) ? recommendationVectors : [];
   const recommendationWeight = recommendationTasteWeight(recommendations.length);
-  const baseTasteVector = snapshot.tasteVector ?? buildProfileTasteVector(snapshot, seed);
+  // v0.1 stored distribution ratios in several dimensions. Rebuild old snapshots
+  // from their original test scores so the persisted vector always means 0..3 points.
+  const baseTasteVector = snapshot.tasteVector?.vectorVersion === MATCH_TASTE_VECTOR_VERSION
+    ? snapshot.tasteVector
+    : buildProfileTasteVector(snapshot, seed);
   if (!recommendationWeight) {
     return {
       ...snapshot,

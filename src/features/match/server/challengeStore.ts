@@ -3,7 +3,7 @@ import questionSeed from "../data/questionSeed.v0.4.json";
 import { MATCH_COMPATIBILITY_CONFIG } from "../config/compatibility.mjs";
 import { calculateCompatibility } from "../engine/compatibilityEngine.mjs";
 import { denseRankEntries, selectRankingWindow } from "../engine/rankingPolicy.mjs";
-import { matchingRecommendationGenreKeys } from "../engine/tasteVectorEngine.mjs";
+import { calculateRecommendationFit } from "../engine/recommendationFitEngine.mjs";
 import { pairTrustSentence } from "../share/pairTrustCopy.mjs";
 import { getMatchDatabase, isPostgresError } from "./database";
 import { getTasteSnapshot, getTasteSnapshotById, updateProfileNickname, type StoredSnapshot } from "./resultStore";
@@ -122,15 +122,25 @@ type AffectedCompatibilityRow = ChallengeRow & {
 };
 
 const genreLabels = Object.fromEntries(questionSeed.publicGenrePolicy.publicGenres.map((genre) => [genre.genreKey, genre.displayLabel]));
+const catalogGenreLabels: Record<string, string> = {
+  ...genreLabels,
+  romance_ropan: "로맨스·로판",
+};
 const featureLabels = Object.fromEntries([...questionSeed.positiveFeatureCatalog, ...questionSeed.avoidanceFeatureCatalog].map((feature) => [feature.featureKey, feature.publicShortLabel ?? feature.displayLabel]));
 
-function publicRecommendations(items: WebtoonRecommendationRecord[], targetGenreKeys: string[]) {
-  return items.map(({ recommendationVector, ...item }) => ({
-    ...item,
-    matchedSalesGenres: matchingRecommendationGenreKeys(recommendationVector, targetGenreKeys, questionSeed)
-      .map((key: string) => genreLabels[key])
-      .filter(Boolean),
-  }));
+function publicRecommendations(items: WebtoonRecommendationRecord[], targetSnapshot: StoredSnapshot | null) {
+  return items.map(({ recommendationVector, ...item }) => {
+    const fit = calculateRecommendationFit(
+      targetSnapshot?.tasteVector,
+      recommendationVector,
+      questionSeed,
+    );
+    return {
+      ...item,
+      mainGenreLabel: catalogGenreLabels[item.mainGenre] ?? item.mainGenre,
+      tasteFitHighlighted: fit.highlighted,
+    };
+  });
 }
 
 export class ActiveChallengeExistsError extends Error {
@@ -744,8 +754,8 @@ export async function getPublicPairResult(challengeCode: string, resultId: strin
     differentGenres: result.differentGenres,
     ownerRecommendedGenres: ownerRecommendationGenreKeys.map((key: string) => genreLabels[key]).filter(Boolean),
     challengerRecommendedGenres: challengerRecommendationGenreKeys.map((key: string) => genreLabels[key]).filter(Boolean),
-    ownerRecommendations: publicRecommendations(recommendations[challenge.ownerProfileId] ?? [], ownerRecommendationGenreKeys),
-    challengerRecommendations: publicRecommendations(recommendations[entry.challengerProfileId] ?? [], challengerRecommendationGenreKeys),
+    ownerRecommendations: publicRecommendations(recommendations[challenge.ownerProfileId] ?? [], challengerSnapshot),
+    challengerRecommendations: publicRecommendations(recommendations[entry.challengerProfileId] ?? [], ownerSnapshot),
     recommendationTasteApplied: Boolean(
       ownerSnapshot?.recommendationInfluence?.workCount
       || challengerSnapshot?.recommendationInfluence?.workCount

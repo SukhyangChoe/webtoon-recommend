@@ -31,7 +31,7 @@ const PAIR_ARCHETYPES = [
     min: 70,
     key: "recommendation_guarantee",
     name: "추천 적중 보증수표",
-    badge: "영업 성공률 높음",
+    badge: "추천 적중률 높음",
     symbol: "✓",
     theme: "mint",
     description: "주력 장르 추천은 높은 확률로 성공. 서로의 찜 목록을 빠르게 불려줘요.",

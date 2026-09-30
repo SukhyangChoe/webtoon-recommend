@@ -5,6 +5,7 @@ export const MATCH_TASTE_VECTOR_VERSION = MATCH_VERSIONS.tasteVector;
 const round = (value, digits = 6) => Number(value.toFixed(digits));
 const sum = (values) => values.reduce((total, value) => total + value, 0);
 const isPositiveNumber = (value) => typeof value === "number" && Number.isFinite(value) && value > 0;
+const MAX_VECTOR_SCORE = 3;
 
 function numericMap(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
@@ -13,11 +14,25 @@ function numericMap(value) {
     .map(([key, score]) => [key, round(score)]));
 }
 
-function addDistributed(target, keys, score) {
+function boundedScoreMap(value) {
+  return Object.fromEntries(Object.entries(numericMap(value))
+    .map(([key, score]) => [key, round(Math.min(MAX_VECTOR_SCORE, score))]));
+}
+
+function scalePeakToMax(value) {
+  const clean = numericMap(value);
+  const peak = Math.max(0, ...Object.values(clean));
+  if (!peak) return {};
+  return Object.fromEntries(Object.entries(clean)
+    .map(([key, score]) => [key, round(score / peak * MAX_VECTOR_SCORE)]));
+}
+
+function addScore(target, keys, score) {
   const uniqueKeys = [...new Set((keys ?? []).filter(Boolean))];
   if (!uniqueKeys.length || !isPositiveNumber(score)) return;
-  const share = score / uniqueKeys.length;
-  for (const key of uniqueKeys) target[key] = round((target[key] ?? 0) + share);
+  for (const key of uniqueKeys) {
+    target[key] = round(Math.min(MAX_VECTOR_SCORE, (target[key] ?? 0) + score));
+  }
 }
 
 function parentGenreForType(typeKey) {
@@ -49,6 +64,21 @@ export function nestTypeScores(flatScores) {
   return nested;
 }
 
+function canonicalTypeScores(typeScores) {
+  const canonical = {};
+  for (const scores of Object.values(typeScores ?? {})) {
+    for (const [typeKey, score] of Object.entries(boundedScoreMap(scores))) {
+      const parentGenre = parentGenreForType(typeKey);
+      canonical[parentGenre] ??= {};
+      canonical[parentGenre][typeKey] = Math.max(
+        canonical[parentGenre][typeKey] ?? 0,
+        score,
+      );
+    }
+  }
+  return canonical;
+}
+
 function compatibilityFor(seed, featureKey, catalogKey) {
   return (seed[catalogKey] ?? []).find((item) => item.featureKey === featureKey)?.webtoonFitCompatibility ?? null;
 }
@@ -56,15 +86,17 @@ function compatibilityFor(seed, featureKey, catalogKey) {
 function addPositiveFeature(target, featureKey, score, seed) {
   const mapping = compatibilityFor(seed, featureKey, "positiveFeatureCatalog");
   if (!mapping || mapping.mappingType === "webtoon_match_only") return;
-  addDistributed(target.tagScores, mapping.positiveTagKeys, score);
-  addDistributed(target.contentAxisScores, mapping.contentAxisKeys, score);
+  addScore(target.tagScores, mapping.positiveTagKeys, score);
+  addScore(target.contentAxisScores, mapping.contentAxisKeys, score);
   const typeHints = mapping.typeHints ?? [];
   if (typeHints.length) {
-    const share = score / typeHints.length;
     for (const typeKey of typeHints) {
       const parent = parentGenreForType(typeKey);
       target.typeScores[parent] ??= {};
-      target.typeScores[parent][typeKey] = round((target.typeScores[parent][typeKey] ?? 0) + share);
+      target.typeScores[parent][typeKey] = round(Math.min(
+        MAX_VECTOR_SCORE,
+        (target.typeScores[parent][typeKey] ?? 0) + score,
+      ));
     }
   }
 }
@@ -72,21 +104,23 @@ function addPositiveFeature(target, featureKey, score, seed) {
 export function buildProfileTasteVector(snapshot, seed) {
   const vector = {
     vectorVersion: MATCH_TASTE_VECTOR_VERSION,
-    genreScores: numericMap(snapshot.rawGenreAffinity),
+    genreScores: boundedScoreMap(snapshot.rawGenreAffinity),
     typeScores: {},
     tagScores: {},
     avoidanceTagScores: {},
     contentAxisScores: {},
-    artStyleScores: numericMap(snapshot.artPreferenceScores),
+    artStyleScores: scalePeakToMax(snapshot.artPreferenceScores),
   };
 
   const positiveGroups = snapshot.positiveTasteScores ?? {};
   for (const scores of Object.values(positiveGroups)) {
-    for (const [featureKey, score] of Object.entries(numericMap(scores))) addPositiveFeature(vector, featureKey, score, seed);
+    for (const [featureKey, score] of Object.entries(scalePeakToMax(scores))) {
+      addPositiveFeature(vector, featureKey, score, seed);
+    }
   }
-  for (const [featureKey, score] of Object.entries(numericMap(snapshot.avoidanceTasteScores))) {
+  for (const [featureKey, score] of Object.entries(scalePeakToMax(snapshot.avoidanceTasteScores))) {
     const mapping = compatibilityFor(seed, featureKey, "avoidanceFeatureCatalog");
-    addDistributed(vector.avoidanceTagScores, mapping?.avoidanceTagKeys, score);
+    addScore(vector.avoidanceTagScores, mapping?.avoidanceTagKeys, score);
   }
   return vector;
 }
@@ -169,56 +203,53 @@ export function matchingRecommendationGenreKeys(recommendation, targetGenreKeys,
 export function recommendationToTasteVector(recommendation, seed) {
   return {
     vectorVersion: MATCH_TASTE_VECTOR_VERSION,
-    genreScores: projectRecommendationGenreScores(recommendation, seed),
-    typeScores: Object.fromEntries(Object.entries(recommendation?.typeScores ?? {})
-      .map(([genreKey, scores]) => [genreKey, numericMap(scores)])
-      .filter(([, scores]) => Object.keys(scores).length)),
-    tagScores: numericMap(recommendation?.tagScores),
-    avoidanceTagScores: numericMap(recommendation?.avoidanceTagScores),
-    contentAxisScores: numericMap(recommendation?.contentAxisScores),
-    artStyleScores: numericMap(recommendation?.artStyleScores),
+    genreScores: scalePeakToMax(projectRecommendationGenreScores(recommendation, seed)),
+    // 일부 카탈로그 레코드는 교차 장르 타입을 작품의 대표 장르 버킷에
+    // 저장한다. 비교 벡터에서는 타입 키 접두사 기준의 canonical 버킷으로
+    // 재배치해 같은 타입이 서로 다른 경로로 분리되지 않게 한다.
+    typeScores: canonicalTypeScores(recommendation?.typeScores),
+    tagScores: boundedScoreMap(recommendation?.tagScores),
+    avoidanceTagScores: boundedScoreMap(recommendation?.avoidanceTagScores),
+    contentAxisScores: boundedScoreMap(recommendation?.contentAxisScores),
+    artStyleScores: boundedScoreMap(recommendation?.artStyleScores),
   };
 }
 
-function normalize(scoreMap) {
-  const clean = numericMap(scoreMap);
-  const total = sum(Object.values(clean));
-  if (!total) return {};
-  return Object.fromEntries(Object.entries(clean).map(([key, score]) => [key, round(score / total)]));
-}
-
-function averageNormalized(vectors) {
-  const normalized = vectors.map(normalize).filter((item) => Object.keys(item).length);
-  if (!normalized.length) return {};
-  const keys = [...new Set(normalized.flatMap((item) => Object.keys(item)))];
-  return Object.fromEntries(keys.map((key) => [key, round(sum(normalized.map((item) => item[key] ?? 0)) / normalized.length)]));
-}
-
-function blendMap(base, recommendationAverage, recommendationWeight, preserveTotal = false) {
-  const baseClean = numericMap(base);
-  if (!Object.keys(recommendationAverage).length) return baseClean;
-  const baseNormalized = normalize(baseClean);
-  const keys = [...new Set([...Object.keys(baseNormalized), ...Object.keys(recommendationAverage)])];
-  const testWeight = 1 - recommendationWeight;
-  const total = preserveTotal ? sum(Object.values(baseClean)) || 1 : 1;
+function averageScoreMaps(vectors) {
+  if (!vectors.length) return {};
+  const clean = vectors.map(boundedScoreMap);
+  const keys = [...new Set(clean.flatMap((item) => Object.keys(item)))];
   return Object.fromEntries(keys.map((key) => [
     key,
-    round(((baseNormalized[key] ?? 0) * testWeight + (recommendationAverage[key] ?? 0) * recommendationWeight) * total),
+    round(sum(clean.map((item) => item[key] ?? 0)) / clean.length),
+  ]).filter(([, score]) => score > 0));
+}
+
+function blendMap(base, recommendationAverage, recommendationWeight) {
+  const baseClean = boundedScoreMap(base);
+  const keys = [...new Set([...Object.keys(baseClean), ...Object.keys(recommendationAverage)])];
+  const testWeight = 1 - recommendationWeight;
+  return Object.fromEntries(keys.map((key) => [
+    key,
+    round(Math.min(
+      MAX_VECTOR_SCORE,
+      (baseClean[key] ?? 0) * testWeight + (recommendationAverage[key] ?? 0) * recommendationWeight,
+    )),
   ]).filter(([, score]) => score > 0));
 }
 
 export function blendTasteVectors(baseVector, recommendations, recommendationWeight, seed) {
   const workVectors = recommendations.map((item) => recommendationToTasteVector(item, seed));
   const average = {
-    genreScores: averageNormalized(workVectors.map((item) => item.genreScores)),
-    tagScores: averageNormalized(workVectors.map((item) => item.tagScores)),
-    contentAxisScores: averageNormalized(workVectors.map((item) => item.contentAxisScores)),
-    artStyleScores: averageNormalized(workVectors.map((item) => item.artStyleScores)),
-    typeScores: averageNormalized(workVectors.map((item) => flattenTypeScores(item.typeScores))),
+    genreScores: averageScoreMaps(workVectors.map((item) => item.genreScores)),
+    tagScores: averageScoreMaps(workVectors.map((item) => item.tagScores)),
+    contentAxisScores: averageScoreMaps(workVectors.map((item) => item.contentAxisScores)),
+    artStyleScores: averageScoreMaps(workVectors.map((item) => item.artStyleScores)),
+    typeScores: averageScoreMaps(workVectors.map((item) => flattenTypeScores(item.typeScores))),
   };
   return {
     vectorVersion: MATCH_TASTE_VECTOR_VERSION,
-    genreScores: blendMap(baseVector.genreScores, average.genreScores, recommendationWeight, true),
+    genreScores: blendMap(baseVector.genreScores, average.genreScores, recommendationWeight),
     typeScores: nestTypeScores(blendMap(flattenTypeScores(baseVector.typeScores), average.typeScores, recommendationWeight)),
     tagScores: blendMap(baseVector.tagScores, average.tagScores, recommendationWeight),
     // 작품의 avoidance는 작품의 부담 요소다. 추천했다고 사용자의 불호가 되지는 않으므로 직접 응답만 유지한다.

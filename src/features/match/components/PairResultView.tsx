@@ -5,7 +5,7 @@ import { trackMatchEvent } from "../analytics/client";
 import { pairArchetypeFor } from "../share/shareArchetypes.mjs";
 import { readMatchDraft } from "../storage/draft.mjs";
 
-type RecommendedWebtoon = { canonicalWebtoonId: string; title: string; platform: string; officialUrl: string | null; mainGenre: string; matchedSalesGenres: string[] };
+type RecommendedWebtoon = { canonicalWebtoonId: string; title: string; platform: string; officialUrl: string | null; mainGenre: string; mainGenreLabel: string; tasteFitHighlighted: boolean };
 type PairResult = { ownerNickname: string; challengerNickname: string; score: number; band: { label: string; subcopy: string }; sharedGenres: string[]; differentGenres: string[]; ownerRecommendedGenres: string[]; challengerRecommendedGenres: string[]; ownerRecommendations: RecommendedWebtoon[]; challengerRecommendations: RecommendedWebtoon[]; recommendationTasteApplied: boolean; sharedTasteLabels: string[]; trustSentence: string; rank: number; entryCount: number };
 
 export function PairResultView({ challengeCode, resultId, showRankingReturn = false }: { challengeCode: string; resultId: string; showRankingReturn?: boolean }) {
@@ -43,7 +43,7 @@ export function PairResultView({ challengeCode, resultId, showRankingReturn = fa
   const scoreEffect = result.score >= 85 ? "is-score-peak" : result.score >= 70 ? "is-score-high" : result.score >= 50 ? "is-score-mid" : "is-score-low";
   const scoreStyle = { "--match-score": `${Math.max(0, Math.min(100, result.score))}%` } as CSSProperties;
 
-  return <main className="match-page match-pair-page">{showRankingReturn ? <a className="match-pair-context-back" href={`/match/c/${challengeCode}/ranking`}>← 전체 랭킹</a> : null}<section className={`match-pair-hero is-${archetype.theme} ${scoreEffect}`}><p className="match-eyebrow">{result.ownerNickname} × {result.challengerNickname}</p><h1>웹툰궁합</h1><div className="match-score-ring" style={scoreStyle}><strong>{result.score}</strong><span>%</span></div><strong className="match-pair-type-badge">{result.band.label}</strong><p className="match-pair-type-label">우리의 웹툰 관계 타입</p><h2>{archetype.name}</h2><p className="match-pair-archetype-copy"><SentenceLines text={archetype.description} /></p>{result.recommendationTasteApplied ? <p className="match-live-score-note">테스트 결과와 등록한 추천작을 함께 반영한 최신 궁합이에요.</p> : null}</section><PairSection title="같이 달릴 장르" items={result.sharedGenres} empty="서로의 새 장르를 개척해 봐요" /><RecommendationSections result={result} /><WebtoonRecommendationSection result={result} /><PairSection title="함께 맞는 취향" items={result.sharedTasteLabels} empty="세부 취향은 각자 다른 매력이 있어요" /><section className="match-result-section match-trust-card"><h2>이 사람 추천, 믿어도 될까?</h2><p>{result.trustSentence}</p></section><section className="match-result-section match-rank-summary"><span>현재 순위</span><strong>{result.rank}위</strong><small>도전자 {result.entryCount}명 중</small></section><p className="match-disclaimer">웹툰궁합은 {result.recommendationTasteApplied ? "테스트 응답과 등록한 추천작" : "테스트 응답"}으로 본 취향 비교 결과이며, 사람 사이의 관계나 성격을 평가하지 않아요.</p><div className="match-result-actions"><a className="match-button" href={`/match/share/pair?challengeCode=${challengeCode}&resultId=${resultId}`}>궁합 결과 공유하기</a><a className="match-button match-button--secondary" href={`/match/c/${challengeCode}/ranking`}>전체 랭킹 보기</a>{personalResultId !== null ? personalResultId ? <a className="match-button match-button--secondary" href={`/match/result/${personalResultId}?from=pair`}>내 취향 결과 보기</a> : <a className="match-button match-button--secondary" href={`/match/c/${challengeCode}`}>나도 테스트하기</a> : null}</div></main>;
+  return <main className="match-page match-pair-page">{showRankingReturn ? <a className="match-pair-context-back" href={`/match/c/${challengeCode}/ranking`}>← 전체 랭킹</a> : null}<section className={`match-pair-hero is-${archetype.theme} ${scoreEffect}`}><p className="match-eyebrow">{result.ownerNickname} × {result.challengerNickname}</p><h1>웹툰궁합</h1><div className="match-score-ring" style={scoreStyle}><strong>{result.score}</strong><span>%</span></div><strong className="match-pair-type-badge">{result.band.label}</strong><p className="match-pair-type-label">우리의 웹툰 관계 타입</p><h2>{archetype.name}</h2><p className="match-pair-archetype-copy"><SentenceLines text={archetype.description} /></p>{result.recommendationTasteApplied ? <p className="match-live-score-note">테스트 결과와 등록한 추천작을 함께 반영한 최신 궁합이에요.</p> : null}</section><PairSection title="같이 달릴 장르" items={result.sharedGenres} empty="서로의 새 장르를 개척해 봐요" /><RecommendationSections result={result} /><WebtoonRecommendationSection result={result} /><PairSection title="함께 맞는 취향" items={result.sharedTasteLabels} empty="세부 취향은 각자 다른 매력이 있어요" /><section className="match-result-section match-trust-card"><h2>이 사람 추천, 믿어도 될까?</h2><p>{result.trustSentence}</p></section><section className="match-result-section match-rank-summary"><span>현재 순위</span><strong>{result.rank}위</strong><small>도전자 {result.entryCount}명 중</small></section><p className="match-disclaimer">웹툰궁합은 {result.recommendationTasteApplied ? "테스트 응답과 등록한 추천작" : "테스트 응답"}으로 본 취향 비교 결과이며, 사람 사이의 관계나 성격을 평가하지 않아요.</p><div className="match-result-actions"><a className="match-button" href={`/match/share/pair?challengeCode=${challengeCode}&resultId=${resultId}`}>궁합 결과 공유하기</a><a className="match-button match-button--secondary" href={`/match/c/${challengeCode}/ranking`}>{result.ownerNickname}님의 전체 랭킹 보기</a>{personalResultId !== null ? personalResultId ? <a className="match-button match-button--secondary" href={`/match/result/${personalResultId}?from=pair`}>내 취향 결과 보기</a> : <a className="match-button match-button--secondary" href={`/match/c/${challengeCode}`}>나도 테스트하기</a> : null}</div></main>;
 }
 
 function SentenceLines({ text }: { text: string }) {
@@ -53,19 +53,19 @@ function SentenceLines({ text }: { text: string }) {
 
 function RecommendationSections({ result }: { result: PairResult }) {
   const recommendations = [
-    { from: result.ownerNickname, to: result.challengerNickname, genres: result.ownerRecommendedGenres },
-    { from: result.challengerNickname, to: result.ownerNickname, genres: result.challengerRecommendedGenres },
+    { nickname: result.ownerNickname, genres: result.ownerRecommendedGenres },
+    { nickname: result.challengerNickname, genres: result.challengerRecommendedGenres },
   ].filter((item) => item.genres.length > 0);
 
   if (!recommendations.length) return null;
 
-  return <section className="match-result-section match-recommendations"><h2>각자 영업할 장르</h2><div>
-    {recommendations.map((item) => <RecommendationRow {...item} key={`${item.from}-${item.to}`} />)}
+  return <section className="match-result-section match-recommendations"><h2>서로에게 물어볼 장르</h2><div>
+    {recommendations.map((item) => <RecommendationRow {...item} key={item.nickname} />)}
   </div></section>;
 }
 
-function RecommendationRow({ from, to, genres }: { from: string; to: string; genres: string[] }) {
-  return <div><strong>{from} → {to}</strong><span>{genres.join(" · ")}</span></div>;
+function RecommendationRow({ nickname, genres }: { nickname: string; genres: string[] }) {
+  return <div><strong>{nickname}에게 물어볼 장르</strong><span>{genres.join(" · ")}</span></div>;
 }
 
 function WebtoonRecommendationSection({ result }: { result: PairResult }) {
@@ -111,7 +111,7 @@ function RecommendationCarousel({ nickname, items }: { nickname: string; items: 
 
   return <div><h3>{nickname} 추천</h3>{items.length ? <div className={`match-recommendation-carousel${carouselEnabled ? "" : " is-static"}`}>
     {carouselEnabled && canScrollLeft ? <button className="match-carousel-arrow is-left" type="button" onClick={() => scroll(-1)} aria-label={`${nickname}님의 이전 추천작 보기`}>‹</button> : null}
-    <ol ref={listRef}>{items.map((item) => <li className={item.matchedSalesGenres.length ? "is-sales-match" : undefined} key={item.canonicalWebtoonId}>{item.officialUrl ? <a href={item.officialUrl} target="_blank" rel="noreferrer"><strong>{item.title}</strong><span>{item.platform}</span>{item.matchedSalesGenres.length ? <small>{item.matchedSalesGenres.join(" · ")} 영업작</small> : null}</a> : <div><strong>{item.title}</strong><span>{item.platform}</span>{item.matchedSalesGenres.length ? <small>{item.matchedSalesGenres.join(" · ")} 영업작</small> : null}</div>}</li>)}</ol>
+    <ol ref={listRef}>{items.map((item) => <li className={item.tasteFitHighlighted ? "is-taste-fit" : undefined} key={item.canonicalWebtoonId}>{item.officialUrl ? <a href={item.officialUrl} target="_blank" rel="noreferrer"><strong>{item.title}</strong><span>{item.platform}</span><small className="match-webtoon-genre">{item.mainGenreLabel}</small></a> : <div><strong>{item.title}</strong><span>{item.platform}</span><small className="match-webtoon-genre">{item.mainGenreLabel}</small></div>}</li>)}</ol>
     {carouselEnabled && canScrollRight ? <button className="match-carousel-arrow is-right" type="button" onClick={() => scroll(1)} aria-label={`${nickname}님의 다음 추천작 보기`}>›</button> : null}
   </div> : <p>아직 등록한 추천작이 없어요.</p>}</div>;
 }

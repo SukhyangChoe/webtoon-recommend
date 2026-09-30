@@ -116,8 +116,8 @@ export function SharePreview({ type, profilePublicId, challengeCode, resultId }:
             metric: `${result.score}%`,
             rows: [
               { label: "같이 달릴 장르", value: result.sharedGenres.slice(0, 2).join(" · ") || "새 장르 개척" },
-              { label: `${result.ownerNickname} → ${result.challengerNickname}`, value: result.ownerRecommendedGenres.slice(0, 2).join(" · ") },
-              { label: `${result.challengerNickname} → ${result.ownerNickname}`, value: result.challengerRecommendedGenres.slice(0, 2).join(" · ") },
+              { label: `${result.ownerNickname}에게 물어볼 장르`, value: result.ownerRecommendedGenres.slice(0, 2).join(" · ") },
+              { label: `${result.challengerNickname}에게 물어볼 장르`, value: result.challengerRecommendedGenres.slice(0, 2).join(" · ") },
             ].filter((row) => row.value),
             footer: "웹툰 취향 한정 관계 타입 · 사람 사이를 평가하지 않아요",
             fileName: "webtoon-match-pair.png",

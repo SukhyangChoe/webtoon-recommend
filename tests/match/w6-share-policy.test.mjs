@@ -59,8 +59,10 @@ test("pair and ranking sharing preserve their intended destinations", () => {
   assert.equal(new URL(pair.shareUrl).searchParams.get("utm_content"), "pair");
   assert.equal(new URL(ranking.shareUrl).searchParams.get("utm_content"), "ranking_initial");
   assert.match(pair.text, /밤샘 정주행 메이트/);
-  assert.match(pair.text, /주인 → 도전자: 로맨스/);
-  assert.match(pair.text, /도전자 → 주인: 무협/);
+  assert.match(pair.text, /주인에게 물어볼 장르: 로맨스/);
+  assert.match(pair.text, /도전자에게 물어볼 장르: 무협/);
+  assert.doesNotMatch(pair.text, /영업/);
+  assert.doesNotMatch(pair.text, /→/);
   assert.ok(pair.text.length < 500);
   assert.ok(ranking.text.length < 500);
 });
@@ -71,8 +73,8 @@ test("pair recommendation copy omits empty directions", () => {
     sharedGenres: ["판타지"], ownerRecommendedGenres: ["로맨스"], challengerRecommendedGenres: [],
     trustSentence: "추천 문구", pairUrl: "https://example.com/match/c/code/match/result",
   });
-  assert.match(pair.text, /주인 → 도전자: 로맨스/);
-  assert.doesNotMatch(pair.text, /도전자 → 주인/);
+  assert.match(pair.text, /주인에게 물어볼 장르: 로맨스/);
+  assert.doesNotMatch(pair.text, /도전자에게 물어볼 장르/);
   assert.doesNotMatch(pair.text, /뚜렷한 장르 없음/);
 });
 

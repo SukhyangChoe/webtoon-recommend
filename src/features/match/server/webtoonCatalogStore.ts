@@ -107,7 +107,7 @@ export async function getProfileRecommendations(publicProfileId: string) {
     join public.webtoons webtoons on webtoons.canonical_webtoon_id = recommendations.canonical_webtoon_id
     join public.match_taste_snapshots snapshots on snapshots.profile_id = recommendations.profile_id
     where snapshots.public_profile_id = ${publicProfileId}
-      and webtoons.catalog_status <> 'hidden'
+      and webtoons.catalog_status = 'active'
     order by recommendations.sort_order asc
   `;
   return rows.map(toSummary);
@@ -132,7 +132,7 @@ export async function getRecommendationsForProfiles(profileIds: string[]) {
     from public.match_profile_recommendations recommendations
     join public.webtoons webtoons on webtoons.canonical_webtoon_id = recommendations.canonical_webtoon_id
     where recommendations.profile_id = any(${uniqueProfileIds}::uuid[])
-      and webtoons.catalog_status <> 'hidden'
+      and webtoons.catalog_status = 'active'
     order by recommendations.profile_id, recommendations.sort_order asc
   `;
   for (const row of rows) {

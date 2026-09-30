@@ -69,7 +69,7 @@ async function withCurrentRecommendationTaste(snapshot: StoredSnapshot) {
     join public.webtoons webtoons
       on webtoons.canonical_webtoon_id = recommendations.canonical_webtoon_id
     where recommendations.profile_id = ${snapshot.profileId}::uuid
-      and webtoons.catalog_status <> 'hidden'
+      and webtoons.catalog_status = 'active'
     order by recommendations.sort_order asc
   `;
   return applyRecommendationTaste(
