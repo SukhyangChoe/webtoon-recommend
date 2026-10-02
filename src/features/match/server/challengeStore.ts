@@ -8,7 +8,11 @@ import { pairTrustSentence } from "../share/pairTrustCopy.mjs";
 import { getMatchDatabase, isPostgresError } from "./database";
 import { getTasteSnapshot, getTasteSnapshotById, updateProfileNickname, type StoredSnapshot } from "./resultStore";
 import { sanitizeMatchNickname } from "./nickname.mjs";
-import { getRecommendationsForProfiles, type WebtoonRecommendationRecord } from "./webtoonCatalogStore";
+import {
+  getProfileIdForAnonymousId,
+  getRecommendationsForProfiles,
+  type WebtoonRecommendationRecord,
+} from "./webtoonCatalogStore";
 
 type Challenge = {
   challengeId: string;
@@ -128,7 +132,12 @@ const catalogGenreLabels: Record<string, string> = {
 };
 const featureLabels = Object.fromEntries([...questionSeed.positiveFeatureCatalog, ...questionSeed.avoidanceFeatureCatalog].map((feature) => [feature.featureKey, feature.publicShortLabel ?? feature.displayLabel]));
 
-function publicRecommendations(items: WebtoonRecommendationRecord[], targetSnapshot: StoredSnapshot | null) {
+function publicRecommendations(
+  items: WebtoonRecommendationRecord[],
+  targetSnapshot: StoredSnapshot | null,
+  recommenderPublicProfileId: string | null,
+  canViewerLike: boolean,
+) {
   return items.map(({ recommendationVector, ...item }) => {
     const fit = calculateRecommendationFit(
       targetSnapshot?.tasteVector,
@@ -137,6 +146,8 @@ function publicRecommendations(items: WebtoonRecommendationRecord[], targetSnaps
     );
     return {
       ...item,
+      recommenderPublicProfileId,
+      canViewerLike,
       mainGenreLabel: catalogGenreLabels[item.mainGenre] ?? item.mainGenre,
       tasteFitHighlighted: fit.highlighted,
     };
@@ -704,7 +715,7 @@ export async function createChallengeEntry(input: { challengeCode: string; anony
   return { resultId: persisted.entry.resultId, score: persisted.entry.score, rank, updated: persisted.updated, existing: persisted.existing };
 }
 
-export async function getPublicPairResult(challengeCode: string, resultId: string) {
+export async function getPublicPairResult(challengeCode: string, resultId: string, viewerAnonymousId?: string | null) {
   const challenge = await findChallenge(challengeCode);
   if (!challenge) return null;
   const database = getMatchDatabase();
@@ -735,10 +746,16 @@ export async function getPublicPairResult(challengeCode: string, resultId: strin
   const ranking = await rankedEntries(challenge.challengeId);
   const entry = ranking.find((item) => item.resultId === resultId);
   if (!entry) return null;
+  const viewerProfileId = viewerAnonymousId
+    ? await getProfileIdForAnonymousId(viewerAnonymousId)
+    : null;
   const [ownerSnapshot, challengerSnapshot, recommendations] = await Promise.all([
     getTasteSnapshotById(result.ownerSnapshotId),
     getTasteSnapshotById(result.challengerSnapshotId),
-    getRecommendationsForProfiles([challenge.ownerProfileId, entry.challengerProfileId]),
+    getRecommendationsForProfiles(
+      [challenge.ownerProfileId, entry.challengerProfileId],
+      viewerProfileId,
+    ),
   ]);
   const explanations = ownerSnapshot && challengerSnapshot ? calculateCompatibility(ownerSnapshot, challengerSnapshot).explanations : null;
   const ownerRecommendationGenreKeys = explanations?.ownerRecommendationGenreKeys ?? [];
@@ -754,8 +771,18 @@ export async function getPublicPairResult(challengeCode: string, resultId: strin
     differentGenres: result.differentGenres,
     ownerRecommendedGenres: ownerRecommendationGenreKeys.map((key: string) => genreLabels[key]).filter(Boolean),
     challengerRecommendedGenres: challengerRecommendationGenreKeys.map((key: string) => genreLabels[key]).filter(Boolean),
-    ownerRecommendations: publicRecommendations(recommendations[challenge.ownerProfileId] ?? [], challengerSnapshot),
-    challengerRecommendations: publicRecommendations(recommendations[entry.challengerProfileId] ?? [], ownerSnapshot),
+    ownerRecommendations: publicRecommendations(
+      recommendations[challenge.ownerProfileId] ?? [],
+      challengerSnapshot,
+      ownerSnapshot?.publicProfileId ?? null,
+      Boolean(viewerProfileId && viewerProfileId !== challenge.ownerProfileId),
+    ),
+    challengerRecommendations: publicRecommendations(
+      recommendations[entry.challengerProfileId] ?? [],
+      ownerSnapshot,
+      challengerSnapshot?.publicProfileId ?? null,
+      Boolean(viewerProfileId && viewerProfileId !== entry.challengerProfileId),
+    ),
     recommendationTasteApplied: Boolean(
       ownerSnapshot?.recommendationInfluence?.workCount
       || challengerSnapshot?.recommendationInfluence?.workCount

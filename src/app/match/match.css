@@ -311,11 +311,8 @@
 .match-module .match-top-genres article > div { display: grid; gap: 7px; min-width: 0; }
 .match-module .match-top-genres article > div > strong { overflow: hidden; color: var(--match-ink); font-size: .87rem; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
 .match-module .match-top-genres article.is-primary > div > strong { color: #fff; }
-.match-module .match-top-stars { display: flex; width: 100%; flex-wrap: nowrap; gap: 1px; overflow: hidden; color: #ffbf35; font-size: .76rem; line-height: 1; white-space: nowrap; }
+.match-module .match-top-stars { display: flex; width: 100%; flex-wrap: wrap; gap: 2px 1px; overflow: visible; color: #ffbf35; font-size: .74rem; line-height: 1; }
 .match-module .match-top-stars i { flex: 0 0 auto; font-style: normal; }
-.match-module .match-top-stars.is-dense { gap: 0; font-size: .54rem; letter-spacing: -.1em; }
-.match-module .match-top-stars.is-very-dense { gap: 0; font-size: .42rem; letter-spacing: -.18em; }
-.match-module .match-top-stars.is-ultra-dense { gap: 0; font-size: .32rem; letter-spacing: -.3em; }
 .match-module .match-top-stars.is-empty { color: #b8b1c4; }
 .match-module .match-taste-influence { position: relative; z-index: 1; margin: 13px 0 0; padding: 10px 12px; border-radius: 12px; background: #f1edf8; color: var(--match-muted); font-size: .79rem; line-height: 1.45; }
 .match-module .match-taste-influence strong { color: var(--match-purple-dark); }
@@ -356,6 +353,9 @@
 .match-module .match-my-recommendations li > div { display: grid; min-width: 0; gap: 2px; }
 .match-module .match-my-recommendations li strong { overflow: hidden; font-size: .91rem; text-overflow: ellipsis; white-space: nowrap; }
 .match-module .match-my-recommendations li span { color: var(--match-muted); font-size: .77rem; }
+.match-module .match-my-recommendations li p { margin: 8px 0 0; overflow-wrap: anywhere; color: var(--match-muted); font-size: .8rem; line-height: 1.55; white-space: pre-line; }
+.match-module :is(.match-my-recommendations,.match-pair-webtoons) q { quotes: "“" "”" "‘" "’"; }
+.match-module .match-my-recommendations li small { margin-top: 5px; color: var(--match-muted); font-size: .72rem; font-weight: 750; }
 .match-module .match-my-recommendations > .match-button { display: flex; margin-top: 15px; align-items: center; justify-content: center; text-decoration: none; }
 .match-module .match-result-actions { display: grid; gap: 8px; padding: 4px 2px 18px; }
 .match-module .match-challenge-form { display: grid; gap: 14px; margin-top: 24px; }
@@ -512,17 +512,25 @@
 .match-module .match-confirm-actions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; margin-top: 20px; }
 .match-module .match-confirm-actions .match-button { min-width: 0; padding: 0 10px; }
 
-.match-module .match-recommendation-manager { display: grid; align-content: start; gap: 14px; }
+.match-module .match-recommendation-manager { display: grid; align-content: start; gap: 14px; padding-bottom: 104px; }
 .match-module .match-recommendation-manager > header { padding: 12px 4px 5px; }
 .match-module .match-recommendation-manager > header h1 { margin: 0; font-size: clamp(1.7rem,7.5vw,2.15rem); line-height: 1.22; letter-spacing: -.05em; }
 .match-module .match-recommendation-manager > header > p:last-child { margin: 10px 0 0; color: var(--match-muted); font-size: .91rem; line-height: 1.55; }
 .match-module .match-selected-webtoons { display: grid; gap: 7px; margin: 15px 0 0; padding: 0; list-style: none; }
-.match-module .match-selected-webtoons li { display: grid; grid-template-columns: 25px minmax(0,1fr) auto; gap: 9px; align-items: center; min-height: 58px; padding: 9px; border: 1px solid var(--match-line); border-radius: 12px; }
+.match-module .match-selected-webtoons li { display: grid; grid-template-columns: 25px minmax(0,1fr) auto; gap: 9px; align-items: start; min-height: 58px; padding: 11px 9px; border: 1px solid var(--match-line); border-radius: 12px; }
 .match-module .match-selected-webtoons li > span { display: grid; width: 25px; height: 25px; place-items: center; border-radius: 50%; background: var(--match-purple-soft); color: var(--match-purple-dark); font-size: .72rem; font-weight: 900; }
-.match-module .match-selected-webtoons li > div:nth-child(2) { display: grid; min-width: 0; gap: 2px; }
+.match-module .match-selected-webtoons li > div:nth-child(2) { display: grid; min-width: 0; gap: 8px; }
+.match-module .match-selected-webtoon-content > div { display: grid; gap: 2px; }
+.match-module .match-selected-webtoon-content label { display: grid; gap: 5px; }
+.match-module .match-selected-webtoon-content label > span { display: flex; gap: 5px; align-items: center; color: var(--match-muted); font-size: .76rem; font-weight: 800; }
+.match-module .match-selected-webtoon-content label > span small { padding: 2px 5px; border-radius: 999px; background: var(--match-purple-soft); font-size: .65rem; }
+.match-module .match-selected-webtoon-content textarea { width: 100%; min-height: 64px; padding: 9px 10px; resize: vertical; border: 1px solid var(--match-line); border-radius: 10px; background: #fff; color: var(--match-ink); font: inherit; font-size: .82rem; line-height: 1.45; outline: none; }
+.match-module .match-selected-webtoon-content textarea:focus { border-color: var(--match-purple); box-shadow: 0 0 0 3px rgba(104,71,232,.1); }
+.match-module .match-selected-webtoon-content label > small { justify-self: end; }
 .match-module .match-selected-webtoons strong { overflow: hidden; font-size: .9rem; text-overflow: ellipsis; white-space: nowrap; }
 .match-module .match-selected-webtoons small { color: var(--match-muted); font-size: .76rem; }
 .match-module .match-selected-webtoons li > div:last-child { display: flex; gap: 3px; }
+.match-module .match-selected-webtoons .match-selected-webtoon-actions { flex-direction: column; }
 .match-module .match-selected-webtoons button,
 .match-module .match-webtoon-search-results button { min-height: 32px; padding: 0 8px; border: 1px solid var(--match-line); border-radius: 8px; background: #fff; color: var(--match-purple-dark); font-weight: 750; cursor: pointer; }
 .match-module .match-selected-webtoons button:disabled,
@@ -537,25 +545,34 @@
 .match-module .match-webtoon-search-results li > div { display: grid; min-width: 0; gap: 3px; }
 .match-module .match-webtoon-search-results strong { overflow: hidden; font-size: .9rem; text-overflow: ellipsis; white-space: nowrap; }
 .match-module .match-webtoon-search-results span { overflow: hidden; color: var(--match-muted); font-size: .75rem; text-overflow: ellipsis; white-space: nowrap; }
-.match-module .match-save-success { margin: 0; padding: 11px 13px; border-radius: 12px; background: #e8f7f0; color: #176c55; font-size: .88rem; font-weight: 800; }
 .match-module .match-recommendation-manager .match-result-actions { align-self: start; }
+.match-module .match-recommendation-save-floating { position: fixed; z-index: 12; right: 0; bottom: max(12px,env(safe-area-inset-bottom)); left: 0; width: min(calc(100vw - 32px),448px); margin: 0 auto; border: 1px solid rgba(255,255,255,.38); box-shadow: 0 12px 28px rgba(73,45,166,.28); }
+.match-module .match-recommendation-save-toast { z-index: 13; bottom: max(82px,calc(env(safe-area-inset-bottom) + 70px)); width: max-content; max-width: min(calc(100vw - 32px),448px); border-color: rgba(255,255,255,.22); border-radius: 16px; background: rgba(23,108,85,.96); }
 .match-module .match-recommendation-manager .match-result-actions .match-button { display: flex; height: 50px; min-height: 50px; align-items: center; justify-content: center; padding: 0 14px; line-height: 1; text-decoration: none; }
 
 .match-module .match-pair-webtoons > div { display: grid; gap: 18px; margin-top: 14px; }
 .match-module .match-pair-webtoons > div > div { min-width: 0; max-width: 100%; }
 .match-module .match-pair-webtoons h3 { margin: 0 0 8px; color: var(--match-purple-dark); font-size: .92rem; }
 .match-module .match-recommendation-carousel { position: relative; width: 100%; min-width: 0; max-width: 100%; }
-.match-module .match-pair-webtoons ol { display: grid; width: 100%; max-width: 100%; grid-auto-flow: column; grid-auto-columns: max(132px,calc((100% - 16px)/3)); gap: 8px; margin: 0; padding: 2px 2px 8px; overflow-x: auto; list-style: none; scrollbar-width: none; scroll-behavior: smooth; scroll-padding-inline: 2px; scroll-snap-type: x proximity; }
-.match-module .match-recommendation-carousel.is-static ol { grid-auto-flow: row; grid-auto-columns: unset; grid-template-columns: repeat(3,minmax(0,1fr)); overflow: visible; scroll-snap-type: none; }
+.match-module .match-pair-webtoons ol { display: grid; width: 100%; max-width: 100%; grid-auto-flow: column; grid-auto-columns: max(156px,calc((100% - 8px)/2)); gap: 8px; margin: 0; padding: 2px 2px 8px; overflow-x: auto; list-style: none; scrollbar-width: none; scroll-behavior: smooth; scroll-padding-inline: 2px; scroll-snap-type: x proximity; }
+.match-module .match-recommendation-carousel.is-static ol { grid-auto-flow: row; grid-auto-columns: unset; grid-template-columns: repeat(2,minmax(0,1fr)); overflow: visible; scroll-snap-type: none; }
 .match-module .match-pair-webtoons ol::-webkit-scrollbar { display: none; }
 .match-module .match-pair-webtoons li { min-width: 0; scroll-snap-align: start; }
-.match-module .match-pair-webtoons :is(a,li > div) { display: grid; gap: 4px; min-height: 70px; padding: 12px; border: 1px solid var(--match-line); border-radius: 13px; background: #faf8fd; color: inherit; text-decoration: none; }
-.match-module .match-pair-webtoons strong { overflow: hidden; font-size: .91rem; text-overflow: ellipsis; white-space: nowrap; }
+.match-module .match-pair-webtoons li > div { display: grid; height: 100%; min-height: 164px; gap: 5px; align-content: start; padding: 12px; border: 1px solid var(--match-line); border-radius: 13px; background: #faf8fd; color: inherit; }
+.match-module .match-pair-webtoons .match-recommendation-title { display: block; min-width: 0; color: inherit; text-decoration: none; }
+.match-module .match-pair-webtoons .match-recommendation-title:hover strong { color: var(--match-purple-dark); text-decoration: underline; text-underline-offset: 2px; }
+.match-module .match-pair-webtoons strong { display: block; min-width: 0; overflow-wrap: anywhere; font-size: .91rem; line-height: 1.35; white-space: normal; word-break: keep-all; }
 .match-module .match-pair-webtoons span { color: var(--match-muted); font-size: .76rem; }
-.match-module .match-pair-webtoons .match-webtoon-genre { justify-self: start; padding: 3px 7px; border-radius: 999px; background: var(--match-purple-soft); color: var(--match-muted); font-size: .68rem; font-weight: 800; line-height: 1.25; }
-.match-module .match-pair-webtoons li.is-taste-fit > :is(a,div) { border-color: rgba(244,174,65,.62); background: linear-gradient(145deg,#fffaf0,#fff5dd); box-shadow: 0 8px 20px rgba(194,121,23,.1); }
+.match-module .match-pair-webtoons .match-webtoon-genre { max-width: 100%; justify-self: start; padding: 3px 7px; overflow-wrap: anywhere; border-radius: 999px; background: var(--match-purple-soft); color: var(--match-muted); font-size: .68rem; font-weight: 800; line-height: 1.25; }
+.match-module .match-pair-webtoons li.is-taste-fit > div { border-color: rgba(244,174,65,.62); background: linear-gradient(145deg,#fffaf0,#fff5dd); box-shadow: 0 8px 20px rgba(194,121,23,.1); }
 .match-module .match-pair-webtoons li.is-taste-fit .match-webtoon-genre { background: #ffedbd; color: #9a5a08; }
 .match-module .match-pair-webtoons p { margin: 0; color: var(--match-muted); font-size: .87rem; }
+.match-module .match-pair-webtoons .match-recommendation-comment { min-width: 0; margin: 8px 0; overflow-wrap: anywhere; color: var(--match-muted); font-size: .78rem; line-height: 1.55; white-space: pre-line; word-break: keep-all; }
+.match-module .match-pair-webtoons :is(.match-recommendation-like,.match-recommendation-like-count) { align-self: end; justify-self: start; margin-top: auto; color: var(--match-muted); font-size: .7rem; font-weight: 800; }
+.match-module .match-pair-webtoons .match-recommendation-like { min-height: 28px; padding: 0 8px; border: 1px solid var(--match-line); border-radius: 999px; background: #fff; cursor: pointer; }
+.match-module .match-pair-webtoons .match-recommendation-like.is-liked { border-color: rgba(194,64,91,.25); background: #fff1f4; color: #ad3550; }
+.match-module .match-pair-webtoons .match-recommendation-like:disabled { cursor: wait; opacity: .62; }
+.match-module .match-pair-webtoons .match-recommendation-like-error { margin-top: 11px; color: #a64355; font-size: .8rem; }
 .match-module .match-carousel-arrow { position: absolute; z-index: 3; top: 50%; display: grid; width: 34px; height: 34px; place-items: center; padding: 0 0 3px; border: 1px solid rgba(104,71,232,.2); border-radius: 50%; background: rgba(255,255,255,.96); color: var(--match-purple-dark); font-size: 1.65rem; font-weight: 800; line-height: 1; box-shadow: 0 7px 18px rgba(61,39,121,.18); cursor: pointer; transform: translateY(-50%); }
 .match-module .match-carousel-arrow.is-left { left: -10px; }
 .match-module .match-carousel-arrow.is-right { right: -10px; }

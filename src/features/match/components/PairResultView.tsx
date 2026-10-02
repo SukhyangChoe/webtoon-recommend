@@ -3,15 +3,31 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { trackMatchEvent } from "../analytics/client";
 import { pairArchetypeFor } from "../share/shareArchetypes.mjs";
+import { ensureAnonymousId } from "../storage/anonymousIdentity.mjs";
 import { readMatchDraft } from "../storage/draft.mjs";
 
-type RecommendedWebtoon = { canonicalWebtoonId: string; title: string; platform: string; officialUrl: string | null; mainGenre: string; mainGenreLabel: string; tasteFitHighlighted: boolean };
+type RecommendedWebtoon = {
+  canonicalWebtoonId: string;
+  title: string;
+  platform: string;
+  officialUrl: string | null;
+  mainGenre: string;
+  mainGenreLabel: string;
+  recommendationComment: string | null;
+  likeCount: number;
+  likedByViewer: boolean;
+  recommenderPublicProfileId: string | null;
+  canViewerLike: boolean;
+  tasteFitHighlighted: boolean;
+};
 type PairResult = { ownerNickname: string; challengerNickname: string; score: number; band: { label: string; subcopy: string }; sharedGenres: string[]; differentGenres: string[]; ownerRecommendedGenres: string[]; challengerRecommendedGenres: string[]; ownerRecommendations: RecommendedWebtoon[]; challengerRecommendations: RecommendedWebtoon[]; recommendationTasteApplied: boolean; sharedTasteLabels: string[]; trustSentence: string; rank: number; entryCount: number };
 
 export function PairResultView({ challengeCode, resultId, showRankingReturn = false }: { challengeCode: string; resultId: string; showRankingReturn?: boolean }) {
   const [result, setResult] = useState<PairResult | null>(null);
   const [error, setError] = useState("");
   const [personalResultId, setPersonalResultId] = useState<string | null>(null);
+  const [likeSavingKey, setLikeSavingKey] = useState<string | null>(null);
+  const [likeMessage, setLikeMessage] = useState("");
   const resultTracked = useRef(false);
 
   useEffect(() => {
@@ -23,7 +39,10 @@ export function PairResultView({ challengeCode, resultId, showRankingReturn = fa
 
   useEffect(() => {
     let active = true;
-    void fetch(`/api/v1/challenges/${challengeCode}/results/${resultId}`).then(async (response) => {
+    const identity = ensureAnonymousId({ cookieText: document.cookie, storage: window.localStorage });
+    void fetch(`/api/v1/challenges/${challengeCode}/results/${resultId}`, {
+      headers: { "x-match-anonymous-id": identity.anonymousId },
+    }).then(async (response) => {
       const body = await response.json();
       if (!response.ok) throw new Error();
       if (active) {
@@ -37,13 +56,61 @@ export function PairResultView({ challengeCode, resultId, showRankingReturn = fa
     return () => { active = false; };
   }, [challengeCode, resultId]);
 
+  async function toggleRecommendationLike(item: RecommendedWebtoon) {
+    if (!result || !item.canViewerLike || !item.recommenderPublicProfileId) return;
+    const key = `${item.recommenderPublicProfileId}:${item.canonicalWebtoonId}`;
+    if (likeSavingKey === key) return;
+    const nextLiked = !item.likedByViewer;
+    const optimisticCount = Math.max(0, item.likeCount + (nextLiked ? 1 : -1));
+    const update = (source: PairResult, likedByViewer: boolean, likeCount: number): PairResult => ({
+      ...source,
+      ownerRecommendations: source.ownerRecommendations.map((candidate) => (
+        candidate.recommenderPublicProfileId === item.recommenderPublicProfileId
+        && candidate.canonicalWebtoonId === item.canonicalWebtoonId
+          ? { ...candidate, likedByViewer, likeCount }
+          : candidate
+      )),
+      challengerRecommendations: source.challengerRecommendations.map((candidate) => (
+        candidate.recommenderPublicProfileId === item.recommenderPublicProfileId
+        && candidate.canonicalWebtoonId === item.canonicalWebtoonId
+          ? { ...candidate, likedByViewer, likeCount }
+          : candidate
+      )),
+    });
+
+    setLikeSavingKey(key);
+    setLikeMessage("");
+    setResult((current) => current ? update(current, nextLiked, optimisticCount) : current);
+    try {
+      const identity = ensureAnonymousId({ cookieText: document.cookie, storage: window.localStorage });
+      const response = await fetch(
+        `/api/v1/results/${item.recommenderPublicProfileId}/recommendations/${encodeURIComponent(item.canonicalWebtoonId)}/like`,
+        {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ anonymousId: identity.anonymousId, liked: nextLiked }),
+        },
+      );
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error ?? "RECOMMENDATION_LIKE_SAVE_FAILED");
+      setResult((current) => current
+        ? update(current, Boolean(body.likedByViewer), Number(body.likeCount) || 0)
+        : current);
+    } catch {
+      setResult((current) => current ? update(current, item.likedByViewer, item.likeCount) : current);
+      setLikeMessage("좋아요를 저장하지 못했어요. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      setLikeSavingKey(null);
+    }
+  }
+
   if (error) return <main className="match-page"><section className="match-card match-hero"><h1>{error}</h1><a className="match-button" href={`/match/c/${challengeCode}`}>초대 화면으로</a></section></main>;
   if (!result) return <main className="match-page"><section className="match-card match-hero"><p>둘의 궁합을 불러오는 중이에요…</p></section></main>;
   const archetype = pairArchetypeFor(result.score);
   const scoreEffect = result.score >= 85 ? "is-score-peak" : result.score >= 70 ? "is-score-high" : result.score >= 50 ? "is-score-mid" : "is-score-low";
   const scoreStyle = { "--match-score": `${Math.max(0, Math.min(100, result.score))}%` } as CSSProperties;
 
-  return <main className="match-page match-pair-page">{showRankingReturn ? <a className="match-pair-context-back" href={`/match/c/${challengeCode}/ranking`}>← 전체 랭킹</a> : null}<section className={`match-pair-hero is-${archetype.theme} ${scoreEffect}`}><p className="match-eyebrow">{result.ownerNickname} × {result.challengerNickname}</p><h1>웹툰궁합</h1><div className="match-score-ring" style={scoreStyle}><strong>{result.score}</strong><span>%</span></div><strong className="match-pair-type-badge">{result.band.label}</strong><p className="match-pair-type-label">우리의 웹툰 관계 타입</p><h2>{archetype.name}</h2><p className="match-pair-archetype-copy"><SentenceLines text={archetype.description} /></p>{result.recommendationTasteApplied ? <p className="match-live-score-note">테스트 결과와 등록한 추천작을 함께 반영한 최신 궁합이에요.</p> : null}</section><PairSection title="같이 달릴 장르" items={result.sharedGenres} empty="서로의 새 장르를 개척해 봐요" /><RecommendationSections result={result} /><WebtoonRecommendationSection result={result} /><PairSection title="함께 맞는 취향" items={result.sharedTasteLabels} empty="세부 취향은 각자 다른 매력이 있어요" /><section className="match-result-section match-trust-card"><h2>이 사람 추천, 믿어도 될까?</h2><p>{result.trustSentence}</p></section><section className="match-result-section match-rank-summary"><span>현재 순위</span><strong>{result.rank}위</strong><small>도전자 {result.entryCount}명 중</small></section><p className="match-disclaimer">웹툰궁합은 {result.recommendationTasteApplied ? "테스트 응답과 등록한 추천작" : "테스트 응답"}으로 본 취향 비교 결과이며, 사람 사이의 관계나 성격을 평가하지 않아요.</p><div className="match-result-actions"><a className="match-button" href={`/match/share/pair?challengeCode=${challengeCode}&resultId=${resultId}`}>궁합 결과 공유하기</a><a className="match-button match-button--secondary" href={`/match/c/${challengeCode}/ranking`}>{result.ownerNickname}님의 전체 랭킹 보기</a>{personalResultId !== null ? personalResultId ? <a className="match-button match-button--secondary" href={`/match/result/${personalResultId}?from=pair`}>내 취향 결과 보기</a> : <a className="match-button match-button--secondary" href={`/match/c/${challengeCode}`}>나도 테스트하기</a> : null}</div></main>;
+  return <main className="match-page match-pair-page">{showRankingReturn ? <a className="match-pair-context-back" href={`/match/c/${challengeCode}/ranking`}>← 전체 랭킹</a> : null}<section className={`match-pair-hero is-${archetype.theme} ${scoreEffect}`}><p className="match-eyebrow">{result.ownerNickname} × {result.challengerNickname}</p><h1>웹툰궁합</h1><div className="match-score-ring" style={scoreStyle}><strong>{result.score}</strong><span>%</span></div><strong className="match-pair-type-badge">{result.band.label}</strong><p className="match-pair-type-label">우리의 웹툰 관계 타입</p><h2>{archetype.name}</h2><p className="match-pair-archetype-copy"><SentenceLines text={archetype.description} /></p>{result.recommendationTasteApplied ? <p className="match-live-score-note">테스트 결과와 등록한 추천작을 함께 반영한 최신 궁합이에요.</p> : null}</section><PairSection title="같이 달릴 장르" items={result.sharedGenres} empty="서로의 새 장르를 개척해 봐요" /><RecommendationSections result={result} /><WebtoonRecommendationSection result={result} likeSavingKey={likeSavingKey} likeMessage={likeMessage} onToggleLike={toggleRecommendationLike} /><PairSection title="함께 맞는 취향" items={result.sharedTasteLabels} empty="세부 취향은 각자 다른 매력이 있어요" /><section className="match-result-section match-trust-card"><h2>이 사람 추천, 믿어도 될까?</h2><p>{result.trustSentence}</p></section><section className="match-result-section match-rank-summary"><span>현재 순위</span><strong>{result.rank}위</strong><small>도전자 {result.entryCount}명 중</small></section><p className="match-disclaimer">웹툰궁합은 {result.recommendationTasteApplied ? "테스트 응답과 등록한 추천작" : "테스트 응답"}으로 본 취향 비교 결과이며, 사람 사이의 관계나 성격을 평가하지 않아요.</p><div className="match-result-actions"><a className="match-button" href={`/match/share/pair?challengeCode=${challengeCode}&resultId=${resultId}`}>궁합 결과 공유하기</a><a className="match-button match-button--secondary" href={`/match/c/${challengeCode}/ranking`}>{result.ownerNickname}님의 전체 랭킹 보기</a>{personalResultId !== null ? personalResultId ? <a className="match-button match-button--secondary" href={`/match/result/${personalResultId}?from=pair`}>내 취향 결과 보기</a> : <a className="match-button match-button--secondary" href={`/match/c/${challengeCode}`}>나도 테스트하기</a> : null}</div></main>;
 }
 
 function SentenceLines({ text }: { text: string }) {
@@ -68,16 +135,26 @@ function RecommendationRow({ nickname, genres }: { nickname: string; genres: str
   return <div><strong>{nickname}에게 물어볼 장르</strong><span>{genres.join(" · ")}</span></div>;
 }
 
-function WebtoonRecommendationSection({ result }: { result: PairResult }) {
+function WebtoonRecommendationSection({ result, likeSavingKey, likeMessage, onToggleLike }: {
+  result: PairResult;
+  likeSavingKey: string | null;
+  likeMessage: string;
+  onToggleLike: (item: RecommendedWebtoon) => Promise<void>;
+}) {
   const groups = [
     { nickname: result.ownerNickname, items: result.ownerRecommendations },
     { nickname: result.challengerNickname, items: result.challengerRecommendations },
   ];
   if (groups.every((group) => group.items.length === 0)) return null;
-  return <section className="match-result-section match-pair-webtoons"><h2>서로의 추천작</h2><div>{groups.map((group) => <RecommendationCarousel {...group} key={group.nickname} />)}</div></section>;
+  return <section className="match-result-section match-pair-webtoons"><h2>서로의 추천작</h2><div>{groups.map((group) => <RecommendationCarousel {...group} likeSavingKey={likeSavingKey} onToggleLike={onToggleLike} key={group.nickname} />)}</div>{likeMessage ? <p className="match-recommendation-like-error" role="alert">{likeMessage}</p> : null}</section>;
 }
 
-function RecommendationCarousel({ nickname, items }: { nickname: string; items: RecommendedWebtoon[] }) {
+function RecommendationCarousel({ nickname, items, likeSavingKey, onToggleLike }: {
+  nickname: string;
+  items: RecommendedWebtoon[];
+  likeSavingKey: string | null;
+  onToggleLike: (item: RecommendedWebtoon) => Promise<void>;
+}) {
   const listRef = useRef<HTMLOListElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -111,7 +188,26 @@ function RecommendationCarousel({ nickname, items }: { nickname: string; items: 
 
   return <div><h3>{nickname} 추천</h3>{items.length ? <div className={`match-recommendation-carousel${carouselEnabled ? "" : " is-static"}`}>
     {carouselEnabled && canScrollLeft ? <button className="match-carousel-arrow is-left" type="button" onClick={() => scroll(-1)} aria-label={`${nickname}님의 이전 추천작 보기`}>‹</button> : null}
-    <ol ref={listRef}>{items.map((item) => <li className={item.tasteFitHighlighted ? "is-taste-fit" : undefined} key={item.canonicalWebtoonId}>{item.officialUrl ? <a href={item.officialUrl} target="_blank" rel="noreferrer"><strong>{item.title}</strong><span>{item.platform}</span><small className="match-webtoon-genre">{item.mainGenreLabel}</small></a> : <div><strong>{item.title}</strong><span>{item.platform}</span><small className="match-webtoon-genre">{item.mainGenreLabel}</small></div>}</li>)}</ol>
+    <ol ref={listRef}>{items.map((item) => {
+      const itemKey = `${item.recommenderPublicProfileId}:${item.canonicalWebtoonId}`;
+      const canLike = item.canViewerLike;
+      const likeLabel = item.likeCount > 0 ? `${item.likeCount}` : "좋아요";
+      return <li className={item.tasteFitHighlighted ? "is-taste-fit" : undefined} key={item.canonicalWebtoonId}>
+        <div>
+          {item.officialUrl ? <a className="match-recommendation-title" href={item.officialUrl} target="_blank" rel="noreferrer"><strong>{item.title}</strong></a> : <strong>{item.title}</strong>}
+          <small className="match-webtoon-genre">{item.mainGenreLabel}</small>
+          {item.recommendationComment ? <p className="match-recommendation-comment"><q>{item.recommendationComment}</q></p> : null}
+          {canLike ? <button
+            className={`match-recommendation-like${item.likedByViewer ? " is-liked" : ""}`}
+            type="button"
+            disabled={likeSavingKey === itemKey}
+            aria-pressed={item.likedByViewer}
+            aria-label={`${item.title} 추천 ${item.likedByViewer ? "좋아요 취소" : "좋아요"}`}
+            onClick={() => void onToggleLike(item)}
+          >{item.likedByViewer ? "♥" : "♡"} {likeLabel}</button> : <span className="match-recommendation-like-count">♡ {item.likeCount}</span>}
+        </div>
+      </li>;
+    })}</ol>
     {carouselEnabled && canScrollRight ? <button className="match-carousel-arrow is-right" type="button" onClick={() => scroll(1)} aria-label={`${nickname}님의 다음 추천작 보기`}>›</button> : null}
   </div> : <p>아직 등록한 추천작이 없어요.</p>}</div>;
 }

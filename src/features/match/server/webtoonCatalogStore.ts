@@ -1,5 +1,6 @@
 import "server-only";
 
+import { normalizeRecommendationComment } from "../config/recommendationPolicy.mjs";
 import { getMatchDatabase } from "./database";
 
 export type WebtoonSummary = {
@@ -11,7 +12,21 @@ export type WebtoonSummary = {
 };
 
 export type WebtoonRecommendationRecord = WebtoonSummary & {
+  recommendationComment: string | null;
+  likeCount: number;
+  likedByViewer: boolean;
   recommendationVector: Record<string, unknown> | null;
+};
+
+export type ProfileRecommendationSummary = WebtoonSummary & {
+  recommendationComment: string | null;
+  likeCount: number;
+  likedByViewer: boolean;
+};
+
+export type ProfileRecommendationInput = {
+  canonicalWebtoonId: string;
+  recommendationComment?: string | null;
 };
 
 type WebtoonRow = {
@@ -22,7 +37,13 @@ type WebtoonRow = {
   main_genre: string;
 };
 
-type RecommendationRow = WebtoonRow & { profile_id: string; sort_order: number };
+type RecommendationRow = WebtoonRow & {
+  profile_id: string;
+  sort_order: number;
+  recommendation_comment: string | null;
+  like_count: number;
+  liked_by_viewer: boolean;
+};
 type RecommendationVectorRow = RecommendationRow & {
   raw_data: { recommendation?: Record<string, unknown> } | null;
 };
@@ -42,6 +63,26 @@ function toSummary(row: WebtoonRow): WebtoonSummary {
     officialUrl: row.official_url,
     mainGenre: row.main_genre,
   };
+}
+
+function toRecommendationSummary(row: RecommendationRow): ProfileRecommendationSummary {
+  return {
+    ...toSummary(row),
+    recommendationComment: row.recommendation_comment,
+    likeCount: Number(row.like_count) || 0,
+    likedByViewer: Boolean(row.liked_by_viewer),
+  };
+}
+
+export async function getProfileIdForAnonymousId(anonymousId: string) {
+  const database = getMatchDatabase();
+  const rows = await database<{ profile_id: string }[]>`
+    select profile_id::text
+    from public.match_profiles
+    where anonymous_id = ${anonymousId}::uuid
+    limit 1
+  `;
+  return rows[0]?.profile_id ?? null;
 }
 
 export function normalizeWebtoonTitle(value: string) {
@@ -92,28 +133,46 @@ export async function searchWebtoons(query: string, limit = 20) {
   return items;
 }
 
-export async function getProfileRecommendations(publicProfileId: string) {
+export async function getProfileRecommendations(publicProfileId: string, viewerAnonymousId?: string | null) {
   const database = getMatchDatabase();
+  const viewerProfileId = viewerAnonymousId
+    ? await getProfileIdForAnonymousId(viewerAnonymousId)
+    : null;
   const rows = await database<RecommendationRow[]>`
     select
       recommendations.profile_id::text,
       recommendations.sort_order,
+      recommendations.recommendation_comment,
+      webtoons.canonical_webtoon_id,
+      webtoons.title,
+      webtoons.platform,
+      webtoons.official_url,
+      webtoons.main_genre,
+      count(likes.liker_profile_id)::int as like_count,
+      coalesce(bool_or(likes.liker_profile_id = ${viewerProfileId}::uuid), false) as liked_by_viewer
+    from public.match_profile_recommendations recommendations
+    join public.webtoons webtoons on webtoons.canonical_webtoon_id = recommendations.canonical_webtoon_id
+    join public.match_taste_snapshots snapshots on snapshots.profile_id = recommendations.profile_id
+    left join public.match_profile_recommendation_likes likes
+      on likes.recommender_profile_id = recommendations.profile_id
+      and likes.canonical_webtoon_id = recommendations.canonical_webtoon_id
+    where snapshots.public_profile_id = ${publicProfileId}
+      and webtoons.catalog_status = 'active'
+    group by
+      recommendations.profile_id,
+      recommendations.sort_order,
+      recommendations.recommendation_comment,
       webtoons.canonical_webtoon_id,
       webtoons.title,
       webtoons.platform,
       webtoons.official_url,
       webtoons.main_genre
-    from public.match_profile_recommendations recommendations
-    join public.webtoons webtoons on webtoons.canonical_webtoon_id = recommendations.canonical_webtoon_id
-    join public.match_taste_snapshots snapshots on snapshots.profile_id = recommendations.profile_id
-    where snapshots.public_profile_id = ${publicProfileId}
-      and webtoons.catalog_status = 'active'
     order by recommendations.sort_order asc
   `;
-  return rows.map(toSummary);
+  return rows.map(toRecommendationSummary);
 }
 
-export async function getRecommendationsForProfiles(profileIds: string[]) {
+export async function getRecommendationsForProfiles(profileIds: string[], viewerProfileId?: string | null) {
   const uniqueProfileIds = [...new Set(profileIds.filter(Boolean))];
   const result = Object.fromEntries(uniqueProfileIds.map((profileId) => [profileId, [] as WebtoonRecommendationRecord[]]));
   if (!uniqueProfileIds.length) return result;
@@ -123,30 +182,55 @@ export async function getRecommendationsForProfiles(profileIds: string[]) {
     select
       recommendations.profile_id::text,
       recommendations.sort_order,
+      recommendations.recommendation_comment,
+      webtoons.canonical_webtoon_id,
+      webtoons.title,
+      webtoons.platform,
+      webtoons.official_url,
+      webtoons.main_genre,
+      webtoons.raw_data,
+      count(likes.liker_profile_id)::int as like_count,
+      coalesce(bool_or(likes.liker_profile_id = ${viewerProfileId ?? null}::uuid), false) as liked_by_viewer
+    from public.match_profile_recommendations recommendations
+    join public.webtoons webtoons on webtoons.canonical_webtoon_id = recommendations.canonical_webtoon_id
+    left join public.match_profile_recommendation_likes likes
+      on likes.recommender_profile_id = recommendations.profile_id
+      and likes.canonical_webtoon_id = recommendations.canonical_webtoon_id
+    where recommendations.profile_id = any(${uniqueProfileIds}::uuid[])
+      and webtoons.catalog_status = 'active'
+    group by
+      recommendations.profile_id,
+      recommendations.sort_order,
+      recommendations.recommendation_comment,
       webtoons.canonical_webtoon_id,
       webtoons.title,
       webtoons.platform,
       webtoons.official_url,
       webtoons.main_genre,
       webtoons.raw_data
-    from public.match_profile_recommendations recommendations
-    join public.webtoons webtoons on webtoons.canonical_webtoon_id = recommendations.canonical_webtoon_id
-    where recommendations.profile_id = any(${uniqueProfileIds}::uuid[])
-      and webtoons.catalog_status = 'active'
     order by recommendations.profile_id, recommendations.sort_order asc
   `;
   for (const row of rows) {
     result[row.profile_id]?.push({
-      ...toSummary(row),
+      ...toRecommendationSummary(row),
       recommendationVector: row.raw_data?.recommendation ?? null,
     });
   }
   return result;
 }
 
-export async function replaceProfileRecommendations(input: { publicProfileId: string; anonymousId: string; canonicalWebtoonIds: string[] }) {
-  const ids = [...new Set(input.canonicalWebtoonIds.map((item) => item.trim()).filter(Boolean))];
-  if (ids.length !== input.canonicalWebtoonIds.length || ids.length > 10) throw new Error("INVALID_RECOMMENDATION_LIST");
+export async function replaceProfileRecommendations(input: { publicProfileId: string; anonymousId: string; recommendations: ProfileRecommendationInput[] }) {
+  if (!Array.isArray(input.recommendations) || input.recommendations.length > 10) {
+    throw new Error("INVALID_RECOMMENDATION_LIST");
+  }
+  const normalizedItems = input.recommendations.map((item) => ({
+    canonicalWebtoonId: item.canonicalWebtoonId?.trim(),
+    recommendationComment: normalizeRecommendationComment(item.recommendationComment),
+  }));
+  const ids = normalizedItems.map((item) => item.canonicalWebtoonId).filter(Boolean);
+  if (ids.length !== normalizedItems.length || new Set(ids).size !== ids.length) {
+    throw new Error("INVALID_RECOMMENDATION_LIST");
+  }
 
   const database = getMatchDatabase();
   return database.begin(async (sql) => {
@@ -162,6 +246,15 @@ export async function replaceProfileRecommendations(input: { publicProfileId: st
     const profileId = profiles[0]?.profile_id;
     if (!profileId) throw new Error("RESULT_OWNER_MISMATCH");
 
+    const current = await sql<{ canonical_webtoon_id: string; recommendation_comment: string | null }[]>`
+      select canonical_webtoon_id, recommendation_comment
+      from public.match_profile_recommendations
+      where profile_id = ${profileId}::uuid
+    `;
+    const currentCommentById = new Map(
+      current.map((row) => [row.canonical_webtoon_id, row.recommendation_comment]),
+    );
+
     let available: WebtoonRow[] = [];
     if (ids.length) {
       available = await sql<WebtoonRow[]>`
@@ -174,18 +267,143 @@ export async function replaceProfileRecommendations(input: { publicProfileId: st
       if (available.length !== ids.length) throw new Error("WEBTOON_NOT_AVAILABLE");
     }
 
-    await sql`delete from public.match_profile_recommendations where profile_id = ${profileId}::uuid`;
-    for (const [index, canonicalWebtoonId] of ids.entries()) {
+    if (ids.length) {
       await sql`
-        insert into public.match_profile_recommendations (profile_id, canonical_webtoon_id, sort_order)
-        values (${profileId}::uuid, ${canonicalWebtoonId}, ${index + 1})
+        delete from public.match_profile_recommendations
+        where profile_id = ${profileId}::uuid
+          and not (canonical_webtoon_id = any(${ids}::text[]))
+      `;
+    } else {
+      await sql`delete from public.match_profile_recommendations where profile_id = ${profileId}::uuid`;
+    }
+    for (const [index, item] of normalizedItems.entries()) {
+      const recommendationComment = item.recommendationComment === undefined
+        ? currentCommentById.get(item.canonicalWebtoonId) ?? null
+        : item.recommendationComment;
+      await sql`
+        insert into public.match_profile_recommendations (
+          profile_id,
+          canonical_webtoon_id,
+          sort_order,
+          recommendation_comment
+        )
+        values (
+          ${profileId}::uuid,
+          ${item.canonicalWebtoonId},
+          ${index + 1},
+          ${recommendationComment}
+        )
+        on conflict (profile_id, canonical_webtoon_id) do update set
+          sort_order = excluded.sort_order,
+          recommendation_comment = excluded.recommendation_comment,
+          updated_at = now()
       `;
     }
 
-    const byId = new Map(available.map((row) => [row.canonical_webtoon_id, toSummary(row)]));
+    const savedRows = await sql<RecommendationRow[]>`
+      select
+        recommendations.profile_id::text,
+        recommendations.sort_order,
+        recommendations.recommendation_comment,
+        webtoons.canonical_webtoon_id,
+        webtoons.title,
+        webtoons.platform,
+        webtoons.official_url,
+        webtoons.main_genre,
+        count(likes.liker_profile_id)::int as like_count,
+        false as liked_by_viewer
+      from public.match_profile_recommendations recommendations
+      join public.webtoons webtoons on webtoons.canonical_webtoon_id = recommendations.canonical_webtoon_id
+      left join public.match_profile_recommendation_likes likes
+        on likes.recommender_profile_id = recommendations.profile_id
+        and likes.canonical_webtoon_id = recommendations.canonical_webtoon_id
+      where recommendations.profile_id = ${profileId}::uuid
+      group by
+        recommendations.profile_id,
+        recommendations.sort_order,
+        recommendations.recommendation_comment,
+        webtoons.canonical_webtoon_id,
+        webtoons.title,
+        webtoons.platform,
+        webtoons.official_url,
+        webtoons.main_genre
+      order by recommendations.sort_order asc
+    `;
     return {
       profileId,
-      items: ids.map((id) => byId.get(id)).filter((item): item is WebtoonSummary => Boolean(item)),
+      items: savedRows.map(toRecommendationSummary),
+    };
+  });
+}
+
+export async function setProfileRecommendationLike(input: {
+  recommenderPublicProfileId: string;
+  canonicalWebtoonId: string;
+  likerAnonymousId: string;
+  liked: boolean;
+}) {
+  const database = getMatchDatabase();
+  return database.begin(async (sql) => {
+    const recommendations = await sql<{ recommender_profile_id: string }[]>`
+      select recommendations.profile_id::text as recommender_profile_id
+      from public.match_profile_recommendations recommendations
+      join public.match_taste_snapshots snapshots on snapshots.profile_id = recommendations.profile_id
+      join public.webtoons webtoons on webtoons.canonical_webtoon_id = recommendations.canonical_webtoon_id
+      where snapshots.public_profile_id = ${input.recommenderPublicProfileId}
+        and recommendations.canonical_webtoon_id = ${input.canonicalWebtoonId}
+        and webtoons.catalog_status = 'active'
+      limit 1
+      for update of recommendations
+    `;
+    const recommenderProfileId = recommendations[0]?.recommender_profile_id;
+    if (!recommenderProfileId) throw new Error("RECOMMENDATION_NOT_FOUND");
+
+    const likerProfiles = await sql<{ profile_id: string }[]>`
+      select profile_id::text
+      from public.match_profiles
+      where anonymous_id = ${input.likerAnonymousId}::uuid
+      limit 1
+    `;
+    const likerProfileId = likerProfiles[0]?.profile_id;
+    if (!likerProfileId) throw new Error("LIKE_PROFILE_REQUIRED");
+    if (likerProfileId === recommenderProfileId) {
+      throw new Error("SELF_RECOMMENDATION_LIKE_FORBIDDEN");
+    }
+
+    if (input.liked) {
+      await sql`
+        insert into public.match_profile_recommendation_likes (
+          recommender_profile_id,
+          canonical_webtoon_id,
+          liker_profile_id
+        )
+        values (
+          ${recommenderProfileId}::uuid,
+          ${input.canonicalWebtoonId},
+          ${likerProfileId}::uuid
+        )
+        on conflict do nothing
+      `;
+    } else {
+      await sql`
+        delete from public.match_profile_recommendation_likes
+        where recommender_profile_id = ${recommenderProfileId}::uuid
+          and canonical_webtoon_id = ${input.canonicalWebtoonId}
+          and liker_profile_id = ${likerProfileId}::uuid
+      `;
+    }
+
+    const counts = await sql<{ like_count: number; liked_by_viewer: boolean }[]>`
+      select
+        count(*)::int as like_count,
+        coalesce(bool_or(liker_profile_id = ${likerProfileId}::uuid), false) as liked_by_viewer
+      from public.match_profile_recommendation_likes
+      where recommender_profile_id = ${recommenderProfileId}::uuid
+        and canonical_webtoon_id = ${input.canonicalWebtoonId}
+    `;
+    return {
+      likeCount: Number(counts[0]?.like_count) || 0,
+      likedByViewer: Boolean(counts[0]?.liked_by_viewer),
     };
   });
 }

@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
+import {
+  RECOMMENDATION_COMMENT_MAX_LENGTH,
+  normalizeRecommendationComment,
+} from "../../src/features/match/config/recommendationPolicy.mjs";
 
 const migrationPath = new URL("../../supabase/migrations/202609110001_webtoon_match_persistence.sql", import.meta.url);
 const catalogMigrationPath = new URL("../../supabase/migrations/202609220001_webtoon_catalog_profile_recommendations.sql", import.meta.url);
@@ -8,9 +12,11 @@ const nicknameRepairMigrationPath = new URL("../../supabase/migrations/202609230
 const selfChallengeRepairMigrationPath = new URL("../../supabase/migrations/202609230002_remove_self_challenge_entries.sql", import.meta.url);
 const reciprocalEntriesMigrationPath = new URL("../../supabase/migrations/202609230003_reciprocal_match_entries.sql", import.meta.url);
 const duplicateNicknameMigrationPath = new URL("../../supabase/migrations/202609240001_allow_duplicate_match_nicknames.sql", import.meta.url);
+const recommendationSocialMigrationPath = new URL("../../supabase/migrations/202610010001_recommendation_comments_likes.sql", import.meta.url);
 const resultStorePath = new URL("../../src/features/match/server/resultStore.ts", import.meta.url);
 const challengeStorePath = new URL("../../src/features/match/server/challengeStore.ts", import.meta.url);
 const catalogStorePath = new URL("../../src/features/match/server/webtoonCatalogStore.ts", import.meta.url);
+const recommendationLikeRoutePath = new URL("../../src/app/api/v1/results/[profilePublicId]/recommendations/[canonicalWebtoonId]/like/route.ts", import.meta.url);
 const databasePath = new URL("../../src/features/match/server/database.ts", import.meta.url);
 
 const migration = readFileSync(migrationPath, "utf8");
@@ -19,9 +25,11 @@ const nicknameRepairMigration = readFileSync(nicknameRepairMigrationPath, "utf8"
 const selfChallengeRepairMigration = readFileSync(selfChallengeRepairMigrationPath, "utf8");
 const reciprocalEntriesMigration = readFileSync(reciprocalEntriesMigrationPath, "utf8");
 const duplicateNicknameMigration = readFileSync(duplicateNicknameMigrationPath, "utf8");
+const recommendationSocialMigration = readFileSync(recommendationSocialMigrationPath, "utf8");
 const resultStore = readFileSync(resultStorePath, "utf8");
 const challengeStore = readFileSync(challengeStorePath, "utf8");
 const catalogStore = readFileSync(catalogStorePath, "utf8");
+const recommendationLikeRoute = readFileSync(recommendationLikeRoutePath, "utf8");
 const database = readFileSync(databasePath, "utf8");
 
 test("W7 migration defines every permanent webtoon-match table", () => {
@@ -85,15 +93,47 @@ test("catalog migration supports profile nicknames, unique link names, and ten o
   }
 });
 
-test("catalog store searches server-side and replaces a bounded owner recommendation list", () => {
+test("catalog store searches server-side and preserves recommendation rows while updating a bounded owner list", () => {
   assert.match(catalogStore, /import "server-only"/);
   assert.match(catalogStore, /const boundedLimit = Math\.max\(1, Math\.min\(30, limit\)\)/);
   assert.match(catalogStore, /replaceAll\(" ", ""\)/);
   assert.match(catalogStore, /replace\(normalized_title, ' ', ''\) like/);
   assert.match(catalogStore, /limit \$\{boundedLimit\}/);
-  assert.match(catalogStore, /ids\.length > 10/);
+  assert.match(catalogStore, /input\.recommendations\.length > 10/);
   assert.match(catalogStore, /delete from public\.match_profile_recommendations/);
+  assert.match(catalogStore, /on conflict \(profile_id, canonical_webtoon_id\) do update set/);
+  assert.match(catalogStore, /recommendation_comment = excluded\.recommendation_comment/);
   assert.match(catalogStore, /RESULT_OWNER_MISMATCH/);
+});
+
+test("recommendation comments are optional, normalized, and limited to 80 characters", () => {
+  assert.equal(RECOMMENDATION_COMMENT_MAX_LENGTH, 80);
+  assert.equal(normalizeRecommendationComment(undefined), undefined);
+  assert.equal(normalizeRecommendationComment(null), null);
+  assert.equal(normalizeRecommendationComment("  장면이   정말 좋아요  "), "장면이 정말 좋아요");
+  assert.equal(normalizeRecommendationComment(" \n\t "), null);
+  assert.throws(() => normalizeRecommendationComment("가".repeat(81)), /INVALID_RECOMMENDATION_COMMENT/);
+  assert.throws(() => normalizeRecommendationComment(42), /INVALID_RECOMMENDATION_COMMENT/);
+});
+
+test("recommendation social migration stores comments and one profile like per recommendation", () => {
+  assert.match(recommendationSocialMigration, /add column if not exists recommendation_comment text/);
+  assert.match(recommendationSocialMigration, /char_length\(recommendation_comment\) between 1 and 80/);
+  assert.match(recommendationSocialMigration, /create table public\.match_profile_recommendation_likes/);
+  assert.match(recommendationSocialMigration, /primary key \(recommender_profile_id, canonical_webtoon_id, liker_profile_id\)/);
+  assert.match(recommendationSocialMigration, /references public\.match_profile_recommendations\(profile_id, canonical_webtoon_id\)[\s\S]*on delete cascade/);
+  assert.match(recommendationSocialMigration, /recommender_profile_id <> liker_profile_id/);
+  assert.match(recommendationSocialMigration, /unique \(profile_id, sort_order\)[\s\S]*deferrable initially deferred/);
+  assert.match(recommendationSocialMigration, /alter table public\.match_profile_recommendation_likes enable row level security/);
+  assert.match(recommendationSocialMigration, /revoke all on table public\.match_profile_recommendation_likes from anon, authenticated/);
+});
+
+test("recommendation likes require a completed anonymous profile and cannot like oneself", () => {
+  assert.match(recommendationLikeRoute, /isAnonymousId\(body\.anonymousId\)/);
+  assert.match(catalogStore, /LIKE_PROFILE_REQUIRED/);
+  assert.match(catalogStore, /SELF_RECOMMENDATION_LIKE_FORBIDDEN/);
+  assert.match(catalogStore, /on conflict do nothing/);
+  assert.match(catalogStore, /match_profile_recommendation_likes/);
 });
 
 test("reciprocal rankings only carry forward a directly viewed match from the same taste snapshot", () => {
