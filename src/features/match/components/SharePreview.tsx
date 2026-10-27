@@ -1,234 +1,117 @@
 "use client";
 
-import Image from "next/image";
-import { useEffect, useState } from "react";
-import { trackMatchEvent } from "../analytics/client";
-import { readOwnerManageToken } from "../storage/challengeStorage.mjs";
-import { downloadBlob, renderShareCardPng, type ShareCardModel } from "../share/shareCardImage";
-import { pairArchetypeFor, personalArchetypeFor } from "../share/shareArchetypes.mjs";
-import { pairShareCopy, personalShareCopy, rankingShareCopy, threadsIntentUrl } from "../share/sharePolicy.mjs";
+import { useEffect, useState } from 'react';
+import { trackMatchEvent } from '../analytics/client';
+import { readOwnerManageToken } from '../storage/challengeStorage.mjs';
+import { ensureAnonymousId } from '../storage/anonymousIdentity.mjs';
+import { downloadBlob, renderShareCardPng, renderShareCardSvg, type ShareCardModel } from '../share/shareCardImage';
+import { createPairShareCard, createPersonalShareCard, createRankingShareCard, SHARE_PAGE_TITLES, shareCardDescription } from '../share/shareCardPresentation.mjs';
+import { pairShareCopy, personalShareCopy, rankingShareCopy, threadsIntentUrl } from '../share/sharePolicy.mjs';
+import { MatchIcon } from './MatchIcon';
 
-type ShareType = "personal" | "pair" | "ranking";
-type SharePayload = { card: ShareCardModel; shareText: string; shareUrl: string; templateKey: string };
+type ShareType = 'personal' | 'pair' | 'ranking';
+type Payload = { card: ShareCardModel; shareText: string; shareUrl: string; templateKey: string; svg: string; previewUrl: string };
+type Genre = { genreKey: string; displayLabel: string; stars: number };
+type PersonalResult = { nickname?: string; topGenres: Genre[]; wellMatchedLabels: string[]; lessMatchedLabels: string[] };
+type PairResult = { ownerNickname: string; challengerNickname: string; ownerGenreKey?: string; challengerGenreKey?: string; score: number; band: { label: string }; sharedGenres: string[]; differentGenres: string[]; ownerRecommendedGenres: string[]; challengerRecommendedGenres: string[]; trustSentence: string };
+type RankingResult = { ownerNickname: string; ownerGenreKey?: string; entryCount: number; rankingVisibility?: string; canManage?: boolean; top20: Array<{ rank: number; nickname: string; score: number; genreKey?: string; sharedGenres: string[] }> };
 
-type PersonalResult = {
-  topGenres: Array<{ genreKey: string; displayLabel: string; stars: number }>;
-  wellMatchedLabels: string[];
-  lessMatchedLabels: string[];
-};
-
-type PairResult = {
-  ownerNickname: string;
-  challengerNickname: string;
-  score: number;
-  band: { label: string };
-  sharedGenres: string[];
-  differentGenres: string[];
-  ownerRecommendedGenres: string[];
-  challengerRecommendedGenres: string[];
-  trustSentence: string;
-  rank: number;
-  entryCount: number;
-};
-
-type RankingResult = {
-  ownerNickname: string;
-  entryCount: number;
-  top20: Array<{ rank: number; nickname: string; score: number; sharedGenres: string[] }>;
-};
-
-async function responseJson<T>(url: string, headers?: HeadersInit) {
+async function responseJson<T>(url: string, headers?: HeadersInit): Promise<T> {
   const response = await fetch(url, { headers });
-  const body = await response.json();
-  if (!response.ok) throw new Error(body.error ?? "SHARE_SOURCE_LOAD_FAILED");
-  return body as T;
+  if (!response.ok) throw new Error('공유할 결과를 불러오지 못했어요.');
+  return response.json();
 }
-
-function fallbackCopy(text: string) {
-  const textarea = document.createElement("textarea");
-  textarea.value = text;
-  textarea.style.position = "fixed";
-  textarea.style.opacity = "0";
-  document.body.appendChild(textarea);
-  textarea.select();
-  const copied = document.execCommand("copy");
-  textarea.remove();
-  if (!copied) throw new Error("COPY_FAILED");
-}
-
 async function copyToClipboard(text: string) {
-  if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(text);
-  fallbackCopy(text);
+  if (navigator.clipboard?.writeText) {
+    try { await navigator.clipboard.writeText(text); return; } catch { /* Try the selection-based fallback next. */ }
+  }
+  const field = document.createElement('textarea');
+  const previousFocus = document.activeElement as HTMLElement | null;
+  field.value = text; field.style.position = 'fixed'; field.style.opacity = '0';
+  document.body.appendChild(field); field.select();
+  try { if (!document.execCommand('copy')) throw new Error('COPY_FAILED'); }
+  finally { field.remove(); previousFocus?.focus({ preventScroll: true }); }
 }
 
 export function SharePreview({ type, profilePublicId, challengeCode, resultId }: { type: ShareType; profilePublicId?: string; challengeCode?: string; resultId?: string }) {
-  const [payload, setPayload] = useState<SharePayload | null>(null);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [payload, setPayload] = useState<Payload | null>(null);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
-
+  const [retry, setRetry] = useState(0);
   useEffect(() => {
     let active = true;
+    let previewUrl = '';
     const load = async () => {
       const origin = window.location.origin;
-      let next: SharePayload;
-
-      if (type === "personal") {
-        if (!profilePublicId) throw new Error("SHARE_SOURCE_MISSING");
-        const result = await responseJson<PersonalResult>(`/api/v1/results/${profilePublicId}`);
-        const challengeUrl = challengeCode ? `${origin}/match/c/${challengeCode}` : undefined;
-        const resultUrl = `${origin}/match/result/${profilePublicId}`;
-        const leadGenre = result.topGenres[0];
-        const archetype = personalArchetypeFor(leadGenre?.genreKey);
-        const copy = personalShareCopy({ ...result, challengeUrl, resultUrl, archetypeName: archetype.name });
-        next = {
-          card: {
-            eyebrow: "나의 웹툰 본캐",
-            title: archetype.name,
-            subtitle: archetype.description,
-            badge: `취향 1위 · ${leadGenre?.displayLabel ?? "웹툰"}`,
-            symbol: archetype.symbol,
-            imageSrc: archetype.imageSrc,
-            imageAlt: archetype.imageAlt,
-            theme: archetype.theme as ShareCardModel["theme"],
-            rows: result.topGenres.slice(0, 3).map((genre, index) => ({ label: `${index + 1}위 · ${genre.displayLabel}`, value: "★".repeat(genre.stars) || "별 없음" })),
-            footer: "나랑 웹툰궁합 몇 % 나오는지 해볼래?",
-            fileName: "webtoon-match-personal.png",
-          },
-          shareText: copy.text,
-          shareUrl: copy.shareUrl,
-          templateKey: copy.templateKey,
-        };
-      } else if (type === "pair") {
-        if (!challengeCode || !resultId) throw new Error("SHARE_SOURCE_MISSING");
-        const result = await responseJson<PairResult>(`/api/v1/challenges/${challengeCode}/results/${resultId}`);
-        const pairUrl = `${origin}/match/c/${challengeCode}/match/${resultId}`;
-        const archetype = pairArchetypeFor(result.score);
-        const copy = pairShareCopy({ ...result, archetypeName: archetype.name, bandLabel: result.band.label, pairUrl });
-        next = {
-          card: {
-            eyebrow: `${result.ownerNickname} × ${result.challengerNickname}`,
-            title: archetype.name,
-            subtitle: archetype.description,
-            badge: archetype.badge,
-            symbol: archetype.symbol,
-            theme: archetype.theme as ShareCardModel["theme"],
-            metric: `${result.score}%`,
-            rows: [
-              { label: "같이 달릴 장르", value: result.sharedGenres.slice(0, 2).join(" · ") || "새 장르 개척" },
-              { label: `${result.ownerNickname}에게 물어볼 장르`, value: result.ownerRecommendedGenres.slice(0, 2).join(" · ") },
-              { label: `${result.challengerNickname}에게 물어볼 장르`, value: result.challengerRecommendedGenres.slice(0, 2).join(" · ") },
-            ].filter((row) => row.value),
-            footer: "웹툰 취향 한정 관계 타입 · 사람 사이를 평가하지 않아요",
-            fileName: "webtoon-match-pair.png",
-          },
-          shareText: copy.text,
-          shareUrl: copy.shareUrl,
-          templateKey: copy.templateKey,
-        };
+      let card: ShareCardModel;
+      let copy: { text: string; shareUrl: string; templateKey: string };
+      if (type === 'personal') {
+        if (!profilePublicId) throw new Error('공유할 결과를 찾지 못했어요.');
+        const result = await responseJson<PersonalResult>(`/api/v1/results/${encodeURIComponent(profilePublicId)}`);
+        card = createPersonalShareCard(result) as ShareCardModel;
+        copy = personalShareCopy({ ...result, challengeUrl: challengeCode ? `${origin}/match/c/${encodeURIComponent(challengeCode)}` : undefined, resultUrl: `${origin}/match/result/${encodeURIComponent(profilePublicId)}`, archetypeName: card.title });
+      } else if (type === 'pair') {
+        if (!challengeCode || !resultId) throw new Error('공유할 궁합을 찾지 못했어요.');
+        const result = await responseJson<PairResult>(`/api/v1/challenges/${encodeURIComponent(challengeCode)}/results/${encodeURIComponent(resultId)}`);
+        card = createPairShareCard(result) as ShareCardModel;
+        copy = pairShareCopy({ ...result, archetypeName: card.title, bandLabel: result.band.label, pairUrl: `${origin}/match/c/${encodeURIComponent(challengeCode)}/match/${encodeURIComponent(resultId)}` });
       } else {
-        if (!challengeCode) throw new Error("SHARE_SOURCE_MISSING");
-        const ownerToken = readOwnerManageToken(window.localStorage, challengeCode);
-        const headers = ownerToken ? { authorization: `Bearer ${ownerToken}` } : undefined;
-        const result = await responseJson<RankingResult>(`/api/v1/challenges/${challengeCode}/ranking?limit=3`, headers);
-        const challengeUrl = `${origin}/match/c/${challengeCode}`;
-        const copy = rankingShareCopy({ topEntry: result.top20[0] ?? null, challengeUrl });
-        next = {
-          card: {
-            eyebrow: `${result.ownerNickname}의 웹툰궁합`,
-            title: "취향 왕좌 쟁탈전",
-            subtitle: result.entryCount ? "현재 1위를 밀어낼 웹툰 메이트를 찾는 중이에요." : "왕좌가 비었어요. 첫 번째 도전자가 주인공!",
-            badge: `현재 도전자 · ${result.entryCount}명`,
-            symbol: "♛",
-            theme: "gold",
-            rows: result.top20.slice(0, 3).map((entry) => ({ label: `${entry.rank}위  ${entry.nickname}`, value: `${entry.score}%` })),
-            callout: {
-              title: result.entryCount ? "다음 순위의 주인공은?" : "첫 번째 자리는 비어 있어요",
-              body: "링크로 들어와 테스트하면 바로 랭킹에 합류해요.",
-            },
-            footer: result.entryCount ? "현재 1위를 넘을 사람을 기다리는 중" : "첫 번째 도전자를 기다리는 중",
-            fileName: "webtoon-match-ranking.png",
-          },
-          shareText: copy.text,
-          shareUrl: copy.shareUrl,
-          templateKey: copy.templateKey,
-        };
+        if (!challengeCode) throw new Error('공유할 관계도를 찾지 못했어요.');
+        const token = readOwnerManageToken(window.localStorage, challengeCode);
+        const identity = ensureAnonymousId({ cookieText: document.cookie, storage: window.localStorage });
+        const result = await responseJson<RankingResult>(`/api/v1/challenges/${encodeURIComponent(challengeCode)}/ranking?limit=3`, { 'x-match-owner-id': identity.anonymousId, ...(token ? { authorization: `Bearer ${token}` } : {}) });
+        if (result.rankingVisibility === 'private' && !result.canManage) throw new Error('비공개 관계도는 공유할 수 없어요.');
+        card = createRankingShareCard(result) as ShareCardModel;
+        copy = rankingShareCopy({ topEntry: result.top20[0] ?? null, challengeUrl: `${origin}/match/c/${encodeURIComponent(challengeCode)}` });
       }
-
-      if (active) setPayload(next);
+      const svg = await renderShareCardSvg(card);
+      if (!active) return;
+      previewUrl = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
+      setPayload({ card, shareText: copy.text, shareUrl: copy.shareUrl, templateKey: copy.templateKey, svg, previewUrl });
     };
-    void load().catch(() => active && setError("공유할 결과를 불러오지 못했어요."));
-    return () => { active = false; };
-  }, [type, profilePublicId, challengeCode, resultId]);
-
+    void load().catch(failure => { if (active) setError(failure instanceof Error ? failure.message : '공유 카드를 만들지 못했어요.'); });
+    return () => { active = false; if (previewUrl) URL.revokeObjectURL(previewUrl); };
+  }, [type, profilePublicId, challengeCode, resultId, retry]);
   useEffect(() => {
     if (!message) return;
-    const timeout = window.setTimeout(() => setMessage(""), 2400);
+    const timeout = window.setTimeout(() => setMessage(''), 4000);
     return () => window.clearTimeout(timeout);
   }, [message]);
-
-  function track(eventName: string, properties: Record<string, string>) {
-    trackMatchEvent(eventName, properties);
+  function track(action: string) {
+    trackMatchEvent('wm_share_fallback', { shareType: type, action });
   }
-
   function openThreads() {
     if (!payload) return;
-    track("wm_share_intent_click", { shareType: type, templateKey: payload.templateKey });
-    if (type === "ranking") track("wm_ranking_share_click", { shareType: type, reason: "initial" });
-    window.open(threadsIntentUrl(payload.shareText), "_blank", "noopener,noreferrer");
+    trackMatchEvent('wm_share_intent_click', { shareType: type, templateKey: payload.templateKey });
+    if (type === 'ranking') trackMatchEvent('wm_ranking_share_click', { shareType: type, reason: 'initial' });
+    window.open(threadsIntentUrl(payload.shareText), '_blank', 'noopener,noreferrer');
+    setMessage('이미지는 저장한 뒤 Threads에서 첨부해 주세요.');
   }
-
-  async function copyText(kind: "text" | "link") {
+  async function copyLink() {
     if (!payload) return;
-    try {
-      await copyToClipboard(kind === "text" ? payload.shareText : payload.shareUrl);
-      track("wm_share_fallback", { shareType: type, action: kind });
-      setMessage(kind === "text" ? "공유 문구를 복사했어요." : "링크를 복사했어요.");
-    } catch {
-      setMessage("복사하지 못했어요. 아래 내용을 직접 복사해 주세요.");
-    }
+    try { await copyToClipboard(payload.shareUrl); track('link'); setMessage('링크를 복사했어요.'); }
+    catch { setMessage('복사하지 못했어요. 다시 시도해 주세요.'); }
   }
-
   async function saveImage() {
-    if (!payload) return;
+    if (!payload || saving) return;
     setSaving(true);
-    try {
-      const blob = await renderShareCardPng(payload.card);
-      downloadBlob(blob, payload.card.fileName);
-      track("wm_share_fallback", { shareType: type, action: "image" });
-      setMessage("공유 카드를 이미지로 저장했어요.");
-    } catch {
-      setMessage("이미지를 저장하지 못했어요. 화면을 캡처해 사용해 주세요.");
-    } finally {
-      setSaving(false);
-    }
+    try { downloadBlob(await renderShareCardPng(payload.svg), payload.card.fileName); track('image'); setMessage('공유 카드를 이미지로 저장했어요.'); }
+    catch { setMessage('이미지를 저장하지 못했어요. 다시 시도해 주세요.'); }
+    finally { setSaving(false); }
   }
-
-  if (error) return <main className="match-page"><section className="match-card match-hero"><p className="match-eyebrow">공유 준비</p><h1>{error}</h1><button className="match-button" type="button" onClick={() => history.back()}>이전 화면으로</button></section></main>;
-  if (!payload) return <main className="match-page"><section className="match-card match-hero"><p>공유 카드를 만드는 중이에요…</p></section></main>;
-
-  return <main className="match-page match-share-page">
-    <section className="match-share-heading"><p className="match-eyebrow">공유 미리보기</p><h1>이 카드로 공유할까요?</h1><p>Threads에서는 이미지가 자동으로 붙지 않을 수 있어요. 이미지를 저장한 뒤 직접 첨부하면 가장 정확해요.</p></section>
-    <article className={`match-share-card is-${payload.card.theme ?? "violet"}${payload.card.metric ? " has-metric" : ""}${payload.card.imageSrc ? " has-character" : ""}${payload.card.callout ? " has-callout" : ""}`} aria-label={`${payload.card.eyebrow} 공유 카드 미리보기`}>
-      <div className="match-share-brand"><strong>웹툰궁합</strong><span>WEBTOON FIT</span></div>
-      {payload.card.imageSrc ? <span className="match-share-character"><Image src={payload.card.imageSrc} alt={payload.card.imageAlt ?? "웹툰 본캐"} width={360} height={540} priority /></span> : payload.card.symbol ? <span className="match-share-symbol" aria-hidden="true">{payload.card.symbol}</span> : null}
-      {payload.card.badge ? <strong className="match-share-badge">{payload.card.badge}</strong> : null}
-      <p>{payload.card.eyebrow}</p>
-      <h2>{payload.card.title}</h2>
-      <h3>{payload.card.subtitle}</h3>
-      {payload.card.metric ? <strong className="match-share-metric">{payload.card.metric}</strong> : null}
-      <div className="match-share-rows">{payload.card.rows.length ? payload.card.rows.map((row, index) => <div key={`${row.label}-${index}`}><strong>{row.label}</strong>{row.value ? <span>{row.value}</span> : null}</div>) : <div><strong>아직 첫 번째 도전자를 기다리는 중</strong></div>}</div>
-      {payload.card.callout ? <div className="match-share-callout"><strong>{payload.card.callout.title}</strong><span>{payload.card.callout.body}</span></div> : null}
-      <footer><span>{payload.card.footer}</span><strong>webtoon fit</strong></footer>
-    </article>
-    <section className="match-share-actions">
-      <button className="match-button" type="button" onClick={openThreads}>Threads에 공유하기</button>
-      <button className="match-button match-button--secondary" type="button" disabled={saving} onClick={() => void saveImage()}>{saving ? "이미지 만드는 중…" : "이미지 저장"}</button>
-      <div><button type="button" onClick={() => void copyText("text")}>문구 복사</button><button type="button" onClick={() => void copyText("link")}>링크 복사</button></div>
-    </section>
-    <p className="match-topic-guide">Threads 작성 화면에서 ‘웹툰’이나 ‘웹툰추천’ 관련 토픽을 하나 골라 주세요. 자동으로 게시되지는 않아요.</p>
-    {message ? <p className="match-toast" role="status" aria-live="polite">{message}</p> : null}
-    <details className="match-share-copy"><summary>공유 문구 미리보기</summary><pre>{payload.shareText}</pre></details>
-    <button className="match-text-link" type="button" onClick={() => history.back()}>이전 화면으로</button>
+  return <main className="match-page wm-share-page" aria-busy={!payload && !error}>
+    <h1>{SHARE_PAGE_TITLES[type]}</h1>
+    {error ? <section className="wm-share-state" role="alert"><p>{error}</p><button className="match-button" type="button" onClick={() => { setError(''); setPayload(null); setRetry(value => value + 1); }}>다시 불러오기</button></section> : payload ? <>
+      <article className={`wm-share-card is-${type}`} aria-label="공유 카드 미리보기">
+        {/* eslint-disable-next-line @next/next/no-img-element -- Self-contained SVG is also the exact PNG export source. */}
+        <img src={payload.previewUrl} width={350} height={500} alt={shareCardDescription(payload.card)} />
+      </article>
+      <section className="wm-share-actions" aria-label="결과 공유">
+        <button className="wm-share-primary" type="button" onClick={openThreads}><MatchIcon name="share" />Threads에 공유하기</button>
+        <div className="wm-share-secondary"><button type="button" disabled={saving} onClick={() => void saveImage()}><MatchIcon name="download" />{saving ? '저장 중…' : '이미지 저장'}</button><button type="button" onClick={() => void copyLink()}><MatchIcon name="link" />링크 복사</button></div>
+      </section>
+    </> : <section className="wm-share-state" role="status">공유 카드를 만드는 중이에요…</section>}
+    <p className={`wm-share-toast${message ? ' is-visible' : ''}`} role="status" aria-live="polite">{message}</p>
   </main>;
 }

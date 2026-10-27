@@ -1,0 +1,21 @@
+/* Approved mature share-card series; test/result screens remain untouched. */
+.match-module:has(.wm-share-page) { background:#f3fafc; }
+.match-module.match-cyan .match-page.wm-share-page { max-width:435px; min-height:calc(100dvh - 56px); padding:12px 20px 20px; display:grid; align-content:start; gap:14px; color:#193640; font-size:16px; }
+.match-module.match-cyan .wm-share-page h1 { margin:0 0 3px; font-family:'WebtoonFit Nanum Gothic',sans-serif; font-size:26px; line-height:1.4; font-weight:700; letter-spacing:-.045em; word-break:keep-all; overflow-wrap:anywhere; }
+.match-module:has(.wm-share-page) > .match-screen-header .match-screen-header-label { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+.wm-share-card { min-width:0; margin:0; }
+.wm-share-card > img { display:block; width:100%; height:auto; border-radius:20px; }
+.wm-share-actions { display:grid; gap:10px; min-width:0; }
+.wm-share-actions button { display:flex; align-items:center; justify-content:center; gap:10px; min-height:48px; padding:10px 12px; font:inherit; font-size:16px; font-weight:700; cursor:pointer; }
+.wm-share-actions .wm-icon { width:22px; height:22px; flex-shrink:0; }
+.wm-share-primary { min-height:52px!important; border:1px solid #00b8d7; border-radius:13px; background:#00c8ea; color:#073c47; }
+.wm-share-secondary { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); padding:3px; border:1px solid #dcebef; border-radius:13px; background:#fff; }
+.wm-share-secondary button { min-width:0; border:0; background:transparent; color:#193640; }
+.wm-share-secondary button+button { border-left:1px solid #dcebef; }
+.wm-share-actions button:disabled { opacity:.5; cursor:wait; }
+.wm-share-page :focus-visible { outline:3px solid #007e98; outline-offset:3px; }
+.wm-share-state { display:grid; align-content:center; justify-items:center; gap:20px; min-height:400px; padding:22px; border:1px solid #dcebef; border-radius:20px; color:#647e87; background:#fff; text-align:center; }
+.wm-share-state p { margin:0; }
+.wm-share-toast { position:fixed; z-index:120; right:16px; bottom:max(20px,env(safe-area-inset-bottom)); left:16px; width:fit-content; max-width:calc(100% - 32px); margin:0 auto; padding:12px 16px; border-radius:14px; background:#193640; color:#fff; font-size:14px; line-height:1.5; text-align:center; box-shadow:0 8px 24px #19364022; }
+.wm-share-toast:not(.is-visible) { padding:0; visibility:hidden; }
+@media(max-width:350px) { .match-module.match-cyan .match-page.wm-share-page { padding-inline:16px; } .match-module.match-cyan .wm-share-page h1 { font-size:23px; } .wm-share-actions button { gap:7px; font-size:15px; } }

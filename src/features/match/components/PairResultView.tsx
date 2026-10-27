@@ -5,6 +5,12 @@ import { trackMatchEvent } from "../analytics/client";
 import { pairArchetypeFor } from "../share/shareArchetypes.mjs";
 import { ensureAnonymousId } from "../storage/anonymousIdentity.mjs";
 import { readMatchDraft } from "../storage/draft.mjs";
+import Link from "next/link";
+import { PersonaAvatar } from "./PersonaAvatar";
+import { MatchIcon } from "./MatchIcon";
+import { MatchActionBar } from "./MatchActionBar";
+import { RecommendationCard, useRecommendationCarousel } from "./RecommendationWork";
+import { useHorizontalScrollIndicator } from "./useHorizontalScrollIndicator";
 
 type RecommendedWebtoon = {
   canonicalWebtoonId: string;
@@ -19,8 +25,11 @@ type RecommendedWebtoon = {
   recommenderPublicProfileId: string | null;
   canViewerLike: boolean;
   tasteFitHighlighted: boolean;
+  coverUrl?: string | null;
+  fitTargetPublicProfileId?: string | null;
 };
-type PairResult = { ownerNickname: string; challengerNickname: string; score: number; band: { label: string; subcopy: string }; sharedGenres: string[]; differentGenres: string[]; ownerRecommendedGenres: string[]; challengerRecommendedGenres: string[]; ownerRecommendations: RecommendedWebtoon[]; challengerRecommendations: RecommendedWebtoon[]; recommendationTasteApplied: boolean; sharedTasteLabels: string[]; trustSentence: string; rank: number; entryCount: number };
+type PairGenre = { genreKey: string; displayLabel: string; stars: number };
+type PairResult = { ownerNickname: string; challengerNickname: string; ownerGenreKey?: string | null; challengerGenreKey?: string | null; ownerTopGenres?: PairGenre[]; challengerTopGenres?: PairGenre[]; score: number; band: { label: string; subcopy: string }; sharedGenres: string[]; differentGenres: string[]; ownerRecommendedGenres: string[]; challengerRecommendedGenres: string[]; ownerRecommendations: RecommendedWebtoon[]; challengerRecommendations: RecommendedWebtoon[]; recommendationTasteApplied: boolean; sharedTasteLabels: string[]; trustSentence: string; rank: number; entryCount: number };
 
 export function PairResultView({ challengeCode, resultId, showRankingReturn = false }: { challengeCode: string; resultId: string; showRankingReturn?: boolean }) {
   const [result, setResult] = useState<PairResult | null>(null);
@@ -28,6 +37,9 @@ export function PairResultView({ challengeCode, resultId, showRankingReturn = fa
   const [personalResultId, setPersonalResultId] = useState<string | null>(null);
   const [likeSavingKey, setLikeSavingKey] = useState<string | null>(null);
   const [likeMessage, setLikeMessage] = useState("");
+  const [tab, setTab] = useState<"summary" | "comparison">("summary");
+  const summaryTab = useRef<HTMLButtonElement>(null);
+  const comparisonTab = useRef<HTMLButtonElement>(null);
   const resultTracked = useRef(false);
 
   useEffect(() => {
@@ -104,35 +116,39 @@ export function PairResultView({ challengeCode, resultId, showRankingReturn = fa
     }
   }
 
-  if (error) return <main className="match-page"><section className="match-card match-hero"><h1>{error}</h1><a className="match-button" href={`/match/c/${challengeCode}`}>초대 화면으로</a></section></main>;
-  if (!result) return <main className="match-page"><section className="match-card match-hero"><p>둘의 궁합을 불러오는 중이에요…</p></section></main>;
+  if (error) return <main className="match-page wm-pair-page"><section className="wm-pair-panel"><h1>{error}</h1><a className="match-button" href={`/match/c/${challengeCode}`}>초대 화면으로</a></section></main>;
+  if (!result) return <main className="match-page wm-pair-page"><section className="wm-pair-panel" role="status"><p>둘의 궁합을 불러오는 중이에요…</p></section></main>;
   const archetype = pairArchetypeFor(result.score);
-  const scoreEffect = result.score >= 85 ? "is-score-peak" : result.score >= 70 ? "is-score-high" : result.score >= 50 ? "is-score-mid" : "is-score-low";
-  const scoreStyle = { "--match-score": `${Math.max(0, Math.min(100, result.score))}%` } as CSSProperties;
+  const [badgeLead, ...badgeRest] = archetype.badge.split(" ");
+  const scoreStyle = { "--pair-score-angle": `${Math.max(0, Math.min(100, result.score)) * 3.6}deg` } as CSSProperties;
 
-  return <main className="match-page match-pair-page">{showRankingReturn ? <a className="match-pair-context-back" href={`/match/c/${challengeCode}/ranking`}>← 전체 랭킹</a> : null}<section className={`match-pair-hero is-${archetype.theme} ${scoreEffect}`}><p className="match-eyebrow">{result.ownerNickname} × {result.challengerNickname}</p><h1>웹툰궁합</h1><div className="match-score-ring" style={scoreStyle}><strong>{result.score}</strong><span>%</span></div><strong className="match-pair-type-badge">{result.band.label}</strong><p className="match-pair-type-label">우리의 웹툰 관계 타입</p><h2>{archetype.name}</h2><p className="match-pair-archetype-copy"><SentenceLines text={archetype.description} /></p>{result.recommendationTasteApplied ? <p className="match-live-score-note">테스트 결과와 등록한 추천작을 함께 반영한 최신 궁합이에요.</p> : null}</section><PairSection title="같이 달릴 장르" items={result.sharedGenres} empty="서로의 새 장르를 개척해 봐요" /><RecommendationSections result={result} /><WebtoonRecommendationSection result={result} likeSavingKey={likeSavingKey} likeMessage={likeMessage} onToggleLike={toggleRecommendationLike} /><PairSection title="함께 맞는 취향" items={result.sharedTasteLabels} empty="세부 취향은 각자 다른 매력이 있어요" /><section className="match-result-section match-trust-card"><h2>이 사람 추천, 믿어도 될까?</h2><p>{result.trustSentence}</p></section><section className="match-result-section match-rank-summary"><span>현재 순위</span><strong>{result.rank}위</strong><small>도전자 {result.entryCount}명 중</small></section><p className="match-disclaimer">웹툰궁합은 {result.recommendationTasteApplied ? "테스트 응답과 등록한 추천작" : "테스트 응답"}으로 본 취향 비교 결과이며, 사람 사이의 관계나 성격을 평가하지 않아요.</p><div className="match-result-actions"><a className="match-button" href={`/match/share/pair?challengeCode=${challengeCode}&resultId=${resultId}`}>궁합 결과 공유하기</a><a className="match-button match-button--secondary" href={`/match/c/${challengeCode}/ranking`}>{result.ownerNickname}님의 전체 랭킹 보기</a>{personalResultId !== null ? personalResultId ? <a className="match-button match-button--secondary" href={`/match/result/${personalResultId}?from=pair`}>내 취향 결과 보기</a> : <a className="match-button match-button--secondary" href={`/match/c/${challengeCode}`}>나도 테스트하기</a> : null}</div></main>;
-}
+  function switchTab(next: "summary" | "comparison") {
+    setTab(next);
+    (next === "summary" ? summaryTab : comparisonTab).current?.focus();
+  }
 
-function SentenceLines({ text }: { text: string }) {
-  const sentences = text.split(/(?<=[.!?])\s+/u).filter(Boolean);
-  return <>{sentences.map((sentence) => <span className="match-sentence-line" key={sentence}>{sentence}</span>)}</>;
-}
-
-function RecommendationSections({ result }: { result: PairResult }) {
-  const recommendations = [
-    { nickname: result.ownerNickname, genres: result.ownerRecommendedGenres },
-    { nickname: result.challengerNickname, genres: result.challengerRecommendedGenres },
-  ].filter((item) => item.genres.length > 0);
-
-  if (!recommendations.length) return null;
-
-  return <section className="match-result-section match-recommendations"><h2>서로에게 물어볼 장르</h2><div>
-    {recommendations.map((item) => <RecommendationRow {...item} key={item.nickname} />)}
-  </div></section>;
-}
-
-function RecommendationRow({ nickname, genres }: { nickname: string; genres: string[] }) {
-  return <div><strong>{nickname}에게 물어볼 장르</strong><span>{genres.join(" · ")}</span></div>;
+  return <main className="match-page wm-pair-page">
+    <header className="wm-pair-heading"><Link href={`/match/c/${challengeCode}/ranking`} aria-label={`${result.ownerNickname}님의 취향 관계도로 돌아가기${showRankingReturn ? ", 이전 화면" : ""}`}><MatchIcon name="chevron" className="is-back" />관계도</Link><h1>상세 궁합</h1></header>
+    <section className="wm-pair-cover" aria-label={`${result.ownerNickname}님과 ${result.challengerNickname}님의 궁합 ${result.score}%`}>
+      <div className="wm-pair-comic"><div className="wm-pair-character"><span title={result.ownerNickname}>{result.ownerNickname}</span><PersonaAvatar genreKey={result.ownerGenreKey} sizes="(max-width: 360px) 200px, 224px" priority /></div><div className="wm-pair-character"><span title={result.challengerNickname}>{result.challengerNickname}</span><PersonaAvatar genreKey={result.challengerGenreKey} sizes="(max-width: 360px) 200px, 224px" priority /></div><span className="wm-pair-bubble"><span className="wm-pair-bubble-words">{badgeLead}<br />{badgeRest.join(" ")}</span><span className="wm-pair-bubble-tail" aria-hidden="true" /><span className="wm-pair-bubble-tail is-right" aria-hidden="true" /></span></div>
+      <div className="wm-pair-cover-caption"><div><p>{result.band.label}</p><h2>{archetype.name}</h2>{result.recommendationTasteApplied ? <small>추천작 반영</small> : null}</div><div className="wm-pair-score" style={scoreStyle}><strong>{result.score}<small>%</small></strong><span>웹툰궁합</span></div></div>
+    </section>
+    <div className="wm-pair-tabs" role="tablist" aria-label="궁합 정보" onKeyDown={(event) => { if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) { event.preventDefault(); switchTab(event.key === "Home" ? "summary" : event.key === "End" ? "comparison" : tab === "summary" ? "comparison" : "summary"); } }}>
+      <button ref={summaryTab} id="pair-summary-tab" role="tab" type="button" aria-selected={tab === "summary"} aria-controls="pair-summary-panel" tabIndex={tab === "summary" ? 0 : -1} onClick={() => setTab("summary")}>궁합 요약</button><button ref={comparisonTab} id="pair-comparison-tab" role="tab" type="button" aria-selected={tab === "comparison"} aria-controls="pair-comparison-panel" tabIndex={tab === "comparison" ? 0 : -1} onClick={() => setTab("comparison")}>비교 상세</button>
+    </div>
+    <div id="pair-summary-panel" role="tabpanel" aria-labelledby="pair-summary-tab" hidden={tab !== "summary"} tabIndex={0}>
+      <section className="wm-pair-panel wm-pair-common"><h2>우리의 취향 접점</h2><div><span className="wm-pair-row-icon" aria-hidden="true">♡</span><div><h3>같이 달릴 장르</h3><PairLabels items={result.sharedGenres} empty="서로 다른 장르를 좋아해요" /></div></div><div><span className="wm-pair-row-icon" aria-hidden="true">✦</span><div><h3>함께 맞는 취향</h3><PairLabels items={result.sharedTasteLabels} empty="세부 취향은 각자의 매력" /></div></div></section>
+      <WebtoonRecommendationSection result={result} likeSavingKey={likeSavingKey} likeMessage={likeMessage} onToggleLike={toggleRecommendationLike} />
+    </div>
+    <div id="pair-comparison-panel" role="tabpanel" aria-labelledby="pair-comparison-tab" hidden={tab !== "comparison"} tabIndex={0}>
+      <section className="wm-pair-panel"><h2>각자의 취향 TOP 3</h2><div className="wm-pair-profiles">{[{ nickname: result.ownerNickname, genreKey: result.ownerGenreKey, genres: result.ownerTopGenres }, { nickname: result.challengerNickname, genreKey: result.challengerGenreKey, genres: result.challengerTopGenres }].map((person, index) => <div key={index}><header><PersonaAvatar genreKey={person.genreKey} /><strong>{person.nickname}</strong></header>{person.genres?.length ? <ol>{person.genres.map((genre, rank) => <li key={genre.genreKey}><small>{rank + 1}</small><span>{genre.displayLabel}</span><b aria-label={`별 ${genre.stars}개`}>★ {genre.stars}</b></li>)}</ol> : <p className="wm-pair-muted">취향 정보 없음</p>}</div>)}</div></section>
+      <section className="wm-pair-panel"><h2>서로 다른 장르</h2><PairLabels items={result.differentGenres} empty="주로 좋아하는 장르가 비슷해요" /></section>
+      <section className="wm-pair-panel wm-pair-reading"><h2>{archetype.name}</h2><p>{archetype.description}</p><h3>이 사람 추천, 믿어도 될까?</h3><p>{result.trustSentence}</p></section>
+    </div>
+    <div className="wm-pair-rank"><span>{result.ownerNickname}님의 관계도</span><strong>{result.rank}위 <small>/ {result.entryCount}명</small></strong></div>
+    <details className="wm-pair-about"><summary>궁합 결과 안내</summary><p>웹툰궁합은 {result.recommendationTasteApplied ? "테스트 응답과 등록한 추천작" : "테스트 응답"}으로 본 취향 비교 결과이며, 사람 사이의 관계나 성격을 평가하지 않아요.</p></details>
+    <MatchActionBar label="상세 궁합 바로가기"><Link className="match-button" href={`/match/c/${challengeCode}/ranking`} aria-label={`${result.ownerNickname}님의 취향 관계도`}>취향 관계도</Link><Link className="match-button match-button--secondary" href={`/match/share/pair?challengeCode=${challengeCode}&resultId=${resultId}`} aria-label="궁합 결과를 Threads에 공유"><MatchIcon name="share" />공유</Link>{personalResultId !== null ? <Link className="match-button match-button--secondary" href={personalResultId ? `/match/result/${personalResultId}?from=pair` : `/match/c/${challengeCode}`}>{personalResultId ? "내 결과" : "테스트하기"}</Link> : null}</MatchActionBar>
+  </main>;
 }
 
 function WebtoonRecommendationSection({ result, likeSavingKey, likeMessage, onToggleLike }: {
@@ -146,7 +162,7 @@ function WebtoonRecommendationSection({ result, likeSavingKey, likeMessage, onTo
     { nickname: result.challengerNickname, items: result.challengerRecommendations },
   ];
   if (groups.every((group) => group.items.length === 0)) return null;
-  return <section className="match-result-section match-pair-webtoons"><h2>서로의 추천작</h2><div>{groups.map((group) => <RecommendationCarousel {...group} likeSavingKey={likeSavingKey} onToggleLike={onToggleLike} key={group.nickname} />)}</div>{likeMessage ? <p className="match-recommendation-like-error" role="alert">{likeMessage}</p> : null}</section>;
+  return <section className="wm-pair-recommendations"><h2>서로의 추천작</h2>{groups.map((group, index) => <RecommendationCarousel {...group} likeSavingKey={likeSavingKey} onToggleLike={onToggleLike} key={index} />)}{likeMessage ? <p className="wm-pair-like-error" role="alert">{likeMessage}</p> : null}</section>;
 }
 
 function RecommendationCarousel({ nickname, items, likeSavingKey, onToggleLike }: {
@@ -155,63 +171,16 @@ function RecommendationCarousel({ nickname, items, likeSavingKey, onToggleLike }
   likeSavingKey: string | null;
   onToggleLike: (item: RecommendedWebtoon) => Promise<void>;
 }) {
-  const listRef = useRef<HTMLOListElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-  const carouselEnabled = items.length > 3;
+  const { listRef, position, prepareNavigation, onKeyDown } = useRecommendationCarousel(items.length, `pair:${items[0]?.recommenderPublicProfileId ?? nickname}:${items[0]?.fitTargetPublicProfileId ?? ''}:${items.map(item => item.canonicalWebtoonId).join(',')}`);
+  const { containerRef, barRef, thumbRef } = useHorizontalScrollIndicator(listRef, items.length);
+  const highlightedCount = items.filter((item) => item.tasteFitHighlighted).length;
 
-  useEffect(() => {
-    if (!carouselEnabled) return;
-    const list = listRef.current;
-    if (!list) return;
-    const update = () => {
-      setCanScrollLeft(list.scrollLeft > 2);
-      setCanScrollRight(list.scrollLeft + list.clientWidth < list.scrollWidth - 2);
-    };
-    update();
-    list.addEventListener("scroll", update, { passive: true });
-    const observer = new ResizeObserver(update);
-    observer.observe(list);
-    return () => {
-      list.removeEventListener("scroll", update);
-      observer.disconnect();
-    };
-  }, [carouselEnabled, items.length]);
-
-  function scroll(direction: -1 | 1) {
-    const list = listRef.current;
-    const firstCard = list?.querySelector<HTMLElement>("li");
-    if (!list || !firstCard) return;
-    const gap = Number.parseFloat(window.getComputedStyle(list).columnGap) || 0;
-    list.scrollBy({ left: direction * (firstCard.offsetWidth + gap), behavior: "smooth" });
-  }
-
-  return <div><h3>{nickname} 추천</h3>{items.length ? <div className={`match-recommendation-carousel${carouselEnabled ? "" : " is-static"}`}>
-    {carouselEnabled && canScrollLeft ? <button className="match-carousel-arrow is-left" type="button" onClick={() => scroll(-1)} aria-label={`${nickname}님의 이전 추천작 보기`}>‹</button> : null}
-    <ol ref={listRef}>{items.map((item) => {
+  return <div ref={containerRef} className="wm-pair-work-group"><header><div><h3>{nickname}님의 추천 <small>{items.length}</small></h3>{highlightedCount ? <span className="wm-pair-fit-note">상대 취향에 맞는 작품 {highlightedCount}</span> : null}</div>{items.length ? <div className="wm-pair-carousel-controls"><span role="status" aria-label={`${nickname}님의 추천작 위치`}>{position.index + 1} / {items.length}</span></div> : null}</header>{items.length ? <ol ref={listRef} className={`wm-pair-work-track${items.length === 1 ? " is-single" : ""}`} tabIndex={items.length > 1 ? 0 : undefined} aria-label={`${nickname}님의 추천작 목록`} onKeyDown={onKeyDown}>{items.map((item, itemIndex) => {
       const itemKey = `${item.recommenderPublicProfileId}:${item.canonicalWebtoonId}`;
-      const canLike = item.canViewerLike;
-      const likeLabel = item.likeCount > 0 ? `${item.likeCount}` : "좋아요";
-      return <li className={item.tasteFitHighlighted ? "is-taste-fit" : undefined} key={item.canonicalWebtoonId}>
-        <div>
-          {item.officialUrl ? <a className="match-recommendation-title" href={item.officialUrl} target="_blank" rel="noreferrer"><strong>{item.title}</strong></a> : <strong>{item.title}</strong>}
-          <small className="match-webtoon-genre">{item.mainGenreLabel}</small>
-          {item.recommendationComment ? <p className="match-recommendation-comment"><q>{item.recommendationComment}</q></p> : null}
-          {canLike ? <button
-            className={`match-recommendation-like${item.likedByViewer ? " is-liked" : ""}`}
-            type="button"
-            disabled={likeSavingKey === itemKey}
-            aria-pressed={item.likedByViewer}
-            aria-label={`${item.title} 추천 ${item.likedByViewer ? "좋아요 취소" : "좋아요"}`}
-            onClick={() => void onToggleLike(item)}
-          >{item.likedByViewer ? "♥" : "♡"} {likeLabel}</button> : <span className="match-recommendation-like-count">♡ {item.likeCount}</span>}
-        </div>
-      </li>;
-    })}</ol>
-    {carouselEnabled && canScrollRight ? <button className="match-carousel-arrow is-right" type="button" onClick={() => scroll(1)} aria-label={`${nickname}님의 다음 추천작 보기`}>›</button> : null}
-  </div> : <p>아직 등록한 추천작이 없어요.</p>}</div>;
+      return <li className="wm-pair-work-slide" key={item.canonicalWebtoonId} aria-label={`추천작 ${itemIndex + 1} / ${items.length}`}><RecommendationCard item={item} profileId={item.fitTargetPublicProfileId} returnTo={typeof window === 'undefined' ? '/match' : window.location.pathname + window.location.search} onOpen={() => prepareNavigation(itemIndex)} likeAction={item.canViewerLike ? { liked: item.likedByViewer, saving: likeSavingKey === itemKey, onToggle: () => void onToggleLike(item) } : undefined} /></li>;
+    })}</ol> : <p className="wm-pair-muted">등록한 추천작이 없어요.</p>}{items.length > 1 ? <div ref={barRef} className="wm-rail-scrollbar wm-pair-scrollbar" aria-hidden="true"><span ref={thumbRef} /></div> : null}</div>;
 }
 
-function PairSection({ title, items, empty }: { title: string; items: string[]; empty: string }) {
-  return <section className="match-result-section"><h2>{title}</h2>{items.length ? <div className="match-labels">{items.map((item) => <span key={item}>{item}</span>)}</div> : <p className="match-empty-label">{empty}</p>}</section>;
+function PairLabels({ items, empty }: { items: string[]; empty: string }) {
+  return items.length ? <div className="wm-pair-labels">{items.map((item) => <span key={item}>{item}</span>)}</div> : <p className="wm-pair-muted">{empty}</p>;
 }

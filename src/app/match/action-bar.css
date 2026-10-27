@@ -1,0 +1,5 @@
+.wm-action-bar { position: fixed; bottom: 0; left: 50%; z-index: 25; box-sizing: border-box; width: 100%; max-width: 540px; transform: translateX(-50%); display: flex; align-items: center; gap: 7px; padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid #e0edf2; background: #fffffff7; }
+.match-module.match-cyan .wm-action-bar .match-button { min-width: 0; flex: 1; gap: 5px; padding: 10px 8px; font-size: 12px; white-space: nowrap; min-height: 50px; }
+.wm-action-bar .wm-icon { width: 18px; height: 18px; }
+.wm-action-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 360px) { .wm-action-bar { padding-inline: 12px; gap: 5px; } }

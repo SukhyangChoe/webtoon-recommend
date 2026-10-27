@@ -329,7 +329,6 @@ const hardFailureKeys = [
   "missingGenreScores",
   "missingTypeScores",
   "unexpectedGenreScoreKeys",
-  "missingPreservedActionGenreScoreExceptions",
   "eligibleSourceMissing",
   "eligibleCoverage",
   "eligibleGateNotVerified",

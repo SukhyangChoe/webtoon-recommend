@@ -1,6 +1,7 @@
 import "server-only";
 
 import { normalizeRecommendationComment } from "../config/recommendationPolicy.mjs";
+import { safeWorkCoverUrl } from "../config/recommendationPresentation.mjs";
 import { getMatchDatabase } from "./database";
 
 export type WebtoonSummary = {
@@ -9,6 +10,8 @@ export type WebtoonSummary = {
   platform: string;
   officialUrl: string | null;
   mainGenre: string;
+  coverUrl?: string | null;
+  introduction?: string | null;
 };
 
 export type WebtoonRecommendationRecord = WebtoonSummary & {
@@ -35,6 +38,8 @@ type WebtoonRow = {
   platform: string;
   official_url: string | null;
   main_genre: string;
+  cover_url?: string | null;
+  introduction?: string | null;
 };
 
 type RecommendationRow = WebtoonRow & {
@@ -62,6 +67,8 @@ function toSummary(row: WebtoonRow): WebtoonSummary {
     platform: row.platform,
     officialUrl: row.official_url,
     mainGenre: row.main_genre,
+    coverUrl: safeWorkCoverUrl(row.cover_url),
+    introduction: typeof row.introduction === "string" ? row.introduction.slice(0, 200) : null,
   };
 }
 
@@ -85,6 +92,27 @@ export async function getProfileIdForAnonymousId(anonymousId: string) {
   return rows[0]?.profile_id ?? null;
 }
 
+/** Restart only the caller's recommendations, never their identity or result history. */
+export async function clearRecommendationsForRestart(anonymousId: string) {
+  const database = getMatchDatabase();
+  return database.begin(async sql => {
+    const profiles = await sql<{ profile_id: string }[]>`
+      select profile_id::text from public.match_profiles
+      where anonymous_id = ${anonymousId}::uuid
+      for update
+    `;
+    const profileId = profiles[0]?.profile_id;
+    if (!profileId) return { profileId: null, removedCount: 0 };
+    // The recommendation FK cascades only this list's comments and received likes.
+    const removed = await sql<{ canonical_webtoon_id: string }[]>`
+      delete from public.match_profile_recommendations
+      where profile_id = ${profileId}::uuid
+      returning canonical_webtoon_id
+    `;
+    return { profileId, removedCount: removed.length };
+  });
+}
+
 export function normalizeWebtoonTitle(value: string) {
   return value.normalize("NFC").trim().replace(/\s+/g, " ").toLocaleLowerCase("ko-KR");
 }
@@ -103,8 +131,11 @@ export async function searchWebtoons(query: string, limit = 20) {
   if (cached && cached.expiresAt > Date.now()) return cached.items;
   const database = getMatchDatabase();
   const rows = await database<WebtoonRow[]>`
-    select canonical_webtoon_id, title, platform, official_url, main_genre
+    select canonical_webtoon_id, title, platform, official_url, main_genre,
+      coalesce(details.cover_url,raw_data->>'coverUrl', raw_data#>>'{metadata,coverUrl}', raw_data#>>'{cover,src}') as cover_url,
+      left(coalesce(details.synopsis,raw_data->>'introduction', raw_data#>>'{metadata,description}',raw_data#>>'{recommendation,recommendationReason}'), 200) as introduction
     from public.webtoons
+    left join public.webtoon_details details using(canonical_webtoon_id)
     where catalog_status = 'active'
       and recommendation_eligible = true
       and (
@@ -148,10 +179,13 @@ export async function getProfileRecommendations(publicProfileId: string, viewerA
       webtoons.platform,
       webtoons.official_url,
       webtoons.main_genre,
+      max(coalesce(details.cover_url,webtoons.raw_data->>'coverUrl', webtoons.raw_data#>>'{metadata,coverUrl}', webtoons.raw_data#>>'{cover,src}')) as cover_url,
+      max(left(coalesce(details.synopsis,webtoons.raw_data->>'introduction', webtoons.raw_data#>>'{metadata,description}',webtoons.raw_data#>>'{recommendation,recommendationReason}'), 200)) as introduction,
       count(likes.liker_profile_id)::int as like_count,
       coalesce(bool_or(likes.liker_profile_id = ${viewerProfileId}::uuid), false) as liked_by_viewer
     from public.match_profile_recommendations recommendations
     join public.webtoons webtoons on webtoons.canonical_webtoon_id = recommendations.canonical_webtoon_id
+    left join public.webtoon_details details on details.canonical_webtoon_id = webtoons.canonical_webtoon_id
     join public.match_taste_snapshots snapshots on snapshots.profile_id = recommendations.profile_id
     left join public.match_profile_recommendation_likes likes
       on likes.recommender_profile_id = recommendations.profile_id
@@ -189,10 +223,13 @@ export async function getRecommendationsForProfiles(profileIds: string[], viewer
       webtoons.official_url,
       webtoons.main_genre,
       webtoons.raw_data,
+      max(coalesce(details.cover_url,webtoons.raw_data->>'coverUrl',webtoons.raw_data#>>'{metadata,coverUrl}',webtoons.raw_data#>>'{cover,src}')) as cover_url,
+      max(left(coalesce(details.synopsis,webtoons.raw_data#>>'{recommendation,recommendationReason}'),200)) as introduction,
       count(likes.liker_profile_id)::int as like_count,
       coalesce(bool_or(likes.liker_profile_id = ${viewerProfileId ?? null}::uuid), false) as liked_by_viewer
     from public.match_profile_recommendations recommendations
     join public.webtoons webtoons on webtoons.canonical_webtoon_id = recommendations.canonical_webtoon_id
+    left join public.webtoon_details details on details.canonical_webtoon_id = webtoons.canonical_webtoon_id
     left join public.match_profile_recommendation_likes likes
       on likes.recommender_profile_id = recommendations.profile_id
       and likes.canonical_webtoon_id = recommendations.canonical_webtoon_id
@@ -310,10 +347,13 @@ export async function replaceProfileRecommendations(input: { publicProfileId: st
         webtoons.platform,
         webtoons.official_url,
         webtoons.main_genre,
+        max(coalesce(details.cover_url,webtoons.raw_data->>'coverUrl', webtoons.raw_data#>>'{metadata,coverUrl}', webtoons.raw_data#>>'{cover,src}')) as cover_url,
+        max(left(coalesce(details.synopsis,webtoons.raw_data->>'introduction', webtoons.raw_data#>>'{metadata,description}',webtoons.raw_data#>>'{recommendation,recommendationReason}'), 200)) as introduction,
         count(likes.liker_profile_id)::int as like_count,
         false as liked_by_viewer
       from public.match_profile_recommendations recommendations
       join public.webtoons webtoons on webtoons.canonical_webtoon_id = recommendations.canonical_webtoon_id
+      left join public.webtoon_details details on details.canonical_webtoon_id = webtoons.canonical_webtoon_id
       left join public.match_profile_recommendation_likes likes
         on likes.recommender_profile_id = recommendations.profile_id
         and likes.canonical_webtoon_id = recommendations.canonical_webtoon_id

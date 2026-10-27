@@ -24,12 +24,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ chal
     const ranking = await getChallengeRanking({
       challengeCode,
       limit,
+      page: Number(url.searchParams.get("page") ?? 1),
+      genreKey: url.searchParams.get("genre"),
       viewerPublicProfileId: url.searchParams.get("viewerProfileId"),
       ownerManageToken: ownerToken(request),
       ownerAnonymousId: ownerAnonymousId(request),
     });
     if (!ranking) return NextResponse.json({ error: "CHALLENGE_NOT_FOUND" }, { status: 404 });
-    return NextResponse.json(ranking);
+    return NextResponse.json(ranking, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     const failure = toMatchApiFailure(error, "RANKING_LOAD_FAILED");
     return NextResponse.json({ error: failure.error }, { status: failure.status });

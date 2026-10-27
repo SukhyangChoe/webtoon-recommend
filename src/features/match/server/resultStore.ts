@@ -174,6 +174,55 @@ export async function getTasteSnapshotById(snapshotId: string) {
   return rows[0] ? withCurrentRecommendationTaste(storedSnapshot(rows[0])) : null;
 }
 
+/** Batch the relationship avatars' live taste results, rather than two queries per person. */
+export async function getTasteSnapshotsByIds(snapshotIds: string[], { latestForProfile = false }: { latestForProfile?: boolean } = {}): Promise<Record<string, StoredSnapshot>> {
+  const ids = [...new Set(snapshotIds)];
+  if (!ids.length) return {};
+  const database = getMatchDatabase();
+  const rows = await database.unsafe<SnapshotRow[]>(
+    `${SNAPSHOT_SELECT} where snapshots.snapshot_id = any($1::uuid[])`,
+    [database.array(ids)],
+  );
+  // Active relationships follow a profile's latest completed test, not the test
+  // pinned when its invite was created. Historical public-result URLs stay pinned.
+  const currentRows = latestForProfile && rows.length ? await database.unsafe<SnapshotRow[]>(`
+    ${SNAPSHOT_SELECT} where snapshots.snapshot_id in (
+      select distinct on (profile_id, question_set_version) snapshot_id
+      from public.match_taste_snapshots
+      where (profile_id, question_set_version) in (
+        select profile_id, question_set_version from public.match_taste_snapshots
+        where snapshot_id = any($1::uuid[])
+      )
+      order by profile_id, question_set_version, completed_at desc, snapshot_id desc
+    )
+  `, [database.array(ids)]) : rows;
+  const profileIds = [...new Set(rows.map((row) => row.profile_id))];
+  if (!profileIds.length) return {};
+  const recommendations = await database.unsafe<Array<RecommendationVectorRow & { profile_id: string }>>(`
+    select recommendations.profile_id::text, webtoons.raw_data
+    from public.match_profile_recommendations recommendations
+    join public.webtoons webtoons on webtoons.canonical_webtoon_id = recommendations.canonical_webtoon_id
+    where recommendations.profile_id = any($1::uuid[]) and webtoons.catalog_status = 'active'
+    order by recommendations.profile_id, recommendations.sort_order
+  `, [database.array(profileIds)]);
+  const vectors: Record<string, Record<string, unknown>[]> = {};
+  for (const row of recommendations) {
+    if (!row.raw_data?.recommendation) continue;
+    const items = vectors[row.profile_id] ?? [];
+    items.push(row.raw_data.recommendation);
+    vectors[row.profile_id] = items;
+  }
+  const processed = currentRows.map((row) => applyRecommendationTaste(
+    storedSnapshot(row), vectors[row.profile_id] ?? [], questionSeed,
+  ) as StoredSnapshot);
+  if (!latestForProfile) return Object.fromEntries(processed.map(snapshot => [snapshot.snapshotId, snapshot]));
+  const byProfileVersion: Record<string, StoredSnapshot> = Object.fromEntries(processed.map(snapshot => [`${snapshot.profileId}:${snapshot.questionSetVersion}`, snapshot]));
+  return Object.fromEntries(rows.flatMap(row => {
+    const snapshot = byProfileVersion[`${row.profile_id}:${row.question_set_version}`];
+    return snapshot ? [[row.snapshot_id, snapshot]] : [];
+  }));
+}
+
 export async function getPublicTasteResult(publicProfileId: string) {
   const snapshot = await getTasteSnapshot(publicProfileId);
   return snapshot ? { ...toPublicTasteResult(snapshot), nickname: snapshot.profileDisplayName ?? null } : null;

@@ -3,10 +3,11 @@ import questionSeed from "../data/questionSeed.v0.4.json";
 import { MATCH_COMPATIBILITY_CONFIG } from "../config/compatibility.mjs";
 import { calculateCompatibility } from "../engine/compatibilityEngine.mjs";
 import { denseRankEntries, selectRankingWindow } from "../engine/rankingPolicy.mjs";
+import { relationshipGenreKeys, selectRelationshipPage } from "../engine/relationshipPolicy.mjs";
 import { calculateRecommendationFit } from "../engine/recommendationFitEngine.mjs";
 import { pairTrustSentence } from "../share/pairTrustCopy.mjs";
 import { getMatchDatabase, isPostgresError } from "./database";
-import { getTasteSnapshot, getTasteSnapshotById, updateProfileNickname, type StoredSnapshot } from "./resultStore";
+import { getTasteSnapshot, getTasteSnapshotById, getTasteSnapshotsByIds, updateProfileNickname, type StoredSnapshot } from "./resultStore";
 import { sanitizeMatchNickname } from "./nickname.mjs";
 import {
   getProfileIdForAnonymousId,
@@ -150,6 +151,7 @@ function publicRecommendations(
       canViewerLike,
       mainGenreLabel: catalogGenreLabels[item.mainGenre] ?? item.mainGenre,
       tasteFitHighlighted: fit.highlighted,
+      fitTargetPublicProfileId: targetSnapshot?.publicProfileId ?? null,
     };
   });
 }
@@ -266,8 +268,29 @@ async function challengeEntries(challengeId: string) {
   return rows.map(entryFromRow);
 }
 
-async function rankedEntries(challengeId: string) {
-  return denseRankEntries(await challengeEntries(challengeId)) as Array<ChallengeEntry & { rank: number }>;
+async function currentChallengeState(challenge: Challenge, entries: ChallengeEntry[]) {
+  const snapshots = await getTasteSnapshotsByIds([challenge.ownerSnapshotId, ...entries.map(entry => entry.challengerSnapshotId)], { latestForProfile: challenge.status === 'active' });
+  const owner = snapshots[challenge.ownerSnapshotId];
+  const results: Record<string, CompatibilityResult> = {};
+  const currentEntries = entries.map(entry => {
+    const challenger = snapshots[entry.challengerSnapshotId];
+    if (challenge.status !== 'active' || !owner || !challenger) return entry;
+    const result = compatibilityResult(challenge, owner, challenger);
+    results[entry.entryId] = { ...result, resultId: entry.resultId };
+    return { ...entry, score: result.overallScore, sharedGenres: result.sharedGenres };
+  });
+  return { snapshots, entries: currentEntries, results };
+}
+
+async function rankedEntries(challenge: Challenge) {
+  const current = await currentChallengeState(challenge, await challengeEntries(challenge.challengeId));
+  return denseRankEntries(current.entries) as Array<ChallengeEntry & { rank: number }>;
+}
+
+async function challengeOwnerSnapshot(challenge: Challenge) {
+  if (challenge.status !== 'active') return getTasteSnapshotById(challenge.ownerSnapshotId);
+  const snapshots = await getTasteSnapshotsByIds([challenge.ownerSnapshotId], { latestForProfile: true });
+  return snapshots[challenge.ownerSnapshotId] ?? null;
 }
 
 function hashToken(token: string) {
@@ -307,7 +330,7 @@ function publicRankingEntry(entry: ChallengeEntry & { rank?: number }, viewerPro
 }
 
 async function publicChallenge(challenge: Challenge) {
-  const ranking = await rankedEntries(challenge.challengeId);
+  const ranking = await rankedEntries(challenge);
   return {
     challengeCode: challenge.challengeCode,
     ownerNickname: challenge.ownerNickname,
@@ -515,7 +538,7 @@ export async function getActiveChallengeForOwner(anonymousId: string) {
   `;
   if (!rows[0]) return null;
   const challenge = challengeFromRow(rows[0]);
-  const ownerSnapshot = await getTasteSnapshotById(challenge.ownerSnapshotId);
+  const ownerSnapshot = await challengeOwnerSnapshot(challenge);
   return {
     ...await publicChallenge(challenge),
     ownerPublicProfileId: ownerSnapshot?.publicProfileId ?? null,
@@ -577,7 +600,9 @@ export async function getExistingChallengeEntry(input: { challengeCode: string; 
     limit 1
   `;
   const entry = rows[0] ? entryFromRow(rows[0]) : null;
-  return entry ? { resultId: entry.resultId, nickname: entry.challengerNickname, score: entry.score } : null;
+  if (!entry) return null;
+  const current = await currentChallengeState(challenge, [entry]);
+  return { resultId: entry.resultId, nickname: entry.challengerNickname, score: current.entries[0].score };
 }
 
 export async function createChallengeEntry(input: { challengeCode: string; anonymousId: string; challengerPublicProfileId: string; challengerNickname: string }) {
@@ -586,7 +611,7 @@ export async function createChallengeEntry(input: { challengeCode: string; anony
   if (challenge.status !== "active") throw new Error("CHALLENGE_CLOSED");
 
   const [ownerSnapshot, challengerSnapshot] = await Promise.all([
-    getTasteSnapshotById(challenge.ownerSnapshotId),
+    challengeOwnerSnapshot(challenge),
     getTasteSnapshot(input.challengerPublicProfileId),
   ]);
   if (!ownerSnapshot || !challengerSnapshot || challengerSnapshot.anonymousId !== input.anonymousId) throw new Error("CHALLENGER_SNAPSHOT_NOT_FOUND");
@@ -711,8 +736,8 @@ export async function createChallengeEntry(input: { challengeCode: string; anony
     return { entry, updated: false, existing: false };
   });
 
-  const rank = (await rankedEntries(challenge.challengeId)).find((item) => item.entryId === persisted.entry.entryId)?.rank ?? null;
-  return { resultId: persisted.entry.resultId, score: persisted.entry.score, rank, updated: persisted.updated, existing: persisted.existing };
+  const currentEntry = (await rankedEntries(challenge)).find((item) => item.entryId === persisted.entry.entryId);
+  return { resultId: persisted.entry.resultId, score: currentEntry?.score ?? persisted.entry.score, rank: currentEntry?.rank ?? null, updated: persisted.updated, existing: persisted.existing };
 }
 
 export async function getPublicPairResult(challengeCode: string, resultId: string, viewerAnonymousId?: string | null) {
@@ -742,16 +767,17 @@ export async function getPublicPairResult(challengeCode: string, resultId: strin
     limit 1
   `;
   if (!rows[0]) return null;
-  const result = resultFromRow(rows[0]);
-  const ranking = await rankedEntries(challenge.challengeId);
+  const current = await currentChallengeState(challenge, await challengeEntries(challenge.challengeId));
+  const ranking = denseRankEntries(current.entries) as Array<ChallengeEntry & { rank: number }>;
   const entry = ranking.find((item) => item.resultId === resultId);
   if (!entry) return null;
+  const result = current.results[entry.entryId] ?? resultFromRow(rows[0]);
   const viewerProfileId = viewerAnonymousId
     ? await getProfileIdForAnonymousId(viewerAnonymousId)
     : null;
   const [ownerSnapshot, challengerSnapshot, recommendations] = await Promise.all([
-    getTasteSnapshotById(result.ownerSnapshotId),
-    getTasteSnapshotById(result.challengerSnapshotId),
+    challenge.status === 'active' ? current.snapshots[challenge.ownerSnapshotId] ?? null : getTasteSnapshotById(result.ownerSnapshotId),
+    challenge.status === 'active' ? current.snapshots[entry.challengerSnapshotId] ?? null : getTasteSnapshotById(result.challengerSnapshotId),
     getRecommendationsForProfiles(
       [challenge.ownerProfileId, entry.challengerProfileId],
       viewerProfileId,
@@ -766,6 +792,10 @@ export async function getPublicPairResult(challengeCode: string, resultId: strin
     ownerNickname: challenge.ownerNickname,
     challengerNickname: entry.challengerNickname,
     score: result.overallScore,
+    ownerGenreKey: ownerSnapshot?.displayGenres?.[0]?.genreKey ?? null,
+    challengerGenreKey: challengerSnapshot?.displayGenres?.[0]?.genreKey ?? null,
+    ownerTopGenres: ownerSnapshot?.displayGenres?.slice(0, 3) ?? [],
+    challengerTopGenres: challengerSnapshot?.displayGenres?.slice(0, 3) ?? [],
     band: result.band,
     sharedGenres: result.sharedGenres,
     differentGenres: result.differentGenres,
@@ -794,13 +824,13 @@ export async function getPublicPairResult(challengeCode: string, resultId: strin
   };
 }
 
-export async function getChallengeRanking(input: { challengeCode: string; limit?: number; viewerPublicProfileId?: string | null; ownerManageToken?: string | null; ownerAnonymousId?: string | null }) {
+export async function getChallengeRanking(input: { challengeCode: string; limit?: number; page?: number; genreKey?: string | null; viewerPublicProfileId?: string | null; ownerManageToken?: string | null; ownerAnonymousId?: string | null }) {
   const challenge = await findChallenge(input.challengeCode);
   if (!challenge) return null;
 
   const canManage = await hasOwnerAccess(challenge, input.ownerManageToken, input.ownerAnonymousId);
   const allEntries = await challengeEntries(challenge.challengeId);
-  const ranked = denseRankEntries(allEntries) as Array<ChallengeEntry & { rank: number }>;
+  let ranked = denseRankEntries(allEntries) as Array<ChallengeEntry & { rank: number }>;
   const viewerSnapshot = input.viewerPublicProfileId ? await getTasteSnapshot(input.viewerPublicProfileId) : null;
   const viewerProfileId = viewerSnapshot?.profileId ?? null;
   const base = {
@@ -817,25 +847,45 @@ export async function getChallengeRanking(input: { challengeCode: string; limit?
   };
 
   if (challenge.rankingVisibility === "private" && !canManage) {
-    return { ...base, top20: [], viewerEntry: null, hiddenEntries: [] };
+    return { ...base, top20: [], viewerEntry: null, hiddenEntries: [], ownerGenreKey: null, ownerTopGenreKeys: [], graphEntries: [], entries: [], pagination: { page: 1, pageSize: 6, totalItems: 0, totalPages: 1 } };
   }
+
+  const current = await currentChallengeState(challenge, allEntries);
+  ranked = denseRankEntries(current.entries) as Array<ChallengeEntry & { rank: number }>;
 
   const window = selectRankingWindow(ranked, viewerProfileId, input.limit ?? 20) as {
     top20: Array<ChallengeEntry & { rank: number }>;
     viewerEntry: (ChallengeEntry & { rank: number }) | null;
   };
   const hiddenEntries = canManage
-    ? allEntries
+    ? current.entries
       .filter((entry) => entry.hiddenByOwner)
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
       .map((entry) => publicRankingEntry(entry, viewerProfileId))
     : [];
 
+  // Avatar identity follows the same recommendation-adjusted taste result as /match/result.
+  // Never return raw vectors, anonymous IDs, or hidden people's snapshots to the client.
+  const snapshots = current.snapshots;
+  const genreKeyFor = (id: string) => snapshots[id]?.displayGenres?.[0]?.genreKey ?? null;
+  const withPersona = (entry: ChallengeEntry & { rank?: number }) => ({
+    ...publicRankingEntry(entry, viewerProfileId), genreKey: genreKeyFor(entry.challengerSnapshotId),
+  });
+  const publicEntries = ranked.map(withPersona);
+  const relationship = selectRelationshipPage(publicEntries, {
+    page: input.page ?? 1,
+    genreKey: input.genreKey && Object.hasOwn(genreLabels, input.genreKey) ? input.genreKey : "all",
+  });
+
   return {
     ...base,
-    top20: window.top20.map((entry) => publicRankingEntry(entry, viewerProfileId)),
-    viewerEntry: window.viewerEntry ? publicRankingEntry(window.viewerEntry, viewerProfileId) : null,
+    top20: window.top20.map(withPersona),
+    viewerEntry: publicEntries.find((entry) => entry.isViewer && !relationship.entries.some((item: { entryId: string }) => item.entryId === entry.entryId)) ?? null,
     hiddenEntries,
+    ownerGenreKey: genreKeyFor(challenge.ownerSnapshotId),
+    ownerTopGenreKeys: relationshipGenreKeys(snapshots[challenge.ownerSnapshotId]?.displayGenres),
+    ownerPublicProfileId: canManage ? snapshots[challenge.ownerSnapshotId]?.publicProfileId ?? null : null,
+    ...relationship,
   };
 }
 

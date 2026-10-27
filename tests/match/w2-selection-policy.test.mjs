@@ -60,9 +60,15 @@ test("primary choices promote a selected option and give secondary choices equal
 });
 
 test("avoid-none is exclusive and regular avoidance is capped at three", () => {
+  const question = seed.questions.find(item => item.questionId === 'wm_avoidance_01');
+  assert.equal(question.maxSelect, 3);
+  assert.equal(question.selectMode, 'multi_select');
   assert.deepEqual(toggleExclusiveSelection(["a"], "avoid_none", "avoid_none", 3), ["avoid_none"]);
   assert.deepEqual(toggleExclusiveSelection(["avoid_none"], "a", "avoid_none", 3), ["a"]);
   assert.deepEqual(toggleExclusiveSelection(["a", "b", "c"], "d", "avoid_none", 3), ["a", "b", "c"]);
+  assert.deepEqual(toggleExclusiveSelection(["a", "b", "c"], "b", "avoid_none", 3), ["a", "c"]);
+  assert.deepEqual(toggleExclusiveSelection(["a", "b", "c"], "avoid_none", "avoid_none", 3), ["avoid_none"]);
+  assert.deepEqual(toggleExclusiveSelection(["avoid_none"], "avoid_none", "avoid_none", 3), []);
 });
 
 test("duel side swap is deterministic", () => {

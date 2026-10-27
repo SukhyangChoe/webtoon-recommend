@@ -1,0 +1,73 @@
+/* Shared reading scale, based on the detailed compatibility screen.
+   Large hero titles and numeric scores retain their existing visual hierarchy. */
+.match-module.match-cyan, .wm-dialog-backdrop, .wm-work-dialog {
+  --wm-font-body: 16px;
+  --wm-font-secondary: 14px;
+  --wm-font-caption: 12px;
+  --wm-font-section: 19px;
+  font-size: var(--wm-font-body);
+  line-height: 1.6;
+}
+.match-module.match-cyan :is(.match-page, .wm-screen, .wm-work-page, .wm-relationship-page, .wm-pair-page) {
+  font-size: var(--wm-font-body);
+  line-height: 1.6;
+}
+.match-module.match-cyan .match-page:not(.wm-screen) .match-card > p:not(.match-eyebrow),
+.match-module.match-cyan :is(.match-question-text, .match-entry-prompt > p:not(.match-eyebrow), .match-confirm-dialog > p:not(.match-eyebrow), .match-share-heading > p:last-child) {
+  font-size: var(--wm-font-body);
+  line-height: 1.7;
+}
+.match-module.match-cyan :is(.match-helper, .match-field-guide, .match-genre-card p, .match-ranked-card small, .match-check-row small, .match-disclaimer, .match-topic-guide, .match-share-copy),
+.match-module.match-cyan .match-page:not(.wm-screen) .match-helper {
+  font-size: var(--wm-font-secondary);
+  line-height: 1.6;
+}
+.match-module.match-cyan :is(.match-genre-card h2, .match-duel-card h2, .match-ranked-card strong, .match-check-row strong, .match-challenge-form label > span:first-child) {
+  font-size: var(--wm-font-body);
+  line-height: 1.5;
+}
+.match-module.match-cyan :is(.match-segmented button, .match-exclusive-button, .match-duel-assist__toggle) {
+  font-size: var(--wm-font-secondary);
+  line-height: 1.5;
+  min-height: 44px;
+}
+.match-module.match-cyan :is(.match-button, .match-back-button),
+.match-module.match-cyan .match-page:not(.wm-screen) .match-button,
+.match-module.match-cyan .wm-screen .match-button,
+.wm-dialog .match-button {
+  font-size: var(--wm-font-body);
+  line-height: 1.5;
+}
+.match-module.match-cyan input:not([type=checkbox], [type=radio]),
+.match-module.match-cyan textarea { font-size: var(--wm-font-body); line-height: 1.6; }
+.match-module.match-cyan :is(.wm-screen h2, .wm-pair-panel > h2, .wm-pair-recommendations > h2) { font-size: var(--wm-font-section); line-height: 1.5; }
+.match-module.match-cyan :is(.wm-screen .wm-taste-group h2, .wm-top-genres strong, .wm-taste-tiles strong, .wm-work-copy h3, .wm-ranking-person-copy > strong, .wm-visibility-switch strong, .wm-replace-guide strong) {
+  font-size: var(--wm-font-body);
+  line-height: 1.5;
+}
+.match-module.match-cyan :is(.wm-screen .wm-note, .wm-screen .wm-eyebrow, .wm-screen .wm-result-meta, .wm-panel-heading a, .wm-local-nav, .wm-avoidance li, .wm-screen .wm-taste-empty, .wm-empty, .wm-count, .wm-return-link, .wm-save-tray > span, .wm-floating-toast, .wm-load-error) {
+  font-size: var(--wm-font-secondary);
+  line-height: 1.6;
+}
+.match-module.match-cyan :is(.wm-taste-tiles li div > span, .wm-top-genres article > span:first-child, .wm-genre-tag, .wm-comment-field > small, .wm-quick-reasons p, .wm-quick-reasons button, .wm-reorder-actions button, .wm-feedback-row button, .wm-carousel-controls > span) {
+  font-size: var(--wm-font-caption);
+  line-height: 1.5;
+}
+.match-module.match-cyan .wm-nickname-edit { font-size: var(--wm-font-secondary) !important; }
+.match-module.match-cyan .wm-quick-reasons button { min-height: 36px; }
+.match-module.match-cyan .wm-comment-field textarea { padding-bottom: 28px; }
+.match-module.match-cyan .wm-feedback-row button { height: auto; min-height: 44px; }
+.match-module.match-cyan :is(.wm-relationship-heading p, .wm-map-empty, .wm-ranking-person-copy > span, .wm-ranking-person-copy > small, .wm-ranking-popover > button, .wm-ranking-pagination, .wm-visibility-switch small, .wm-hidden-participants, .wm-hidden-participants p, .wm-replace-guide p, .wm-ranking-empty p, .wm-ranking-empty-copy, .wm-ranking-toast) {
+  font-size: var(--wm-font-secondary);
+  line-height: 1.6;
+}
+.match-module.match-cyan :is(.wm-participants-panel summary > strong, .wm-link-management summary > strong, .wm-relationship-owner > strong, .wm-ranking-person-main > b) { font-size: var(--wm-font-body); }
+.match-module.match-cyan :is(.wm-relationship-owner > span:last-child, .wm-relationship-node > span:last-child, .wm-participants-panel > summary > small, .wm-closed-badge, .wm-list-sort) { font-size: var(--wm-font-caption); }
+.match-module.match-cyan .wm-relationship-filters button { font-size: var(--wm-font-secondary); white-space: normal; overflow-wrap: anywhere; line-height: 1.4; }
+.match-module.match-cyan .wm-relationship-filters small { font-size: var(--wm-font-caption); }
+.wm-dialog :is(.wm-pair-summary h2, .wm-hide-confirm h2) { font-size: 19px; line-height: 1.5; }
+.wm-dialog :is(.wm-pair-summary header p, .wm-pair-summary-genres > span, .wm-pair-summary-genres b, .wm-pair-summary-genres p, .wm-private-pair-note, .wm-hide-confirm p) { font-size: 14px; line-height: 1.6; }
+/* Compact multi-action footers use the same secondary size as pair results. */
+.match-module.match-cyan .wm-action-bar .match-button { font-size: var(--wm-font-secondary); }
+/* Shared immersive work titles must not inherit ordinary section-heading styles. */
+.match-module.match-cyan .wm-recommendation-card .wm-pair-work-title :is(h3, h4) { font-size: 18px; line-height: 1.5; }

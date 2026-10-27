@@ -14,7 +14,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ chal
       : null;
     const result = await getPublicPairResult(challengeCode, resultId, viewerAnonymousId);
     if (!result) return NextResponse.json({ error: "PAIR_RESULT_NOT_FOUND" }, { status: 404 });
-    return NextResponse.json(result);
+    return NextResponse.json(result, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     const failure = toMatchApiFailure(error, "PAIR_RESULT_LOAD_FAILED");
     return NextResponse.json({ error: failure.error }, { status: failure.status });

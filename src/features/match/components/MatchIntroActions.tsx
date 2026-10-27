@@ -6,6 +6,7 @@ import { MATCH_ROUTES } from "../config/routes";
 import { readPendingChallenge, writePendingChallenge } from "../storage/challengeStorage.mjs";
 import { createEmptyMatchDraft, readMatchDraft, writeMatchDraft } from "../storage/draft.mjs";
 import { validateMatchNickname } from "../server/nickname.mjs";
+import { MatchNavigation } from "./MatchUI";
 
 export function MatchIntroActions() {
   const [nickname, setNickname] = useState("");
@@ -45,5 +46,5 @@ export function MatchIntroActions() {
 
   if (!ready) return <button className="match-button" type="button" disabled>시작 화면을 준비하는 중…</button>;
 
-  return <form className="match-challenge-form match-test-profile-form" onSubmit={begin}><label><span>테스트에서 사용할 닉네임</span><input type="text" value={nickname} onChange={(event) => setNickname(event.target.value)} minLength={2} maxLength={20} placeholder="2~20자" autoComplete="nickname" aria-invalid={nickname.length > 0 && !nicknameValidation.valid} aria-describedby="test-nickname-guide" /><small id="test-nickname-guide" className={`match-field-guide${nickname.length > 0 && !nicknameValidation.valid ? " is-error" : ""}`}>{nicknameValidation.message}</small></label>{challengeCode ? <label className="match-check-row"><input type="checkbox" checked={agreed} onChange={(event) => setAgreed(event.target.checked)} /><span><strong>공개 범위를 확인했어요</strong><small>닉네임·궁합 점수·순위가 공개되며, 이 결과는 서로의 궁합 랭킹에 표시될 수 있어요.</small></span></label> : <p className="match-profile-note">닉네임은 결과와 초대 링크를 만들 때 사용해요. 실명이나 연락처는 피해주세요.</p>}<button className="match-button" type="submit" disabled={!nicknameValidation.valid || Boolean(challengeCode && !agreed)}>테스트 시작</button></form>;
+  return <form className="match-challenge-form match-test-profile-form" onSubmit={begin}><label><span>테스트에서 사용할 닉네임</span><input type="text" value={nickname} onChange={(event) => setNickname(event.target.value)} minLength={2} maxLength={20} placeholder="2~20자" autoComplete="nickname" aria-invalid={nickname.length > 0 && !nicknameValidation.valid} aria-describedby="test-nickname-guide" /><small id="test-nickname-guide" className={`match-field-guide${nickname.length > 0 && !nicknameValidation.valid ? " is-error" : ""}`}>{nicknameValidation.message}</small></label>{challengeCode ? <label className="match-check-row"><input type="checkbox" checked={agreed} onChange={(event) => setAgreed(event.target.checked)} /><span><strong>공개 범위를 확인했어요</strong><small>닉네임·궁합 점수·순위가 공개되며, 이 결과는 서로의 궁합 랭킹에 표시될 수 있어요.</small></span></label> : <p className="match-profile-note">닉네임은 결과와 초대 링크를 만들 때 사용해요. 실명이나 연락처는 피해주세요.</p>}<MatchNavigation previous="/match" type="submit" label="테스트 시작" disabled={!nicknameValidation.valid || Boolean(challengeCode && !agreed)} /></form>;
 }

@@ -14,9 +14,9 @@ export const CATALOG_TYPE_PARENT_KEYS = Object.freeze([
   "thriller_horror",
 ]);
 
-// 최신 원본 DB에 이미 포함된 5건은 사용자 확인 전까지 원값과 계산을 보존한다.
-// 이 목록은 action을 여섯 번째 기준 장르로 승인하는 목록이 아니라,
-// 새 action 값의 확산을 막기 위한 명시적인 임시 예외 목록이다.
+// Historical exceptions retained for auditing older snapshots. The user-approved
+// integrated 20261023 source removes these five action values. Do not reinsert
+// them or require their presence in new catalogs; other action values stay invalid.
 export const PRESERVED_ACTION_GENRE_SCORE_EXCEPTIONS = Object.freeze({
   wt_thriller_horror_add_040: Object.freeze({
     title: "재력으로 후려치는 환생 경찰",

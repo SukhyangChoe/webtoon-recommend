@@ -1,3 +1,5 @@
+import { personaImageFor } from "../config/personaImages.mjs";
+
 const OPPOSITE_SHELF_ARCHETYPE = {
   min: 0,
   key: "opposite_shelf_guide",
@@ -58,15 +60,15 @@ const PAIR_ARCHETYPES = [
 ];
 
 const PERSONAL_ARCHETYPES = {
-  fantasy: { name: "회귀 버튼 단골손님", description: "세계가 망해도 다음 화부터 확인하는 판타지 정주행러.", imageSrc: "/match/personas/fantasy-v2.png", imageAlt: "깨진 시간 마법을 되돌리는 판타지 본캐" },
-  murim: { name: "내공 만렙 정주행러", description: "수련 한 번, 경지 상승 한 번에 같이 강해지는 무협 체질.", imageSrc: "/match/personas/murim-v2.png", imageAlt: "비급과 내공을 펼치는 무협 고수 본캐" },
-  romance: { name: "심쿵 장면 수집가", description: "눈빛 한 번과 말풍선 하나도 놓치지 않는 감정선 채집가.", imageSrc: "/match/personas/romance.png", imageAlt: "설레는 장면을 스크랩북에 모으는 로맨스 본캐" },
-  ropan: { name: "황궁 서사 VIP", description: "빙의부터 계약결혼까지, 황궁 소식은 누구보다 빠른 독자.", imageSrc: "/match/personas/ropan-v2.png", imageAlt: "황궁 계약서에 인장을 찍는 로맨스 판타지 본캐" },
-  action: { name: "사이다 타격감 감별사", description: "답답함은 짧게, 반격은 시원하게 터져야 다음 화를 누르는 타입.", imageSrc: "/match/personas/action-v2.png", imageAlt: "전력을 다해 결정타를 날리는 액션 본캐" },
-  thriller_horror: { name: "복선 추적 야간반", description: "수상한 컷은 확대하고 떡밥은 끝까지 회수하는 심야 추적자.", imageSrc: "/match/personas/thriller-horror-v2.png", imageAlt: "손전등을 들고 뒤를 경계하는 스릴러 본캐" },
-  drama_daily: { name: "감정선 밀착 관찰자", description: "큰 사건보다 사람 마음이 움직이는 한 컷에 오래 머무는 독자.", imageSrc: "/match/personas/drama-daily-v2.png", imageAlt: "커피와 수첩을 동시에 챙기는 귀여운 일상 드라마 본캐" },
-  comedy: { name: "웃음컷 저장 장인", description: "타이밍 좋은 한 컷이면 장르를 넘어 바로 정주행하는 타입.", imageSrc: "/match/personas/comedy-v2.png", imageAlt: "휴대폰을 놓칠 만큼 크게 웃는 코미디 본캐" },
-  sports: { name: "역전 서사 응원단장", description: "훈련의 땀과 마지막 1초의 뒤집기에 누구보다 진심인 독자.", imageSrc: "/match/personas/sports-v2.png", imageAlt: "역전의 순간을 이끄는 농구 선수 본캐" },
+  fantasy: { name: "회귀 버튼 단골손님", description: "세계가 망해도 다음 화부터 확인하는 판타지 정주행러." },
+  murim: { name: "내공 만렙 정주행러", description: "수련 한 번, 경지 상승 한 번에 같이 강해지는 무협 체질." },
+  romance: { name: "심쿵 장면 수집가", description: "눈빛 한 번과 말풍선 하나도 놓치지 않는 감정선 채집가." },
+  ropan: { name: "황궁 서사 VIP", description: "빙의부터 계약결혼까지, 황궁 소식은 누구보다 빠른 독자." },
+  action: { name: "사이다 타격감 감별사", description: "답답함은 짧게, 반격은 시원하게 터져야 다음 화를 누르는 타입." },
+  thriller_horror: { name: "복선 추적 야간반", description: "수상한 컷은 확대하고 떡밥은 끝까지 회수하는 심야 추적자." },
+  drama_daily: { name: "감정선 밀착 관찰자", description: "큰 사건보다 사람 마음이 움직이는 한 컷에 오래 머무는 독자." },
+  comedy: { name: "웃음컷 저장 장인", description: "타이밍 좋은 한 컷이면 장르를 넘어 바로 정주행하는 타입." },
+  sports: { name: "역전 서사 응원단장", description: "훈련의 땀과 마지막 1초의 뒤집기에 누구보다 진심인 독자." },
 };
 
 export function pairArchetypeFor(score) {
@@ -78,8 +80,7 @@ export function personalArchetypeFor(genreKey) {
   const persona = PERSONAL_ARCHETYPES[genreKey] ?? {
     name: "다음 화 버튼 수호자",
     description: "재밌는 웹툰이라면 장르를 넘어 끝까지 확인하는 독자.",
-    imageSrc: "/match/personas/fantasy-v2.png",
-    imageAlt: "마법책을 펼쳐 다음 이야기를 찾는 웹툰 본캐",
   };
-  return { ...persona, symbol: "★", theme: "violet" };
+  const image = personaImageFor(genreKey);
+  return { ...persona, imageSrc: image.src, imageAlt: image.alt, symbol: "★", theme: "violet" };
 }

@@ -10,6 +10,7 @@ export default async function MatchSharePage({ params, searchParams }: { params:
   const query = await searchParams;
   const first = (value: string | string[] | undefined) => Array.isArray(value) ? value[0] : value;
   return <SharePreview
+    key={JSON.stringify([type, first(query.profilePublicId), first(query.challengeCode), first(query.resultId)])}
     type={type}
     profilePublicId={first(query.profilePublicId)}
     challengeCode={first(query.challengeCode)}

@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { trackMatchEvent } from "../analytics/client";
 import { MATCH_ROUTES } from "../config/routes";
 import { ensureAnonymousId } from "../storage/anonymousIdentity.mjs";
-import { readMatchDraft, resetMatchDraft } from "../storage/draft.mjs";
+import { readMatchDraft } from "../storage/draft.mjs";
+import { restartMatchTest } from '../api/restartTest.mjs';
 import { clearPendingChallenge, readChallengeResult, readOwnerManageToken, readPendingChallenge, writeChallengeResult, writePendingChallenge } from "../storage/challengeStorage.mjs";
 import { validateMatchNickname } from "../server/nickname.mjs";
 
@@ -18,6 +19,7 @@ export function ChallengeLanding({ challengeCode }: { challengeCode: string }) {
   const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState("");
   const landingTracked = useRef(false);
+  const restartPending = useRef(false);
   const nicknameValidation = validateMatchNickname(nickname);
 
   useEffect(() => {
@@ -79,11 +81,20 @@ export function ChallengeLanding({ challengeCode }: { challengeCode: string }) {
     window.location.assign(MATCH_ROUTES.result(existingResultId));
   }
 
-  function startFresh() {
+  async function startFresh() {
+    if (restartPending.current) return;
+    restartPending.current = true;
+    setError('');
     const preparedNickname = nicknameValidation.valid && agreed ? nicknameValidation.nickname : "";
-    writePendingChallenge(window.localStorage, challengeCode, preparedNickname);
-    resetMatchDraft(window.localStorage);
-    window.location.assign(MATCH_ROUTES.intro);
+    try {
+      const identity = ensureAnonymousId({ cookieText: document.cookie, storage: window.localStorage });
+      await restartMatchTest({ anonymousId: identity.anonymousId, storage: window.localStorage });
+      writePendingChallenge(window.localStorage, challengeCode, preparedNickname);
+      window.location.assign(MATCH_ROUTES.intro);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : '테스트를 다시 시작하지 못했어요.');
+      restartPending.current = false;
+    }
   }
 
   function submit(event: React.FormEvent) {
@@ -94,6 +105,7 @@ export function ChallengeLanding({ challengeCode }: { challengeCode: string }) {
 
   if (error && !challenge) return <section className="match-card match-hero"><p className="match-eyebrow">링크 확인</p><h1>{error}</h1><a className="match-button" href="/match">내 취향 테스트하기</a></section>;
   if (!challenge) return <section className="match-card match-hero"><p>초대 링크를 불러오는 중이에요…</p></section>;
+  if (error && !existingResultId) return <section className="match-card"><p className="match-notice" role="alert">{error}</p><button className="match-button" type="button" onClick={() => void startFresh()}>다시 시도</button></section>;
   if (challenge.status !== "active") return <section className="match-card match-hero"><p className="match-eyebrow">초대 종료</p><h1>이 궁합 링크는 지금 닫혀 있어요</h1>{isOwner ? <a className="match-button" href={`/match/c/${challengeCode}/ranking`}>랭킹 관리에서 다시 열기</a> : <a className="match-button" href="/match">내 취향 테스트하기</a>}</section>;
 
   return <section className="match-card match-invite-card"><p className="match-eyebrow">웹툰궁합 초대</p><div className="match-invite-stars" aria-hidden="true">✦ ✦<br />✦</div><h1><strong>{challenge.ownerNickname}</strong>님이<br />웹툰궁합을 보자고 했어요</h1><div className="match-invite-stats"><span>현재 도전자 <strong>{challenge.entryCount}명</strong></span>{challenge.topScore !== null ? <span>현재 1위 <strong>{challenge.topScore}%</strong></span> : null}</div>{isOwner ? <><p>내가 만든 링크의 참여 현황과 랭킹을 관리할 수 있어요.</p><div className="match-actions"><a className="match-button" href={`/match/c/${challengeCode}/ranking`}>랭킹 관리하기</a>{existingResultId ? <a className="match-button match-button--secondary" href={`/match/result/${existingResultId}`}>내 취향 결과 보기</a> : null}</div></> : existingResultId ? <><p>저장된 취향으로 바로 비교하거나, 새로 테스트할 수 있어요.</p><form className="match-challenge-form match-invite-entry-form" onSubmit={submit}><label><span>닉네임</span><input type="text" value={nickname} onChange={(event) => { setNickname(event.target.value); setError(""); }} minLength={2} maxLength={20} placeholder="2~20자" autoComplete="nickname" aria-invalid={nickname.length > 0 && !nicknameValidation.valid} aria-describedby="challenger-nickname-guide" /><small id="challenger-nickname-guide" className={`match-field-guide${nickname.length > 0 && !nicknameValidation.valid ? " is-error" : ""}`}>{nicknameValidation.message}</small></label><label className="match-check-row"><input type="checkbox" checked={agreed} onChange={(event) => setAgreed(event.target.checked)} /><span><strong>공개 범위를 확인했어요</strong><small>닉네임·궁합 점수·순위가 공개되며, 이 결과는 서로의 궁합 랭킹에 표시될 수 있어요.</small></span></label>{error ? <p className="match-notice is-error" role="alert">{error}</p> : null}<button className="match-button" type="submit" disabled={!agreed || !nicknameValidation.valid}>저장된 취향으로 바로 궁합 보기</button><button className="match-button match-button--secondary" type="button" onClick={startFresh}>새로 테스트하기</button></form></> : <button className="match-button" type="button" onClick={startFresh}>테스트 시작</button>}</section>;

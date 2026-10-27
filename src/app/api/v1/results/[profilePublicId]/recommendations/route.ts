@@ -16,7 +16,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ prof
       : null;
     return NextResponse.json({
       items: await getProfileRecommendations(profilePublicId, viewerAnonymousId),
-    });
+    }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     const failure = toMatchApiFailure(error, "RECOMMENDATIONS_LOAD_FAILED");
     return NextResponse.json({ error: failure.error }, { status: failure.status });
@@ -53,7 +53,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ prof
       items: replacement.items,
       recommendationInfluence: tasteResult?.recommendationInfluence ?? { workCount: 0, recommendationPercent: 0, testPercent: 100 },
       ...refreshed,
-    });
+    }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     const failure = toMatchApiFailure(error, "RECOMMENDATIONS_SAVE_FAILED");
     return NextResponse.json({ error: failure.error }, { status: failure.status });

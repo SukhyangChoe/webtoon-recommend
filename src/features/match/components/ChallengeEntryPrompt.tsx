@@ -5,7 +5,9 @@ import { ensureAnonymousId } from "../storage/anonymousIdentity.mjs";
 import { clearChallengeResult, clearPairResultPrompt, clearPendingChallenge, readLatestChallengeResult, readPairResultPrompt, readPendingChallenge, writeChallengeResult, writePairResultPrompt } from "../storage/challengeStorage.mjs";
 import { validateMatchNickname } from "../server/nickname.mjs";
 
-export function ChallengeEntryPrompt({ publicProfileId }: { publicProfileId: string }) {
+export type PairResultAction = { href: string; ownerNickname: string };
+
+export function ChallengeEntryPrompt({ publicProfileId, variant = "section", hideCompletedAction = false, onPairResultChange }: { publicProfileId: string; variant?: "section" | "action"; hideCompletedAction?: boolean; onPairResultChange?: (pair: PairResultAction | null) => void }) {
   const [challengeCode, setChallengeCode] = useState("");
   const [ownerNickname, setOwnerNickname] = useState("");
   const [nickname, setNickname] = useState("");
@@ -15,6 +17,10 @@ export function ChallengeEntryPrompt({ publicProfileId }: { publicProfileId: str
   const [pairResultId, setPairResultId] = useState("");
   const submissionStarted = useRef(false);
   const nicknameValidation = validateMatchNickname(nickname);
+
+  useEffect(() => {
+    onPairResultChange?.(challengeCode && ownerNickname && pairResultId ? { href: `/match/c/${challengeCode}/match/${pairResultId}`, ownerNickname } : null);
+  }, [challengeCode, ownerNickname, pairResultId, onPairResultChange]);
 
   const completeEntry = useCallback(async (code: string, challengerNickname: string) => {
     setSubmitting(true);
@@ -122,7 +128,10 @@ export function ChallengeEntryPrompt({ publicProfileId }: { publicProfileId: str
   }
 
   if (!challengeCode || !ownerNickname) return null;
-  if (pairResultId) return <section className="match-result-section match-entry-prompt"><p className="match-eyebrow">웹툰궁합</p><p>{ownerNickname}님과의 궁합 결과도 준비됐어요</p><a className="match-button" href={`/match/c/${challengeCode}/match/${pairResultId}`}>{ownerNickname}님과의 궁합 보러 가기</a></section>;
+  if (pairResultId && hideCompletedAction) return null;
+  if (pairResultId) return variant === "action"
+    ? <div className="wm-pair-action"><a className="match-button" href={`/match/c/${challengeCode}/match/${pairResultId}`}>{ownerNickname}님과의 웹툰궁합 보기 <span aria-hidden="true">→</span></a></div>
+    : <section className="match-result-section match-entry-prompt"><p className="match-eyebrow">웹툰궁합</p><p>{ownerNickname}님과의 궁합 결과도 준비됐어요</p><a className="match-button" href={`/match/c/${challengeCode}/match/${pairResultId}`}>{ownerNickname}님과의 궁합 보러 가기</a></section>;
   if (submitting) return <section className="match-result-section match-entry-prompt"><p className="match-eyebrow">궁합 계산 중</p><h2>{ownerNickname}님과의 결과를 만들고 있어요</h2><div className="match-loading-bar" aria-label="궁합 결과 계산 중"><span /></div></section>;
 
   return <section className="match-result-section match-entry-prompt"><p className="match-eyebrow">초대 참여</p><h2>{ownerNickname}님과의 궁합을 확인할게요</h2><p>{message || "이전 화면에서 입력한 닉네임을 확인한 뒤 다시 진행해 주세요."}</p><form className="match-challenge-form" onSubmit={submit}><label><span>닉네임</span><input type="text" value={nickname} onChange={(event) => setNickname(event.target.value)} minLength={2} maxLength={20} placeholder="2~20자" autoComplete="nickname" aria-invalid={nickname.length > 0 && !nicknameValidation.valid} aria-describedby="challenger-nickname-guide" /><small id="challenger-nickname-guide" className={`match-field-guide${nickname.length > 0 && !nicknameValidation.valid ? " is-error" : ""}`}>{nicknameValidation.message}</small></label><label className="match-check-row"><input type="checkbox" checked={agreed} onChange={(event) => setAgreed(event.target.checked)} /><span><strong>공개 범위를 확인했어요</strong><small>닉네임·궁합 점수·순위가 공개되며, 이 결과는 서로의 궁합 랭킹에 표시될 수 있어요.</small></span></label><button className="match-button" type="submit" disabled={!agreed || !nicknameValidation.valid}>궁합 결과 다시 만들기</button></form></section>;

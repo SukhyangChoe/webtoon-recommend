@@ -1,234 +1,237 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { trackMatchEvent } from "../analytics/client";
 import { readMatchDraft } from "../storage/draft.mjs";
 import { ensureAnonymousId } from "../storage/anonymousIdentity.mjs";
 import { readOwnerManageToken } from "../storage/challengeStorage.mjs";
-
-type RankingEntry = {
-  entryId: string;
-  resultId: string;
-  nickname: string;
-  score: number;
-  rank: number | null;
-  sharedGenres: string[];
-  isViewer: boolean;
-  isReciprocal: boolean;
-  updatedAt: string;
-};
+import { recommendationGenreLabel } from "../config/recommendationPresentation.mjs";
+import { pairArchetypeFor } from "../share/shareArchetypes.mjs";
+import { RELATIONSHIP_MIN_SCORE, RELATIONSHIP_MAX_PEOPLE } from "../engine/relationshipPolicy.mjs";
+import { MatchDialog } from "./MatchDialog";
+import { MatchIcon } from "./MatchIcon";
+import { MatchActionBar } from "./MatchActionBar";
+import { PersonaAvatar } from "./PersonaAvatar";
+import { RelationshipMap, type RelationshipPerson } from "./RelationshipMap";
 
 type RankingData = {
-  challengeCode: string;
-  ownerNickname: string;
-  entryCount: number;
-  status: "active" | "closed" | "deleted";
-  rankingVisibility: "public_by_link" | "private";
-  canManage: boolean;
-  top20: RankingEntry[];
-  viewerEntry: RankingEntry | null;
-  hiddenEntries: RankingEntry[];
+  challengeCode: string; ownerNickname: string; ownerGenreKey: string | null; ownerTopGenreKeys: string[]; ownerPublicProfileId?: string | null; entryCount: number;
+  status: "active" | "closed" | "deleted"; rankingVisibility: "public_by_link" | "private"; canManage: boolean;
+  graphEntries: RelationshipPerson[]; entries: RelationshipPerson[]; viewerEntry: RelationshipPerson | null;
+  hiddenEntries: RelationshipPerson[];
+  pagination: { page: number; pageSize: number; totalItems: number; totalPages: number };
 };
-
+type Identity = { ownerToken: string; anonymousId: string; viewerProfileId: string };
 const ACTIVE_CHALLENGE_MESSAGE = "다른 궁합 링크가 이미 열려 있어요. 그 링크를 닫은 뒤 다시 열어 주세요.";
 
-function ownerHeaders(ownerToken: string, ownerAnonymousId: string, includeContentType = false) {
+function ownerHeaders(identity: Identity, json = false) {
   return {
-    ...(includeContentType ? { "content-type": "application/json" } : {}),
-    ...(ownerToken ? { authorization: `Bearer ${ownerToken}` } : {}),
-    ...(ownerAnonymousId ? { "x-match-owner-id": ownerAnonymousId } : {}),
+    ...(json ? { "content-type": "application/json" } : {}),
+    ...(identity.ownerToken ? { authorization: `Bearer ${identity.ownerToken}` } : {}),
+    "x-match-owner-id": identity.anonymousId,
   };
 }
 
-async function requestRanking(challengeCode: string, ownerToken: string, ownerAnonymousId: string, viewerProfileId: string) {
-  const query = new URLSearchParams({ limit: "20" });
-  if (viewerProfileId) query.set("viewerProfileId", viewerProfileId);
-  const response = await fetch(`/api/v1/challenges/${challengeCode}/ranking?${query}`, {
-    headers: ownerHeaders(ownerToken, ownerAnonymousId),
-  });
-  const body = await response.json();
-  if (!response.ok) throw new Error(body.error ?? "RANKING_LOAD_FAILED");
-  return body as RankingData;
+async function requestRanking(challengeCode: string, identity: Identity, page: number, genre: string, signal?: AbortSignal) {
+  const query = new URLSearchParams({ limit: "20", page: String(page), genre });
+  if (identity.viewerProfileId) query.set("viewerProfileId", identity.viewerProfileId);
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  if (signal?.aborted) controller.abort();
+  signal?.addEventListener("abort", abort, { once: true });
+  const timeout = window.setTimeout(abort, 20000);
+  try {
+    const response = await fetch(`/api/v1/challenges/${challengeCode}/ranking?${query}`, { headers: ownerHeaders(identity), signal: controller.signal });
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.error ?? "RANKING_LOAD_FAILED");
+    return body as RankingData;
+  } finally {
+    window.clearTimeout(timeout);
+    signal?.removeEventListener("abort", abort);
+  }
 }
 
 export function ChallengeRankingView({ challengeCode }: { challengeCode: string }) {
   const [ranking, setRanking] = useState<RankingData | null>(null);
-  const [ownerToken, setOwnerToken] = useState("");
-  const [ownerAnonymousId, setOwnerAnonymousId] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [genre, setGenre] = useState("all");
+  const [listOpen, setListOpen] = useState(false);
+  const [managementOpen, setManagementOpen] = useState(false);
   const [viewerProfileId, setViewerProfileId] = useState("");
   const [message, setMessage] = useState("");
   const [mutating, setMutating] = useState("");
-  const [mutationAction, setMutationAction] = useState<"hide" | "restore" | "">("");
-  const [confirming, setConfirming] = useState("");
-  const [hideCandidate, setHideCandidate] = useState<RankingEntry | null>(null);
+  const [confirming, setConfirming] = useState(false);
+  const [hideCandidate, setHideCandidate] = useState<RelationshipPerson | null>(null);
+  const [selected, setSelected] = useState<RelationshipPerson | null>(null);
+  const [menuId, setMenuId] = useState<string | null>(null);
   const [replaceMode, setReplaceMode] = useState(false);
-  const rankingTracked = useRef(false);
+  const identity = useRef<Identity>({ ownerToken: "", anonymousId: "", viewerProfileId: "" });
+  const rankingTracked = useRef("");
+  const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const menuButtonRefs = useRef(new Map<string, HTMLButtonElement>());
+  const menuActionRef = useRef<HTMLButtonElement>(null);
+  const listRef = useRef<HTMLDetailsElement>(null);
+  const requestVersion = useRef(0);
 
   useEffect(() => {
     let active = true;
-    const token = readOwnerManageToken(window.localStorage, challengeCode) ?? "";
-    const identity = ensureAnonymousId({ cookieText: document.cookie, storage: window.localStorage });
-    const viewer = readMatchDraft(window.localStorage)?.resultPublicId ?? "";
-    const wantsReplacement = new URLSearchParams(window.location.search).get("replace") === "1";
-    void requestRanking(challengeCode, token, identity.anonymousId, viewer).then((body) => {
-      if (!active) return;
-      setOwnerToken(token);
-      setOwnerAnonymousId(identity.anonymousId);
+    const controller = new AbortController();
+    const version = ++requestVersion.current;
+    async function load() {
+      const anonymous = ensureAnonymousId({ cookieText: document.cookie, storage: window.localStorage });
+      const viewer = readMatchDraft(window.localStorage)?.resultPublicId ?? "";
+      identity.current = { ownerToken: readOwnerManageToken(window.localStorage, challengeCode) ?? "", anonymousId: anonymous.anonymousId, viewerProfileId: viewer };
+      setLoading(true);
+      setMessage("");
       setViewerProfileId(viewer);
-      setReplaceMode(wantsReplacement);
-      setRanking(body);
-      if (!rankingTracked.current) {
-        rankingTracked.current = true;
-        trackMatchEvent("wm_ranking_view", {
-          challengeCode,
-          entryCount: body.entryCount,
-          viewerRank: body.viewerEntry?.rank ?? 0,
-          canManage: body.canManage,
-        });
+      setReplaceMode(new URLSearchParams(window.location.search).get("replace") === "1");
+      try {
+        const body = await requestRanking(challengeCode, identity.current, page, genre, controller.signal);
+        if (!active || version !== requestVersion.current) return;
+        if (genre !== "all" && !body.ownerTopGenreKeys?.includes(genre)) { setGenre("all"); setPage(1); return; }
+        setRanking(body);
+        if (body.entryCount > 0 && !body.graphEntries.length) setListOpen(true);
+        if (rankingTracked.current !== challengeCode) {
+          rankingTracked.current = challengeCode;
+          trackMatchEvent("wm_ranking_view", { challengeCode, entryCount: body.entryCount, viewerRank: body.viewerEntry?.rank ?? 0, canManage: body.canManage });
+        }
+      } catch {
+        if (active && version === requestVersion.current) setMessage("관계도를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.");
+      } finally {
+        if (active && version === requestVersion.current) setLoading(false);
       }
-    }).catch(() => active && setMessage("랭킹을 불러오지 못했어요."));
-    return () => { active = false; };
-  }, [challengeCode]);
+    }
+    void load();
+    return () => { active = false; controller.abort(); };
+  }, [challengeCode, page, genre]);
 
-  async function refresh() {
-    setRanking(await requestRanking(challengeCode, ownerToken, ownerAnonymousId, viewerProfileId));
+  useEffect(() => {
+    if (!menuId) return;
+    menuActionRef.current?.focus();
+    const dismiss = (event: PointerEvent) => {
+      if (!(event.target instanceof Element) || !event.target.closest(".wm-ranking-menu")) setMenuId(null);
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { setMenuId(null); menuButtonRefs.current.get(menuId)?.focus(); }
+    };
+    document.addEventListener("pointerdown", dismiss);
+    document.addEventListener("keydown", escape);
+    return () => { document.removeEventListener("pointerdown", dismiss); document.removeEventListener("keydown", escape); };
+  }, [menuId]);
+
+  useEffect(() => () => { if (noticeTimer.current) clearTimeout(noticeTimer.current); }, []);
+
+  function notify(text: string) {
+    if (noticeTimer.current) clearTimeout(noticeTimer.current);
+    setMessage(text);
+    noticeTimer.current = setTimeout(() => setMessage(""), 4500);
   }
 
-  async function setEntryHidden(entry: RankingEntry, hiddenByOwner: boolean) {
+  async function refresh() {
+    const version = ++requestVersion.current;
+    const body = await requestRanking(challengeCode, identity.current, ranking?.pagination.page ?? page, genre);
+    if (version === requestVersion.current) {
+      setRanking(body);
+      if (body.entryCount > 0 && !body.graphEntries.length) setListOpen(true);
+    }
+  }
+
+  async function setEntryHidden(entry: RelationshipPerson, hiddenByOwner: boolean) {
+    if (!ranking?.canManage || mutating) return;
     setMutating(entry.entryId);
-    setMutationAction(hiddenByOwner ? "hide" : "restore");
-    setMessage("");
     try {
-      const response = await fetch(`/api/v1/challenges/${challengeCode}/entries/${entry.entryId}`, {
-        method: "PATCH",
-        headers: ownerHeaders(ownerToken, ownerAnonymousId, true),
-        body: JSON.stringify({ hiddenByOwner }),
-      });
+      const response = await fetch(`/api/v1/challenges/${challengeCode}/entries/${entry.entryId}`, { method: "PATCH", headers: ownerHeaders(identity.current, true), body: JSON.stringify({ hiddenByOwner }) });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error);
       trackMatchEvent("wm_owner_hide_entry", { challengeCode, hidden: hiddenByOwner });
       await refresh();
-      if (hiddenByOwner) setHideCandidate(null);
-      setMessage(hiddenByOwner ? "랭킹에서 숨겼어요." : "랭킹에 다시 표시했어요.");
-    } catch {
-      if (hiddenByOwner) setHideCandidate(null);
-      setMessage("항목 표시를 변경하지 못했어요.");
-    } finally {
-      setMutating("");
-      setMutationAction("");
-    }
+      setHideCandidate(null);
+      setSelected(null);
+      notify(hiddenByOwner ? "랭킹에서 숨겼어요." : "랭킹에 다시 표시했어요.");
+    } catch { notify("항목 표시를 변경하지 못했어요. 다시 시도해 주세요."); }
+    finally { setMutating(""); }
   }
 
   async function updateChallenge(body: { status?: "active" | "closed"; rankingVisibility?: boolean }) {
-    if (body.status === "closed" && confirming !== "challenge") {
-      setConfirming("challenge");
-      setMessage("새 참여를 닫으려면 버튼을 한 번 더 눌러 주세요.");
-      return;
-    }
-    setConfirming("");
+    if (!ranking?.canManage || mutating) return;
+    if (body.status === "closed" && !confirming) { setConfirming(true); notify("한 번 더 누르면 새 참여를 닫아요."); return; }
+    setConfirming(false);
     setMutating("challenge");
-    setMessage("");
     try {
-      const response = await fetch(`/api/v1/challenges/${challengeCode}`, {
-        method: "PATCH",
-        headers: ownerHeaders(ownerToken, ownerAnonymousId, true),
-        body: JSON.stringify(body),
-      });
+      const response = await fetch(`/api/v1/challenges/${challengeCode}`, { method: "PATCH", headers: ownerHeaders(identity.current, true), body: JSON.stringify(body) });
       const result = await response.json();
-      if (!response.ok) {
-        if (result.error === "ACTIVE_CHALLENGE_EXISTS") throw new Error(ACTIVE_CHALLENGE_MESSAGE);
-        throw new Error(result.error);
-      }
+      if (!response.ok) throw new Error(result.error === "ACTIVE_CHALLENGE_EXISTS" ? ACTIVE_CHALLENGE_MESSAGE : result.error);
       await refresh();
-      setMessage(body.status === "closed" ? replaceMode ? "기존 링크를 닫았어요. 이제 새 결과로 링크를 만들 수 있어요." : "새 참여를 닫았어요." : body.status === "active" ? "새 참여를 다시 열었어요." : body.rankingVisibility ? "링크 랭킹을 공개했어요." : "링크 랭킹을 비공개로 바꿨어요.");
-    } catch (error) {
-      setMessage(error instanceof Error && error.message === ACTIVE_CHALLENGE_MESSAGE ? ACTIVE_CHALLENGE_MESSAGE : "링크 설정을 변경하지 못했어요.");
-    } finally {
-      setMutating("");
-    }
+      notify(body.status === "closed" ? "새 참여를 닫았어요." : body.status === "active" ? "새 참여를 다시 열었어요." : body.rankingVisibility ? "랭킹을 공개했어요." : "랭킹을 비공개로 바꿨어요.");
+    } catch (error) { notify(error instanceof Error && error.message === ACTIVE_CHALLENGE_MESSAGE ? error.message : "링크 설정을 변경하지 못했어요."); }
+    finally { setMutating(""); }
   }
 
   async function copyInvitationLink() {
-    try {
-      await navigator.clipboard.writeText(`${window.location.origin}/match/c/${challengeCode}`);
-      setMessage("초대 링크를 복사했어요.");
-    } catch {
-      setMessage("초대 링크를 복사하지 못했어요. 잠시 후 다시 시도해 주세요.");
-    }
+    try { await navigator.clipboard.writeText(`${window.location.origin}/match/c/${challengeCode}`); notify("초대 링크를 복사했어요."); }
+    catch { notify("링크를 복사하지 못했어요. 다시 시도해 주세요."); }
   }
 
-  if (!ranking && message) return <main className="match-page"><section className="match-card match-hero"><h1>{message}</h1><a className="match-button" href="/match">웹툰궁합 홈으로</a></section></main>;
-  if (!ranking) return <main className="match-page"><section className="match-card match-hero"><p>궁합 랭킹을 불러오는 중이에요…</p></section></main>;
+  function openSummary(entry: RelationshipPerson) { setMenuId(null); setSelected(entry); }
+  function changePage(next: number) {
+    setMenuId(null); setPage(next);
+    listRef.current?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "start" });
+  }
+
+  if (!ranking) return <main className="match-page wm-relationship-page"><section className="wm-ranking-empty"><h1>{loading ? "관계도를 불러오는 중이에요…" : "관계도를 불러오지 못했어요"}</h1>{!loading ? <><p>{message}</p><button className="match-button" type="button" onClick={() => window.location.reload()}>다시 시도</button><Link href="/match">웹툰핏 홈으로</Link></> : null}</section></main>;
 
   const rankingIsPrivate = ranking.rankingVisibility === "private" && !ranking.canManage;
-  return <main className="match-page match-ranking-page">
-    <section className="match-ranking-hero">
-      <p className="match-eyebrow">웹툰궁합 랭킹</p>
-      <h1><strong>{ranking.ownerNickname}</strong>님과<br />누가 가장 잘 맞을까?</h1>
-      <div className="match-ranking-count"><strong>{ranking.entryCount}</strong><span>명의 도전자</span></div>
-      {ranking.status === "closed" ? <span className="match-status-badge">새 참여 마감</span> : null}
-      <p className="match-live-score-note">추천작이 바뀌면 취향을 다시 반영해 궁합 점수와 순위도 새로 계산돼요.</p>
-    </section>
+  const personalResultId = viewerProfileId || (ranking.canManage ? ranking.ownerPublicProfileId : null);
+  const currentPage = ranking.pagination.page;
+  const total = ranking.pagination.totalItems;
+  const shownGenres = ranking.ownerTopGenreKeys ?? [];
+  const displayEntry = (entry: RelationshipPerson, key = entry.entryId) => <div className={`wm-ranking-person${entry.isViewer ? " is-viewer" : ""}`} key={key}>
+    <button type="button" className="wm-ranking-person-main" onClick={() => openSummary(entry)} aria-label={`${entry.nickname}님과의 궁합 ${entry.score}%, 요약 보기`}>
+      <span className="wm-list-rank">{entry.rank ?? "–"}</span><PersonaAvatar genreKey={entry.genreKey} />
+      <span className="wm-ranking-person-copy"><strong>{entry.nickname}{entry.isViewer ? <small> 나</small> : null}</strong><span>{entry.genreKey ? recommendationGenreLabel(entry.genreKey) : "웹툰 취향"}</span>{entry.isReciprocal ? <small>이전에 본 궁합</small> : null}</span>
+      <b>{entry.score}%</b>
+    </button>
+    {ranking.canManage ? <div className="wm-ranking-menu"><button ref={(element) => { if (element) menuButtonRefs.current.set(entry.entryId, element); else menuButtonRefs.current.delete(entry.entryId); }} type="button" className="wm-ranking-more" aria-label={`${entry.nickname}님 관리 메뉴`} aria-haspopup="menu" aria-expanded={menuId === entry.entryId} disabled={loading || Boolean(mutating)} onClick={() => setMenuId(menuId === entry.entryId ? null : entry.entryId)}><MatchIcon name="more" /></button>
+      {menuId === entry.entryId ? <div className="wm-ranking-popover" role="menu" aria-label={`${entry.nickname}님 관리`}><span>{entry.nickname}</span><button ref={menuActionRef} type="button" role="menuitem" onBlur={(event) => { if (!event.currentTarget.closest(".wm-ranking-menu")?.contains(event.relatedTarget as Node | null)) setMenuId(null); }} onClick={() => { menuButtonRefs.current.get(entry.entryId)?.focus(); setMenuId(null); setHideCandidate(entry); }}><MatchIcon name="eyeOff" />랭킹에서 숨기기</button></div> : null}
+    </div> : <MatchIcon name="chevron" className="wm-row-chevron" />}
+  </div>;
 
-    {mutationAction ? <div className="match-ranking-progress" role="status" aria-live="polite"><strong>{mutationAction === "hide" ? "랭킹에서 숨기는 중이에요…" : "랭킹으로 복원하는 중이에요…"}</strong><div aria-hidden="true"><span /></div></div> : null}
+  return <main className="match-page wm-relationship-page" aria-busy={loading || Boolean(mutating)}>
+    <header className="wm-relationship-heading"><h1>{ranking.ownerNickname}님의 취향 관계도</h1><p>{ranking.entryCount}명 참여 · {RELATIONSHIP_MIN_SCORE}% 이상 상위 {RELATIONSHIP_MAX_PEOPLE}명{ranking.status === "closed" ? <span className="wm-closed-badge">참여 마감</span> : null}</p></header>
+    {rankingIsPrivate ? <section className="wm-ranking-empty"><h2>비공개 관계도예요</h2><p>주인장만 전체 순위를 볼 수 있어요.</p></section> : <>
+      <nav className="wm-relationship-filters" aria-label={`${ranking.ownerNickname}님의 상위 취향 장르 필터`}><button type="button" aria-pressed={genre === "all"} disabled={loading || Boolean(mutating)} onClick={() => { setGenre("all"); setPage(1); setMenuId(null); }}>전체</button>{shownGenres.map((key, index) => <button key={key} type="button" aria-label={`${index + 1}위 ${recommendationGenreLabel(key)}`} aria-pressed={genre === key} disabled={loading || Boolean(mutating)} onClick={() => { setGenre(key); setPage(1); setMenuId(null); }}><small aria-hidden="true">{index + 1}위</small><span>{recommendationGenreLabel(key)}</span></button>)}</nav>
+      <RelationshipMap ownerNickname={ranking.ownerNickname} ownerGenreKey={ranking.ownerGenreKey} entries={ranking.graphEntries} selectedId={selected?.entryId} onSelect={openSummary} />
+      {!ranking.graphEntries.length ? <p className="wm-map-empty">{ranking.entryCount ? <>아직 궁합 80% 이상인 참여자가 없어요.<br />전체 목록에서 확인해 보세요.</> : "첫 번째 궁합을 기다리고 있어요."}</p> : null}
+      <details ref={listRef} className="wm-participants-panel" open={listOpen} onToggle={(event) => { setListOpen(event.currentTarget.open); if (!event.currentTarget.open) setMenuId(null); }}>
+        <summary><MatchIcon name="users" /><strong>{genre === "all" ? "전체 참여자" : `${recommendationGenreLabel(genre)} 참여자`} <span>{total}명</span></strong>{ranking.canManage ? <small>주인장</small> : null}<MatchIcon name="down" /></summary>
+        <div className="wm-participants-content"><span className="wm-list-sort">궁합순{loading ? " · 불러오는 중…" : ""}</span>
+          {ranking.entries.length ? ranking.entries.map((entry) => displayEntry(entry)) : <p className="wm-ranking-empty-copy">아직 참여자가 없어요.</p>}
+          <nav className="wm-ranking-pagination" aria-label="참여자 목록 페이지"><span>{total ? `${(currentPage - 1) * 6 + 1}–${Math.min(currentPage * 6, total)}` : "0"} / {total}명</span><div><button type="button" aria-label="이전 참여자 페이지" disabled={currentPage <= 1 || loading || Boolean(mutating)} onClick={() => changePage(currentPage - 1)}><MatchIcon name="chevron" className="is-back" /></button><span>{currentPage} / {ranking.pagination.totalPages}</span><button type="button" aria-label="다음 참여자 페이지" disabled={currentPage >= ranking.pagination.totalPages || loading || Boolean(mutating)} onClick={() => changePage(currentPage + 1)}><MatchIcon name="chevron" /></button></div></nav>
+        </div>
+      </details>
+      {ranking.viewerEntry && !ranking.entries.some((entry) => entry.entryId === ranking.viewerEntry?.entryId) ? <section className="wm-viewer-position"><h2>내 현재 위치</h2>{displayEntry(ranking.viewerEntry, "viewer-position")}</section> : null}
+    </>}
 
-    {rankingIsPrivate ? <section className="match-result-section match-ranking-empty"><h2>랭킹을 공개하지 않은 링크예요</h2><p>링크 주인만 이 기기에서 전체 랭킹을 볼 수 있어요.</p></section> : <RankingList challengeCode={challengeCode} entries={ranking.top20} canManage={ranking.canManage} mutating={mutating} onRequestHide={setHideCandidate} />}
+    {ranking.canManage ? <details className="wm-link-management" open={managementOpen || replaceMode} onToggle={(event) => setManagementOpen(event.currentTarget.open)}><summary><MatchIcon name="settings" /><strong>링크 관리</strong><MatchIcon name="down" /></summary><div className="wm-management-content">
+      {replaceMode ? <div className="wm-replace-guide"><strong>새 결과로 링크 바꾸기</strong><p>{ranking.status === "closed" ? "이제 최신 취향 결과로 새 링크를 만들 수 있어요." : "기존 링크를 먼저 닫아 주세요. 이전 랭킹은 보관됩니다."}</p></div> : null}
+      <label className="wm-visibility-switch"><span><strong>링크 랭킹 공개</strong><small>끄면 주인장만 볼 수 있어요.</small></span><input type="checkbox" checked={ranking.rankingVisibility === "public_by_link"} disabled={Boolean(mutating) || loading} onChange={(event) => void updateChallenge({ rankingVisibility: event.target.checked })} /><span className="wm-switch-track" aria-hidden="true" /></label>
+      {replaceMode && ranking.status === "closed" ? <Link className="match-button" href="/match/challenge/new">새 결과로 초대 링크 만들기</Link> : null}
+      <button className="match-button match-button--secondary" type="button" disabled={Boolean(mutating) || loading} onClick={() => void updateChallenge({ status: ranking.status === "closed" ? "active" : "closed" })}>{mutating === "challenge" ? "변경 중…" : ranking.status === "closed" ? "새 참여 다시 열기" : confirming ? "한 번 더 눌러 닫기" : "새 참여 닫기"}</button>
+      <details className="wm-hidden-participants"><summary>숨긴 참여자 {ranking.hiddenEntries.length}명 <MatchIcon name="down" /></summary>{ranking.hiddenEntries.map((entry) => <div key={entry.entryId}><span>{entry.nickname} · {entry.score}%</span><button type="button" disabled={Boolean(mutating) || loading} onClick={() => void setEntryHidden(entry, false)}>{mutating === entry.entryId ? "복원 중…" : "복원"}</button></div>)}{!ranking.hiddenEntries.length ? <p>숨긴 참여자가 없어요.</p> : null}</details>
+    </div></details> : null}
 
-    {!rankingIsPrivate && ranking.viewerEntry ? <section className="match-result-section match-viewer-rank"><p>내 현재 위치</p><RankingRow challengeCode={challengeCode} entry={ranking.viewerEntry} /></section> : null}
+    <MatchActionBar className="wm-ranking-actions" label="관계도 바로가기">
+      <Link className="match-button" href={personalResultId ? `/match/result/${personalResultId}` : "/match/test/intro"}>{personalResultId ? "내 결과" : "테스트하기"}</Link>
+      {ranking.canManage ? <Link className="match-button match-button--secondary" href={`/match/share/ranking?challengeCode=${challengeCode}`} aria-label="현재 랭킹을 Threads에 공유"><MatchIcon name="share" />공유</Link> : null}
+      <button className="match-button match-button--secondary" type="button" onClick={() => void copyInvitationLink()}><MatchIcon name="link" />링크 복사</button>
+    </MatchActionBar>
 
-    {ranking.canManage ? <section className="match-result-section match-owner-panel">
-      <p className="match-eyebrow">링크 주인 관리</p>
-      <h2>랭킹과 참여 설정</h2>
-      {replaceMode ? <div className="match-replace-guide"><strong>새 결과로 링크 바꾸기</strong><p>{ranking.status === "closed" ? "기존 링크가 닫혔어요. 이제 최신 취향 결과로 새 링크를 만들 수 있어요." : "랭킹 기준이 섞이지 않도록 기존 링크를 먼저 닫아 주세요. 기존 결과와 랭킹은 그대로 보관됩니다."}</p></div> : null}
-      <label className="match-owner-toggle"><input type="checkbox" checked={ranking.rankingVisibility === "public_by_link"} disabled={mutating === "challenge"} onChange={(event) => void updateChallenge({ rankingVisibility: event.target.checked })} /><span><strong>링크 랭킹 공개</strong><small>끄면 링크를 아는 사람도 전체 순위를 볼 수 없어요.</small></span></label>
-      {replaceMode && ranking.status === "closed" ? <><a className="match-button" href="/match/challenge/new">새 결과로 초대 링크 만들기</a><button className="match-button match-button--secondary" type="button" disabled={mutating === "challenge"} onClick={() => void updateChallenge({ status: "active" })}>기존 링크 다시 열기</button></> : <button className={`match-button ${ranking.status === "closed" ? "" : "match-danger-button"}`} type="button" disabled={mutating === "challenge"} onClick={() => void updateChallenge({ status: ranking.status === "closed" ? "active" : "closed" })}>{ranking.status === "closed" ? "새 참여 다시 열기" : confirming === "challenge" ? "한 번 더 눌러 닫기" : replaceMode ? "기존 링크 닫기" : "새 참여 닫기"}</button>}
-      {ranking.hiddenEntries.length ? <details className="match-hidden-entries"><summary>숨긴 도전자 {ranking.hiddenEntries.length}명</summary>{ranking.hiddenEntries.map((entry) => <div key={entry.entryId}><span>{entry.nickname} · {entry.score}%</span><button type="button" disabled={Boolean(mutating)} onClick={() => void setEntryHidden(entry, false)}>{mutating === entry.entryId && mutationAction === "restore" ? "복원 중…" : "복원"}</button></div>)}</details> : null}
-    </section> : null}
-
-    {hideCandidate ? <div className="match-confirm-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !mutating) setHideCandidate(null); }}>
-      <section className="match-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="match-hide-confirm-title">
-        <p className="match-eyebrow">랭킹 숨김</p>
-        <h2 id="match-hide-confirm-title">{hideCandidate.nickname}님을 정말 숨길까요?</h2>
-        <p>숨긴 도전자는 공개 랭킹에서 보이지 않으며, 나중에 관리 화면에서 다시 복원할 수 있어요.</p>
-        {mutating === hideCandidate.entryId ? <div className="match-confirm-progress" role="status"><span>숨기는 중…</span><div aria-hidden="true"><span /></div></div> : null}
-        <div className="match-confirm-actions"><button type="button" className="match-button match-button--secondary" disabled={Boolean(mutating)} onClick={() => setHideCandidate(null)}>취소</button><button type="button" className="match-button match-danger-button" disabled={Boolean(mutating)} onClick={() => void setEntryHidden(hideCandidate, true)}>{mutating === hideCandidate.entryId ? "처리 중…" : "정말 숨기기"}</button></div>
-      </section>
-    </div> : null}
-
-    {message ? <p className="match-notice" role="status">{message}</p> : null}
-    {viewerProfileId || ranking.canManage ? <div className="match-result-actions">
-      {viewerProfileId ? <a className="match-button" href={`/match/result/${viewerProfileId}`}>내 결과 보기</a> : null}
-      {ranking.canManage ? <>
-        <a className={`match-button ${viewerProfileId ? "match-button--secondary" : ""}`} href={`/match/share/ranking?challengeCode=${challengeCode}`}>현재 랭킹 Threads에 공유</a>
-        <button className="match-button match-button--secondary" type="button" onClick={() => void copyInvitationLink()}>초대 링크 복사</button>
-      </> : null}
-    </div> : null}
+    {selected ? <MatchDialog sheet titleId="wm-pair-summary-title" onClose={() => setSelected(null)}><div className="wm-pair-summary"><header><PersonaAvatar genreKey={selected.genreKey} /><div><h2 id="wm-pair-summary-title">{selected.nickname}님과의 궁합</h2><p>{pairArchetypeFor(selected.score).name}</p></div><strong>{selected.score}<small>%</small></strong></header><div className="wm-pair-summary-genres"><span>함께 맞는 장르</span>{selected.sharedGenres.length ? selected.sharedGenres.slice(0, 2).map((label) => <b key={label}>{label}</b>) : <p>서로 다른 장르의 매력</p>}</div>
+      {ranking.canManage || selected.isViewer ? <Link className="match-button" href={`/match/c/${challengeCode}/match/${selected.resultId}?from=ranking`}>{selected.nickname}님과의 상세 궁합 보기 <MatchIcon name="chevron" /></Link> : <p className="wm-private-pair-note">상세 궁합은 당사자와 주인장만 볼 수 있어요.</p>}
+    </div></MatchDialog> : null}
+    {hideCandidate ? <MatchDialog titleId="wm-hide-title" busy={Boolean(mutating)} onClose={() => setHideCandidate(null)}><div className="wm-hide-confirm"><h2 id="wm-hide-title">{hideCandidate.nickname}님을 숨길까요?</h2><p>관계도와 랭킹에서 숨겨져요.<br />링크 관리에서 다시 복원할 수 있어요.</p><div><button type="button" className="match-button match-button--secondary" disabled={Boolean(mutating)} onClick={() => setHideCandidate(null)}>취소</button><button type="button" className="match-button" disabled={Boolean(mutating)} onClick={() => void setEntryHidden(hideCandidate, true)}>{mutating ? "숨기는 중…" : "숨기기"}</button></div></div></MatchDialog> : null}
+    {message ? <div className="wm-ranking-toast" role="status">{message}<button type="button" aria-label="알림 닫기" onClick={() => setMessage("")}><MatchIcon name="close" /></button></div> : null}
   </main>;
-}
-
-function RankingList({ challengeCode, entries, canManage, mutating, onRequestHide }: { challengeCode: string; entries: RankingEntry[]; canManage: boolean; mutating: string; onRequestHide: (entry: RankingEntry) => void }) {
-  if (!entries.length) return <section className="match-result-section match-ranking-empty"><div aria-hidden="true">✦</div><h2>아직 도전자가 없어요</h2><p>첫 번째 궁합을 기다리는 중이에요.</p></section>;
-  const hasViewerEntry = entries.some((entry) => entry.isViewer);
-  const note = canManage
-    ? "상위 20명까지 보여요. 도전자를 누르면 둘의 궁합 결과를 볼 수 있어요."
-    : hasViewerEntry
-      ? "상위 20명까지 보여요. 내 순위를 누르면 링크 주인과의 궁합 결과를 볼 수 있어요."
-      : "상위 20명까지 보여요.";
-  return <section className="match-result-section match-ranking-list"><h2>현재 랭킹</h2><p className="match-section-note">{note}</p><div>{entries.map((entry) => <RankingRow key={entry.entryId} challengeCode={challengeCode} entry={entry} canManage={canManage} mutating={mutating} onRequestHide={onRequestHide} />)}</div></section>;
-}
-
-function RankingRow({ challengeCode, entry, canManage = false, mutating = "", onRequestHide }: { challengeCode: string; entry: RankingEntry; canManage?: boolean; mutating?: string; onRequestHide?: (entry: RankingEntry) => void }) {
-  const canHide = canManage && onRequestHide;
-  const canOpenResult = canManage || entry.isViewer;
-  const rowContent = <>
-    <span className="match-ranking-position">{entry.rank}</span>
-    <div><strong>{entry.nickname}{entry.isViewer ? <small> 나</small> : null}{entry.isReciprocal ? <span className="match-ranking-origin">이전에 본 궁합</span> : null}</strong><p>{entry.sharedGenres.length ? entry.sharedGenres.join(" · ") : "겹치는 장르를 찾는 중"}</p></div>
-    <strong className="match-ranking-score">{entry.score}% {canOpenResult ? <span aria-hidden="true">›</span> : null}</strong>
-  </>;
-  return <article className={`match-ranking-row ${canHide ? "has-actions" : ""} ${entry.rank && entry.rank <= 3 ? `is-top-${entry.rank}` : ""} ${entry.isViewer ? "is-viewer" : ""}`}>
-    {canOpenResult
-      ? <a className="match-ranking-result-link" href={`/match/c/${challengeCode}/match/${entry.resultId}?from=ranking`} aria-label={`${entry.nickname}님과의 웹툰궁합 결과 보기`}>{rowContent}</a>
-      : <div className="match-ranking-result-link is-static">{rowContent}</div>}
-    {canHide ? <button className="match-ranking-hide" type="button" disabled={Boolean(mutating)} onClick={() => onRequestHide(entry)}>{mutating === entry.entryId ? "처리 중…" : "숨김"}</button> : null}
-  </article>;
 }

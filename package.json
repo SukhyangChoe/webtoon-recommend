@@ -9,13 +9,15 @@
     "lint": "eslint",
     "test:match": "node --test tests/match/*.test.mjs",
     "report:match-pilot": "node --env-file=.env.local scripts/webtoon-match-pilot-export.mjs",
-    "sync:webtoon-catalog": "node --env-file=.env.local scripts/sync-webtoon-catalog.mjs"
+    "sync:webtoon-catalog": "node --env-file=.env.local scripts/sync-webtoon-catalog.mjs --apply",
+    "check:webtoon-catalog": "node --env-file=.env.local scripts/sync-webtoon-catalog.mjs --dry-run"
   },
   "dependencies": {
     "next": "16.2.9",
     "postgres": "^3.4.9",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "sharp": "0.34.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
