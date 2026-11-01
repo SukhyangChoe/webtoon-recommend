@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ButtonHTMLAttributes, CSSProperties, ReactNode } from "react";
 import { matchQuestionProgress, matchScoreAngle } from "../config/uiTheme.mjs";
 import { MatchIcon } from "./MatchIcon";
+import { TEST_HELP_COPY } from '../config/testPresentation.mjs';
 
 export function MatchButton({ children, secondary = false, className = "", ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { secondary?: boolean }) {
   return <button type="button" {...props} className={`match-button${secondary ? " match-button--secondary" : ""} ${className}`.trim()}>{children}</button>;
@@ -21,8 +22,9 @@ export function MatchProgress({ screenOrder }: { screenOrder?: number }) {
   return <div className="match-progress" role="progressbar" aria-label="취향 테스트 진행률" aria-valuemin={0} aria-valuemax={progress.total} aria-valuenow={progress.current}><span style={{ width: `${progress.percent}%` }} /></div>;
 }
 
-export function MatchQuestionLayout({ progressLabel, progress, title, questionText, question, helperText, screenOrder, children }: { progressLabel?: string; progress?: string; title: string; questionText?: string; question?: string; helperText?: string; screenOrder?: number; children?: ReactNode }) {
-  return <main className="match-page match-question-page"><MatchPanel><MatchProgress screenOrder={screenOrder} /><p className="match-eyebrow">{progressLabel ?? progress}</p><h1>{title}</h1><p className="match-question-text">{questionText ?? question}</p>{helperText ? <p className="match-helper">{helperText}</p> : null}{children}</MatchPanel></main>;
+export function MatchQuestionLayout({ questionId, progressLabel, progress, title, questionText, question, helperText, screenOrder, children }: { questionId?: string; progressLabel?: string; progress?: string; title: string; questionText?: string; question?: string; helperText?: string; screenOrder?: number; children?: ReactNode }) {
+  const help = TEST_HELP_COPY[questionId as keyof typeof TEST_HELP_COPY] ?? helperText;
+  return <main className="match-page match-question-page"><MatchPanel><MatchProgress screenOrder={screenOrder} /><p className="match-eyebrow">{progressLabel ?? progress}</p><h1>{title}</h1><p className="match-question-text">{questionText ?? question}</p>{help ? <p className="match-helper">{help}</p> : null}{children}</MatchPanel></main>;
 }
 
 export function MatchScoreRing({ score }: { score: number }) {

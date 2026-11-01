@@ -35,9 +35,8 @@ export function safeWorkReturnPath(value) {
   } catch { return '/match'; }
 }
 
-export function workDetailHref(id, profileId, returnTo) {
+export function workDetailHref(id, returnTo) {
   const query = new URLSearchParams();
-  if (typeof profileId === 'string' && /^[\w-]{1,100}$/.test(profileId)) query.set('profile', profileId);
   if (returnTo) query.set('returnTo', safeWorkReturnPath(returnTo));
   return `/match/work/${encodeURIComponent(id)}${query.size ? `?${query}` : ''}`;
 }

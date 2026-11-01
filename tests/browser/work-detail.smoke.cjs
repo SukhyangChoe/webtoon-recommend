@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const {chromium} = require('playwright');
+const postgres = require('postgres');
 
 (async()=>{
   const base=process.env.MATCH_TEST_BASE_URL??'http://127.0.0.1:3000';
@@ -14,26 +15,46 @@ const {chromium} = require('playwright');
     const page=await context.newPage();
     page.setDefaultTimeout(25000);
     const errors=[];page.on('pageerror',error=>errors.push(error.message));
+    let detailFetches=0;
+    page.on('request',request=>{if(/\/api\/v1\/webtoons\/(?!search)[\w-]+(?:\?|$)/.test(request.url()))detailFetches++;});
     await page.route('**/api/v1/analytics/**',route=>route.fulfill({status:200,contentType:'application/json',body:'{"ok":true}'}));
     await page.route('**/api/v1/match-events',route=>route.fulfill({status:202,contentType:'application/json',body:'{"accepted":true}'}));
     const pairPath='/match/c/mKOdmiLcE0JU/match/VIbseuqFQuk6RRDr?from=ranking';
     const pairResponse=await page.request.get(`${base}/api/v1/challenges/mKOdmiLcE0JU/results/VIbseuqFQuk6RRDr`);
     assert.equal(pairResponse.status(),200);
     const pair=await pairResponse.json();
-    const primaryRecommendations=pair.ownerRecommendations.length?pair.ownerRecommendations:pair.challengerRecommendations;
+    // This context is the owner (the fit target of the challenger's works).
+    // Only the counterpart's recommendations are shown in their pair view.
+    const primaryRecommendations=pair.challengerRecommendations;
     const first=primaryRecommendations[0];
     const profile=pair.challengerRecommendations[0].fitTargetPublicProfileId;
+    const sql=postgres(process.env.WEBTOON_MATCH_DATABASE_URL,{max:1,prepare:false});
+    let viewerId,latestProfile;
+    try {
+      const rows=await sql.begin('read only',tx=>tx`select p.anonymous_id,latest.public_profile_id from public.match_profiles p join public.match_taste_snapshots s on s.profile_id=p.profile_id join lateral (select public_profile_id from public.match_taste_snapshots where profile_id=p.profile_id order by completed_at desc,snapshot_id desc limit 1) latest on true where s.public_profile_id=${profile} limit 1`);
+      viewerId=rows[0]?.anonymous_id;
+      latestProfile=rows[0]?.public_profile_id;
+      assert.ok(viewerId,'read-only existing viewer identity is available');
+    } finally { await sql.end(); }
+    await context.addCookies([{name:'wm_aid',value:viewerId,url:base}]);
+    const viewerHeaders={'x-match-anonymous-id':viewerId};
     assert.ok(first.fitTargetPublicProfileId);
     for(const item of [...pair.ownerRecommendations,...pair.challengerRecommendations]){
-      const response=await page.request.get(`${base}/api/v1/webtoons/${item.canonicalWebtoonId}?profile=${item.fitTargetPublicProfileId}`);
+      const response=await page.request.get(`${base}/api/v1/webtoons/${item.canonicalWebtoonId}?profile=${item.fitTargetPublicProfileId}`,{headers:viewerHeaders});
       assert.equal(response.status(),200);
       assert.match(response.headers()['cache-control'],/private, no-store/);
       const detail=await response.json();
-      assert.equal(detail.fit?.highlighted??false,item.tasteFitHighlighted,'detail and pair highlights use the same recipient and fit calculation');
+      const direct=await (await page.request.get(`${base}/api/v1/webtoons/${item.canonicalWebtoonId}`,{headers:viewerHeaders})).json();
+      assert.deepEqual(detail.fit,direct.fit,'the entry link cannot override the current viewer');
+      assert.ok(detail.fit,'existing completed viewer has a fit');
+      assert.equal(detail.fit.profilePublicId,latestProfile);
       for(const secret of ['recommendationVector','raw_data','anonymousId','source_refs','tasteVector'])assert.equal(secret in detail,false);
     }
     const anonymous=await (await page.request.get(`${base}/api/v1/webtoons/wt_romance_ropan_016`)).json();
     assert.equal(anonymous.fit,null,'an anonymous viewer is not shown a fabricated fit score');
+    assert.equal(anonymous.fitStatus,'test_required');
+    const legacyAnonymous=await (await page.request.get(`${base}/api/v1/webtoons/wt_romance_ropan_016?profile=${profile}`)).json();
+    assert.equal(legacyAnonymous.fit,null,'a legacy public profile query never substitutes for the viewer');
     assert.equal(anonymous.statusLabel,'휴재','current seed status overrides the old demo');
     assert.ok(anonymous.creators.length===2&&(/^\/match\/covers\//.test(anonymous.coverUrl)||/^https:\/\/[a-z0-9]{20}\.supabase\.co\/storage\/v1\/object\/public\/webtoon-covers\//.test(anonymous.coverUrl)));
     assert.equal((await page.request.get(`${base}/api/v1/webtoons/does-not-exist`)).status(),404);
@@ -43,8 +64,17 @@ const {chromium} = require('playwright');
     await page.getByRole('link',{name:first.title,exact:true}).first().click();
     await page.waitForURL(/\/match\/work\//);
     await page.getByRole('heading',{name:first.title,exact:true,level:1}).waitFor();
-    assert.equal(new URL(page.url()).searchParams.get('profile'),first.fitTargetPublicProfileId);
+    assert.equal(new URL(page.url()).searchParams.has('profile'),false);
+    await page.getByRole('meter',{name:'핏점수',exact:true}).waitFor();
     await page.getByRole('button',{name:'이전 화면으로 돌아가기',exact:true}).click();
+    await page.waitForURL(base+pairPath);
+    await page.getByRole('tab',{name:'궁합 요약',exact:true}).waitFor();
+    const previousFetches=detailFetches;
+    await page.getByRole('link',{name:first.title,exact:true}).first().click();
+    await page.waitForURL(/\/match\/work\//);
+    await page.getByRole('meter',{name:'핏점수',exact:true}).waitFor();
+    assert.ok(detailFetches>previousFetches,'reopening the same work fetches fresh viewer/work data instead of restoring a cached score');
+    await page.getByRole('button',{name:'이전 화면으로 돌아가기'}).click();
     await page.waitForURL(base+pairPath);
     await page.getByRole('tab',{name:'궁합 요약',exact:true}).waitFor();
     const pairTrack=page.locator('.wm-pair-work-track').first();
@@ -194,6 +224,7 @@ const {chromium} = require('playwright');
 
     // A real touch-enabled mobile context, separate from the desktop wheel session.
     const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,reducedMotion:'reduce'});
+    await mobile.addCookies([{name:'wm_aid',value:viewerId,url:base}]);
     const phone=await mobile.newPage();
     await phone.route('**/api/v1/match-events',route=>route.fulfill({status:202,contentType:'application/json',body:'{"accepted":true}'}));
     await phone.goto(base+detailPath);
@@ -226,19 +257,27 @@ const {chromium} = require('playwright');
     await mobile.close();
     await page.setViewportSize({width:390,height:844});
     // Final capture uses a real saved recommendation, without changing user data.
-    await page.goto(`${base}/match/work/${first.canonicalWebtoonId}?profile=${profile}`);
+    await page.goto(`${base}/match/work/${first.canonicalWebtoonId}`);
     await page.getByRole('heading',{name:first.title,level:1,exact:true}).waitFor();
+    await page.getByRole('meter',{name:'핏점수',exact:true}).waitFor();
     await page.locator('.wm-work-hero img').evaluate(img=>img.decode());
     await page.addStyleTag({content:'nextjs-portal { display:none !important; }'});
     await page.screenshot({path:path.join(output,'work_detail_compact_summary.png')});
+    const guest=await browser.newContext({viewport:{width:390,height:844}});
+    const guestPage=await guest.newPage();
+    await guestPage.goto(`${base}/match/work/${first.canonicalWebtoonId}?profile=${profile}`);
+    await guestPage.getByRole('button',{name:'취향 테스트로 핏점수 확인하기'}).waitFor();
+    assert.equal(await guestPage.getByRole('meter').count(),0);
+    await guest.close();
     await page.goto(`${base}/match/work/does-not-exist`);
     await page.getByRole('heading',{name:'작품을 찾지 못했어요.'}).waitFor();
     assert.equal(await page.locator('.wm-work-fit').count(),0);
 
     // Missing fields and long title are isolated UI tests, never user-facing artifacts.
-    await page.route('**/api/v1/webtoons/ui-test',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({...anonymous,title:'제목이 아무리 길어도 잘리지 않고 화면 너비에 맞게 여러 줄로 자연스럽게 배치되는 작품 상세 화면',coverUrl:null,introduction:null,creators:[],contentLabels:[],appreciationPoints:[],artStyles:[],statusLabel:null,ageRating:null,officialUrl:null,fit:null})}));
+    await page.route('**/api/v1/webtoons/ui-test**',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({...anonymous,canonicalWebtoonId:'ui-test',title:'제목이 아무리 길어도 잘리지 않고 화면 너비에 맞게 여러 줄로 자연스럽게 배치되는 작품 상세 화면',coverUrl:null,introduction:null,creators:[],contentLabels:[],appreciationPoints:[],artStyles:[],statusLabel:null,ageRating:null,officialUrl:null,fit:null})}));
     await page.goto(`${base}/match/work/ui-test`);
     await page.getByRole('heading',{level:1}).waitFor();
+    await page.getByRole('button',{name:'취향 테스트로 핏점수 확인하기'}).waitFor();
     for(const width of [320,390]){
       await page.setViewportSize({width,height:844});
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
@@ -246,6 +285,6 @@ const {chromium} = require('playwright');
       assert.ok(await page.getByRole('img',{name:'작품 커버 미등록'}).isVisible());
     }
     assert.deepEqual(errors,[]);
-    console.log(JSON.stringify({ok:true,widths:[320,390,435,768],liveRecommendations:[...pair.ownerRecommendations,...pair.challengerRecommendations].length,checks:['same fit','no private vector leak','anonymous fallback','live status','internal navigation','carousel restoration','full-width cover','no duplicate info links','equal-height tabs','tab-specific content and reading position','persistent staged sheet','64px threshold','live drag morph','short/horizontal/cancelled gestures','body scroll isolation','stationary CTA and cover','keyboard and touch','visible short-viewport tabs','missing data','long title','404'],artifacts:output},null,2));
+    console.log(JSON.stringify({ok:true,widths:[320,390,435,768],liveRecommendations:[...pair.ownerRecommendations,...pair.challengerRecommendations].length,checks:['viewer-only fit','legacy profile ignored','fresh fetch on every open','no private vector leak','anonymous fallback and test prompt','live status','internal navigation','carousel restoration','full-width cover','no duplicate info links','equal-height tabs','tab-specific content and reading position','persistent staged sheet','64px threshold','live drag morph','short/horizontal/cancelled gestures','body scroll isolation','stationary CTA and cover','keyboard and touch','visible short-viewport tabs','missing data','long title','404'],artifacts:output},null,2));
   } finally {await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

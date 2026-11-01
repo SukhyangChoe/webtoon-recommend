@@ -10,7 +10,7 @@ body:has(.wm-work-page) .brand-bar__logo { left:50% !important; right:auto !impo
 .wm-work-page h1,.wm-work-page h2,.wm-work-page h3,.wm-work-page p { margin:0; }
 .wm-work-page button { font:inherit; cursor:pointer; }
 .wm-work-page :focus-visible { outline:3px solid #007e98; outline-offset:3px; }
-.wm-work-page .wm-work-back { position:absolute; z-index:51; top:calc((var(--brand-bar-height) - 44px)/2); left:12px; width:44px; height:44px; display:grid; place-items:center; border:0; background:transparent; color:#00697f; }
+.wm-work-page .wm-work-back { position:absolute; z-index:51; top:calc((var(--brand-bar-height) - 44px)/2); left:12px; width:44px; height:44px; padding:0; display:grid; place-items:center; border:0; background:transparent; color:#00697f; }
 .wm-work-back .is-back { transform:rotate(180deg); }
 .wm-work-hero { height:var(--work-hero-height,calc(100% - 330px)); min-height:68px; background:#edf7fb; overflow:hidden; }
 .wm-work-hero .wm-work-cover { display:block; width:100%; height:100%; object-fit:cover; object-position:center top; border:0; border-radius:0; }
@@ -43,6 +43,15 @@ body:has(.wm-work-page) .brand-bar__logo { left:50% !important; right:auto !impo
 .wm-work-summary h1 { font-size:28px; font-weight:800; line-height:1.4; letter-spacing:-.035em; word-break:keep-all; overflow-wrap:anywhere; margin-top:3px; }
 .wm-work-credits { color:#547581; font-size:14px; margin-top:5px!important; }
 .wm-work-fit { flex:0 0 88px; margin-top:0; padding:8px 10px; border-radius:14px; background:#e3f8fc; }
+.wm-work-fit-pending { color:#547581; font-size:12px; line-height:1.7; text-align:center; }
+.wm-work-fit-error { margin-top:10px; color:#547581; font-size:13px; line-height:1.6; }
+.wm-work-fit-error button { min-height:44px; padding:8px 12px; margin-top:6px; border:1px solid #cfe8ee; border-radius:10px; background:#edf8fc; color:#00697f; }
+.wm-work-fit-prompt { display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; min-height:44px; margin-top:6px; padding:8px 10px; border:0; border-radius:10px; background:#edf8fc; color:#00697f; font:inherit; font-size:13px; line-height:1.5; text-align:left; text-decoration:none; cursor:pointer; }
+.wm-work-test-invitation { margin-top:12px; }
+.wm-work-test-invitation p { color:#547581; font-size:13px; line-height:1.5; }
+.wm-work-test-invitation [role="alert"] { margin-top:8px; color:#a63050; }
+.wm-work-fit-prompt .wm-icon { width:16px; height:16px; flex-shrink:0; }
+.wm-work-page .wm-work-fit-note { margin-top:10px; color:#547581; font-size:13px; line-height:1.5; }
 .wm-work-fit>div:first-child { display:flex; flex-direction:column; align-items:center; gap:2px; }
 .wm-work-fit>div>span { display:flex; align-items:center; gap:4px; min-width:0; font-size:12px; font-weight:700; overflow-wrap:anywhere; }
 .wm-work-fit svg { flex-shrink:0; width:18px; height:18px; color:#00697f; }

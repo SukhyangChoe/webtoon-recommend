@@ -10,7 +10,7 @@ test("relationship filters use only the owner's actual top three genres in resul
 });
 
 const entries = () => denseRankEntries(Array.from({ length: 30 }, (_, index) => ({
-  entryId: `entry-${index + 1}`, score: 100 - index, genreKey: index % 2 ? "ropan" : "fantasy",
+  entryId: `entry-${index + 1}`, score: 100 - index * 2, genreKey: index % 2 ? "ropan" : "fantasy",
   createdAt: new Date(2026, 0, index + 1).toISOString(), hiddenByOwner: false,
 })));
 
@@ -20,19 +20,19 @@ test("relationship map is capped at six even when thirty scores qualify", () => 
   assert.equal(result.pagination.totalItems, 30);
 });
 
-test("the list reaches all thirty people, including scores below 80", () => {
+test("the list reaches all thirty people, including scores below 60", () => {
   const ranked = entries();
   const ids = Array.from({ length: 5 }, (_, index) => selectRelationshipPage(ranked, { page: index + 1 }).entries.map((entry) => entry.entryId)).flat();
   assert.equal(new Set(ids).size, 30);
   assert.equal(ids.at(-1), "entry-30");
-  assert.equal(selectRelationshipPage(ranked, { page: 5 }).entries.at(-1).score, 71);
+  assert.equal(selectRelationshipPage(ranked, { page: 5 }).entries.at(-1).score, 42);
 });
 
 test("the threshold is inclusive and never silently lowered for an empty map", () => {
-  const result = selectRelationshipPage([{ score: 80 }, { score: 79 }, { score: 0 }]);
-  assert.deepEqual(result.graphEntries.map((entry) => entry.score), [80]);
-  assert.equal(result.entries.length, 3);
-  assert.equal(selectRelationshipPage([{ score: 79 }]).graphEntries.length, 0);
+  const result = selectRelationshipPage([{ score: 80 }, { score: 79 }, { score: 60 }, { score: 59 }, { score: 0 }, { score: NaN }]);
+  assert.deepEqual(result.graphEntries.map((entry) => entry.score), [80, 79, 60]);
+  assert.equal(result.entries.length, 6);
+  assert.equal(selectRelationshipPage([{ score: 59 }]).graphEntries.length, 0);
 });
 
 test("hidden people are removed from both map and pagination and restored to the same order", () => {
@@ -52,7 +52,7 @@ test("genre filters affect both views without renumbering global dense ranks", (
   assert.equal(result.entries.length, 3);
   assert.ok(result.entries.every((entry) => entry.genreKey === "ropan"));
   assert.deepEqual(result.entries.map((entry) => entry.rank), [26, 28, 30]);
-  assert.ok(result.graphEntries.every((entry) => entry.genreKey === "ropan" && entry.score >= 80));
+  assert.ok(result.graphEntries.every((entry) => entry.genreKey === "ropan" && entry.score >= 60));
 });
 
 test("pagination safely clamps invalid and disappearing last pages", () => {

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { trackMatchEvent } from '../analytics/client';
 import { readOwnerManageToken } from '../storage/challengeStorage.mjs';
 import { ensureAnonymousId } from '../storage/anonymousIdentity.mjs';
-import { downloadBlob, renderShareCardPng, renderShareCardSvg, type ShareCardModel } from '../share/shareCardImage';
+import { downloadBlob, renderShareCardPng, renderShareCardSvg, shareCardSize, type ShareCardModel } from '../share/shareCardImage';
 import { createPairShareCard, createPersonalShareCard, createRankingShareCard, SHARE_PAGE_TITLES, shareCardDescription } from '../share/shareCardPresentation.mjs';
 import { pairShareCopy, personalShareCopy, rankingShareCopy, threadsIntentUrl } from '../share/sharePolicy.mjs';
 import { MatchIcon } from './MatchIcon';
@@ -48,8 +48,12 @@ export function SharePreview({ type, profilePublicId, challengeCode, resultId }:
       let copy: { text: string; shareUrl: string; templateKey: string };
       if (type === 'personal') {
         if (!profilePublicId) throw new Error('공유할 결과를 찾지 못했어요.');
-        const result = await responseJson<PersonalResult>(`/api/v1/results/${encodeURIComponent(profilePublicId)}`);
-        card = createPersonalShareCard(result) as ShareCardModel;
+        const resultPath = `/api/v1/results/${encodeURIComponent(profilePublicId)}`;
+        const [result, recommendations] = await Promise.all([
+          responseJson<PersonalResult>(resultPath),
+          responseJson<{ items: Array<{ title: string; coverUrl?: string | null }> }>(`${resultPath}/recommendations`),
+        ]);
+        card = createPersonalShareCard(result, recommendations.items) as ShareCardModel;
         copy = personalShareCopy({ ...result, challengeUrl: challengeCode ? `${origin}/match/c/${encodeURIComponent(challengeCode)}` : undefined, resultUrl: `${origin}/match/result/${encodeURIComponent(profilePublicId)}`, archetypeName: card.title });
       } else if (type === 'pair') {
         if (!challengeCode || !resultId) throw new Error('공유할 궁합을 찾지 못했어요.');
@@ -105,7 +109,7 @@ export function SharePreview({ type, profilePublicId, challengeCode, resultId }:
     {error ? <section className="wm-share-state" role="alert"><p>{error}</p><button className="match-button" type="button" onClick={() => { setError(''); setPayload(null); setRetry(value => value + 1); }}>다시 불러오기</button></section> : payload ? <>
       <article className={`wm-share-card is-${type}`} aria-label="공유 카드 미리보기">
         {/* eslint-disable-next-line @next/next/no-img-element -- Self-contained SVG is also the exact PNG export source. */}
-        <img src={payload.previewUrl} width={350} height={500} alt={shareCardDescription(payload.card)} />
+        <img src={payload.previewUrl} width={shareCardSize(payload.card).width} height={shareCardSize(payload.card).height} alt={shareCardDescription(payload.card)} />
       </article>
       <section className="wm-share-actions" aria-label="결과 공유">
         <button className="wm-share-primary" type="button" onClick={openThreads}><MatchIcon name="share" />Threads에 공유하기</button>

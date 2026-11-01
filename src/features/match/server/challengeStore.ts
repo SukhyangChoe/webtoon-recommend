@@ -6,6 +6,7 @@ import { denseRankEntries, selectRankingWindow } from "../engine/rankingPolicy.m
 import { relationshipGenreKeys, selectRelationshipPage } from "../engine/relationshipPolicy.mjs";
 import { calculateRecommendationFit } from "../engine/recommendationFitEngine.mjs";
 import { pairTrustSentence } from "../share/pairTrustCopy.mjs";
+import { pairViewerRole, relationshipDestination } from '../config/relationshipDestination.mjs';
 import { getMatchDatabase, isPostgresError } from "./database";
 import { getTasteSnapshot, getTasteSnapshotById, getTasteSnapshotsByIds, updateProfileNickname, type StoredSnapshot } from "./resultStore";
 import { sanitizeMatchNickname } from "./nickname.mjs";
@@ -148,7 +149,7 @@ function publicRecommendations(
     return {
       ...item,
       recommenderPublicProfileId,
-      canViewerLike,
+      canViewerLike: canViewerLike && Boolean(item.commentId && item.recommendationComment),
       mainGenreLabel: catalogGenreLabels[item.mainGenre] ?? item.mainGenre,
       tasteFitHighlighted: fit.highlighted,
       fitTargetPublicProfileId: targetSnapshot?.publicProfileId ?? null,
@@ -786,11 +787,19 @@ export async function getPublicPairResult(challengeCode: string, resultId: strin
   const explanations = ownerSnapshot && challengerSnapshot ? calculateCompatibility(ownerSnapshot, challengerSnapshot).explanations : null;
   const ownerRecommendationGenreKeys = explanations?.ownerRecommendationGenreKeys ?? [];
   const challengerRecommendationGenreKeys = explanations?.challengerRecommendationGenreKeys ?? [];
+  const [ownerRelationship, challengerRelationship] = await Promise.all([
+    activeChallengeForProfile(challenge.ownerProfileId),
+    activeChallengeForProfile(entry.challengerProfileId),
+  ]);
   return {
     resultId,
     challengeCode,
     ownerNickname: challenge.ownerNickname,
     challengerNickname: entry.challengerNickname,
+    viewerRole: pairViewerRole(viewerProfileId, challenge.ownerProfileId, entry.challengerProfileId),
+    ownerRelationship: relationshipDestination(ownerRelationship ?? challenge, challenge.ownerProfileId, viewerProfileId),
+    challengerRelationship: relationshipDestination(challengerRelationship, entry.challengerProfileId, viewerProfileId),
+    viewerPublicProfileId: viewerProfileId === challenge.ownerProfileId ? ownerSnapshot?.publicProfileId ?? null : viewerProfileId === entry.challengerProfileId ? challengerSnapshot?.publicProfileId ?? null : null,
     score: result.overallScore,
     ownerGenreKey: ownerSnapshot?.displayGenres?.[0]?.genreKey ?? null,
     challengerGenreKey: challengerSnapshot?.displayGenres?.[0]?.genreKey ?? null,

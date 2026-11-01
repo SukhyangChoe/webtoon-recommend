@@ -12,7 +12,7 @@
   font-size: var(--wm-font-body);
   line-height: 1.6;
 }
-.match-module.match-cyan .match-page:not(.wm-screen) .match-card > p:not(.match-eyebrow),
+.match-module.match-cyan .match-page:not(.wm-screen) .match-card > p:not(.match-eyebrow, .match-helper),
 .match-module.match-cyan :is(.match-question-text, .match-entry-prompt > p:not(.match-eyebrow), .match-confirm-dialog > p:not(.match-eyebrow), .match-share-heading > p:last-child) {
   font-size: var(--wm-font-body);
   line-height: 1.7;

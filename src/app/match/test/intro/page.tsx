@@ -6,9 +6,9 @@ export default function MatchIntroPage() {
       <section className="match-card">
         <p className="match-eyebrow">시작하기</p>
         <h1>먼저 사용할<br />닉네임을 정해 주세요</h1>
-        <p>결과와 궁합 랭킹에 표시될 이름이에요.</p>
+        <p className="match-helper">결과·궁합 랭킹에 표시할 이름</p>
         <MatchIntroActions />
-        <div className="match-intro-guides"><div className="match-mini-guide"><span>1</span><p><strong>평소의 취향대로 골라 주세요</strong><br />정답이 없는 질문이에요.</p></div><div className="match-mini-guide"><span>2</span><p><strong>추천작으로 취향을 더할 수 있어요</strong><br />결과를 보고 좋아하는 작품을 등록해요.</p></div><aside className="match-soft-note">사람 사이의 관계나 성격이 아닌,<br />웹툰 취향을 비교하는 테스트예요.</aside></div>
+        <div className="match-intro-guides"><div className="match-mini-guide"><span>1</span><p><strong>평소 취향대로 선택</strong><br />정답 없는 취향 질문</p></div><div className="match-mini-guide"><span>2</span><p><strong>추천작으로 취향 보완</strong><br />결과 확인 후 좋아하는 작품 등록</p></div><aside className="match-soft-note">사람·성격 평가가 아닌,<br />웹툰 취향 비교 테스트</aside></div>
       </section>
     </main>
   );

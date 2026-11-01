@@ -1,6 +1,8 @@
 import { MatchBootstrap } from "@/features/match/components/MatchBootstrap";
 import Image from "next/image";
 import { MatchPanel } from "@/features/match/components/MatchUI";
+import Link from 'next/link';
+import { MatchIcon } from '@/features/match/components/MatchIcon';
 
 export default function MatchHomePage() {
   return (
@@ -13,6 +15,7 @@ export default function MatchHomePage() {
         <div className="match-mini-guide"><span>01</span><p><strong>1분 남짓, 가벼운 취향 테스트</strong><br />장르와 마음에 드는 장면을 골라요.</p></div>
         <div className="match-mini-guide"><span>02</span><p><strong>친구와 취향 비교</strong><br />링크를 나누고 서로의 추천작을 만나요.</p></div>
         <MatchBootstrap />
+        <Link className="wm-search-entry" href="/match/search"><MatchIcon name="search" /><span><strong>작품 검색</strong><small>궁금한 작품을 찾아보세요</small></span><MatchIcon name="chevron" /></Link>
       </MatchPanel>
     </main>
   );

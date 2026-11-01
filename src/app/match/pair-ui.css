@@ -12,28 +12,35 @@ body:has(.wm-pair-page) .brand-bar__logo { left: 50% !important; right: auto !im
 .wm-pair-heading h1 { font-size: 18px; line-height: 1.5; font-weight: 750; }
 .wm-pair-heading > a { position: absolute; left: -4px; display: inline-flex; align-items: center; gap: 3px; min-height: 44px; padding: 0 5px; text-decoration: none; color: #456874; font-size: 14px; }
 .wm-pair-cover { position: relative; border: 1px solid #c6dfe9; border-radius: 18px; overflow: hidden; background: #fff; box-shadow: 0 4px 16px #19364008; }
-.wm-pair-comic { position: relative; isolation: isolate; display: grid; grid-template-columns: 1fr 1fr; height: 220px; overflow: hidden; background: radial-gradient(circle at 25% 10%, #fff 0%, #dcf7fc 45%, #bfedf6 100%); }
+.wm-pair-comic { position: relative; isolation: isolate; display: grid; grid-template-columns: 1fr 1fr; height: 248px; overflow: hidden; background: radial-gradient(circle at 25% 10%, #fff 0%, #dcf7fc 45%, #bfedf6 100%); }
 .wm-pair-comic::before { position: absolute; z-index: -1; content: ''; inset: -20% -10% -10% 50%; transform: rotate(10deg); border-left: 2px solid #8db6c5; background: radial-gradient(circle, #d5e8ed 1px, transparent 1px) 0 0 / 7px 7px, #fff9ea; }
 .wm-pair-character { position: relative; min-width: 0; display: flex; align-items: flex-end; justify-content: center; padding-top: 46px; }
-.wm-pair-character > span:first-child { position: absolute; top: 12px; left: 10px; right: 10px; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; color: #456874; font-size: 14px; font-weight: 700; line-height: 1.5; text-align: center; overflow-wrap: anywhere; }
+.wm-pair-character > .wm-pair-profile { position: absolute; z-index: 3; top: 8px; left: 8px; right: 8px; min-width: 0; }
+.wm-pair-profile-link, .wm-pair-profile-static { display: flex; justify-content: center; align-items: center; gap: 5px; min-width: 0; min-height: 44px; padding: 5px 8px; border: 1px solid transparent; border-radius: 10px; color: #456874; line-height: 1.4; text-decoration: none; }
+.wm-pair-profile-link { background: #ffffffed; border-color: #abdce7; color: #00697f; box-shadow: 0 2px 5px #19364008; }
+.wm-pair-profile-link:hover { border-color: #007e98; background: #e6faff; }
+.wm-pair-profile-name { display: block; min-width: 0; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 14px; font-weight: 750; }
+.wm-pair-profile-link > .wm-icon { width: 16px; height: 16px; flex-shrink: 0; }
+.wm-pair-comic .wm-pair-bubble { top: 54px; min-height: 58px; padding-block: 6px; line-height: 1.45; }
 .wm-pair-character .wm-persona-avatar { width: 100%; height: 160px; border: 0; border-radius: 0; background: transparent; }
 .wm-pair-character .wm-persona-avatar img { width:224px; height:224px; left:50%; top:0; transform:translateX(-50%); }
 .wm-pair-bubble { position: absolute; top: 54px; left: 50%; z-index: 2; display: grid; place-items: center; width: 46%; min-height: 66px; transform: translateX(-50%); padding: 8px 12px; border: 1.5px solid #285568; border-radius: 46% 54% 48% 52% / 50% 48% 52% 50%; color: #193e50; background: #fff; font-family: 'WebtoonFit Nanum Gothic', sans-serif; font-size: 16px; font-weight: 700; font-synthesis: none; line-height: 1.55; text-align: center; }
 .wm-pair-bubble-words { position: relative; z-index: 3; word-break: keep-all; }
-.wm-pair-bubble-tail { position: absolute; bottom: -20%; left: 15%; width: 14%; height: 30%; background: #285568; clip-path: polygon(10% 0, 100% 0, 0 100%); }
+.wm-pair-bubble-tail { position: absolute; bottom: -16%; left: 15%; width: 14%; height: 24%; background: #285568; clip-path: polygon(10% 0, 100% 0, 0 100%); }
 .wm-pair-bubble-tail::after { position: absolute; content: ''; inset: 0 2px 3px 2px; background: #fff; clip-path: polygon(10% 0, 100% 0, 0 100%); }
 .wm-pair-bubble-tail.is-right { left: auto; right: 15%; transform: scaleX(-1); }
-.wm-pair-cover-caption { position: relative; display: flex; gap: 10px; align-items: center; min-height: 108px; padding: 16px 12px 16px 16px; border-top: 1px solid #c6dfe9; background: #fff; }
-.wm-pair-cover-caption > div:first-child { flex: 1; min-width: 0; }
-.wm-pair-cover-caption p { font-size: 14px; color: #547581; margin-bottom: 8px; }
-.wm-pair-cover-caption h2 { font-size: clamp(20px, 5.4vw, 26px); font-weight: 800; letter-spacing: -.035em; line-height: 1.4; word-break: keep-all; overflow-wrap: anywhere; }
-.wm-pair-cover-caption > div > small { display: inline-block; margin-top: 8px; color: #547581; font-size: 12px; }
+.wm-pair-cover-caption { position: relative; min-height: 108px; padding: 16px 12px 16px 16px; border-top: 1px solid #c6dfe9; background: #fff; }
+.wm-pair-result-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.wm-pair-result-heading h2 { color: #00697f; font-size: 14px; font-weight: 750; line-height: 1.5; word-break: keep-all; }
+.wm-pair-result-copy { flex: 1; min-width: 0; }
+.wm-pair-result-band { display: inline-block; max-width: 100%; margin-top: 8px; padding: 2px 8px; border-radius: 6px; background: #edf7fb; color: #547581; font-size: 12px; line-height: 1.5; }
+.wm-pair-result-body { display: flex; align-items: center; gap: 12px; }
+.wm-pair-result-body .wm-pair-result-name { min-width: 0; font-size: clamp(20px, 5.4vw, 26px); font-weight: 800; letter-spacing: -.035em; line-height: 1.4; word-break: keep-all; overflow-wrap: anywhere; }
 .wm-pair-score { position: relative; isolation: isolate; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 86px; height: 86px; border-radius: 50%; background: #e6f0f4; }
 .wm-pair-score::before { content: ''; position: absolute; inset: 0; z-index: -2; border-radius: inherit; background: conic-gradient(#b1f2fc 0deg, #00c8ea 230deg, #007e98 360deg); mask: conic-gradient(#000 0deg var(--pair-score-angle), transparent var(--pair-score-angle) 360deg); -webkit-mask: conic-gradient(#000 0deg var(--pair-score-angle), transparent var(--pair-score-angle) 360deg); }
 .wm-pair-score::after { content: ''; position: absolute; inset: 5px; z-index: -1; border-radius: inherit; background: #f7fdff; }
 .wm-pair-score strong { color: #17394a; font-size: 31px; letter-spacing: -.06em; line-height: 1.1; }
 .wm-pair-score strong small { font-size: 17px; margin-left: 1px; }
-.wm-pair-score > span { margin-top: 4px; color: #547581; font-size: 12px; }
 .wm-pair-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 18px 0 14px; padding: 4px; background: #e6f0f4; border: 1px solid #dce9ef; border-radius: 24px; }
 .wm-pair-tabs button { min-width: 0; min-height: 44px; padding: 10px 8px; border: 0; border-radius: 20px; color: #456874; background: transparent; font-size: 16px; font-weight: 700; }
 .wm-pair-tabs button[aria-selected="true"] { color: #fff; background: #193e50; box-shadow: 0 2px 4px #19364012; }
@@ -51,9 +58,12 @@ body:has(.wm-pair-page) .brand-bar__logo { left: 50% !important; right: auto !im
 .wm-pair-page .wm-pair-muted { color: #547581; font-size: 15px; line-height: 1.7; }
 .wm-pair-recommendations { min-width: 0; padding-top: 4px; }
 .wm-pair-work-group { margin-top: 16px; }
+.wm-pair-recommendations > .wm-pair-work-group:first-child { margin-top: 0; }
+.wm-pair-work-empty { display: grid; place-items: center; min-height: 88px; padding: 24px 16px; border: 1px solid var(--match-ui-border, #dcebef); border-radius: 14px; background: #fff; text-align: center; }
 .wm-pair-work-group > header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
-.wm-pair-work-group h3 { color: #285061; font-size: 16px; font-weight: 700; line-height: 1.5; overflow-wrap: anywhere; }
-.wm-pair-work-group h3 small { color: #6e8995; font-weight: 500; padding-left: 3px; }
+.wm-pair-work-group header :is(h2, h3) { color: #285061; font-size: 16px; font-weight: 700; line-height: 1.5; overflow-wrap: anywhere; }
+.wm-pair-work-group header h2 { font-size: var(--wm-font-section, 19px); font-weight: 750; }
+.wm-pair-work-group header :is(h2, h3) small { color: #6e8995; font-size: 14px; font-weight: 500; padding-left: 3px; }
 .wm-pair-work-group > header > div:first-child { min-width: 0; }
 .wm-pair-carousel-controls { display: flex; flex-shrink: 0; align-items: center; justify-content: flex-end; gap: 6px; margin-left: auto; }
 .wm-pair-carousel-controls > span { color: #547581; font-size: 13px; white-space: nowrap; margin-right: 3px; }
@@ -71,7 +81,8 @@ body:has(.wm-pair-page) .brand-bar__logo { left: 50% !important; right: auto !im
 .wm-pair-work-track .wm-work-cover--empty { display: flex; justify-content: flex-start; padding-top: 36px; border: 0; font-size: 12px; color: #547581; }
 .wm-pair-work-track .wm-cover-book { width: 40px; height: 56px; }
 .wm-pair-work-track .wm-cover-book::after { width: 22px; left: 7px; top: 10px; }
-.wm-pair-work-copy { position: absolute; inset: auto 0 0; z-index: 1; pointer-events: auto; min-width: 0; padding: 40px 11px 8px; color: #fff; background: linear-gradient(180deg, #07171f00, #07171fba 38%, #07171ff2); }
+/* Decorative padding and metadata must not block the full-cover detail link. */
+.wm-pair-work-copy { position: absolute; inset: auto 0 0; z-index: 1; pointer-events: none; min-width: 0; padding: 40px 11px 8px; color: #fff; background: linear-gradient(180deg, #07171f00, #07171fba 38%, #07171ff2); }
 .wm-pair-work-copy a, .wm-pair-work-copy button { pointer-events: auto; }
 .wm-pair-work-title { display: block; min-width: 0; color: inherit; text-decoration: none; }
 .wm-pair-work-track .wm-pair-work-title :is(h3, h4) { margin: 0; overflow: hidden; white-space: nowrap; color: #fff; font-size: 18px; line-height: 1.5; font-weight: 750; text-shadow: 0 1px 4px #0005; }
@@ -105,6 +116,13 @@ body:has(.wm-pair-page) .brand-bar__logo { left: 50% !important; right: auto !im
 .wm-pair-work-like-count { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; padding: 4px 8px; border: 1px solid #ffffff55; border-radius: 999px; background: #ffffff14; color: #fff; font-size: 14px; line-height: 1.5; }
 .wm-pair-work-like-count > span { color: #ffc0d4; font-size: 17px; }
 .wm-pair-work-track blockquote { margin: 10px 0 0; padding-inline: 11px; font-size: 15px; line-height: 1.65; color: #456775; overflow-wrap: anywhere; }
+.wm-recommendation-comment { margin-top: 10px; padding: 12px; border: 1px solid #dcebef; border-radius: 14px; background: #fff; }
+.wm-pair-work-track .wm-recommendation-comment blockquote { margin: 0; padding: 0; }
+.wm-comment-actions { display: flex; justify-content: flex-end; margin-top: 6px; }
+.wm-comment-actions .wm-pair-work-like { border-color: #cfe4eb; background: #f3fafc; box-shadow: none; }
+.wm-comment-actions .wm-pair-work-like.is-liked { background: #ffe5ef; border-color: #f3b2ca; }
+.wm-comment-actions .wm-pair-work-like-count { color: #456775; border-color: #dcebef; background: #f3fafc; min-height: 36px; }
+.wm-comment-actions .wm-pair-work-like-count > span { color: #b64268; }
 .wm-pair-work-track q::before { content: '“'; color: #8ca8b6; }
 .wm-pair-work-track q::after { content: '”'; color: #8ca8b6; }
 .wm-pair-work-card.is-taste-fit .wm-pair-work-artwork::after { content: ''; position: absolute; z-index: 2; inset: 0; border: 3px solid #e8ff38; border-radius: inherit; box-shadow: inset 0 0 8px #e8ff3855; pointer-events: none; }
@@ -114,6 +132,7 @@ body:has(.wm-pair-page) .brand-bar__logo { left: 50% !important; right: auto !im
 .wm-pair-profiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .wm-pair-profiles > div { min-width: 0; padding: 10px; border-radius: 12px; background: #f1f8fb; }
 .wm-pair-profiles header { display: flex; flex-direction: column; align-items: center; gap: 7px; margin-bottom: 12px; }
+.wm-pair-profiles header > .wm-pair-profile-link, .wm-pair-profiles header > .wm-pair-profile-static { width: 100%; }
 .wm-pair-profiles .wm-persona-avatar { width: 58px; height: 58px; }
 .wm-pair-profiles header strong { font-size: 15px; line-height: 1.5; word-break: keep-all; overflow-wrap: anywhere; text-align: center; }
 .wm-pair-profiles ol { display: grid; gap: 10px; list-style: none; padding: 0; margin: 0; }
@@ -122,7 +141,7 @@ body:has(.wm-pair-page) .brand-bar__logo { left: 50% !important; right: auto !im
 .wm-pair-profiles li > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .wm-pair-profiles li > b { color: #94630d; white-space: nowrap; font-size: 12px; }
 .wm-pair-reading p { color: #456874; font-size: 16px; line-height: 1.8; }
-.wm-pair-reading h3 { font-size: 16px; margin: 20px 0 10px; }
+.wm-pair-reading h3 { margin: 24px 0 12px; padding-left: 10px; border-left: 3px solid #00bfdc; color: #00697f; font-size: 18px; font-weight: 750; line-height: 1.45; letter-spacing: -.02em; word-break: keep-all; overflow-wrap: anywhere; }
 .wm-pair-rank { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 16px; padding: 16px; border-radius: 14px; background: #e9f4f9; }
 .wm-pair-rank > span { color: #547581; font-size: 14px; min-width: 0; overflow-wrap: anywhere; }
 .wm-pair-rank strong { color: #00697f; font-size: 20px; white-space: nowrap; }
@@ -133,7 +152,7 @@ body:has(.wm-pair-page) .brand-bar__logo { left: 50% !important; right: auto !im
 .match-module.match-cyan .wm-pair-page .wm-action-bar .match-button { font-size: 14px; }
 @media (max-width: 360px) {
   .match-module.match-cyan .wm-pair-page { padding-inline: 12px; }
-  .wm-pair-comic { height: 210px; }
+  .wm-pair-comic { height: 238px; }
   .wm-pair-character .wm-persona-avatar { height: 146px; }
   .wm-pair-character .wm-persona-avatar img { width:200px; height:200px; }
   .wm-pair-bubble { width: 52%; font-size: 15px; }

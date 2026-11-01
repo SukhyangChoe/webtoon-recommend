@@ -5,6 +5,7 @@ import { buildTasteSnapshot, toPublicTasteResult } from "../engine/resultEngine.
 import type { MatchAnswers } from "../storage/draftTypes";
 import { getMatchDatabase } from "./database";
 import { sanitizeMatchNickname } from "./nickname.mjs";
+import type { WorkReadContext } from './workReadDeadline';
 
 export type AccuracyFeedback = "almost_exact" | "mostly_right" | "slightly_off" | "very_off";
 export type RecommendationInfluence = { workCount: number; recommendationPercent: number; testPercent: number };
@@ -61,9 +62,13 @@ function storedSnapshot(row: SnapshotRow): StoredSnapshot {
   } as StoredSnapshot;
 }
 
-async function withCurrentRecommendationTaste(snapshot: StoredSnapshot) {
+async function withCurrentRecommendationTaste(snapshot: StoredSnapshot, read?: WorkReadContext) {
   const database = getMatchDatabase();
-  const rows = await database<RecommendationVectorRow[]>`
+  const rows = read ? await read.query<RecommendationVectorRow[]>('recommendations', `
+    select webtoons.raw_data from public.match_profile_recommendations recommendations
+    join public.webtoons webtoons on webtoons.canonical_webtoon_id = recommendations.canonical_webtoon_id
+    where recommendations.profile_id = $1::uuid and webtoons.catalog_status = 'active'
+    order by recommendations.sort_order asc`, [snapshot.profileId]) : await database<RecommendationVectorRow[]>`
     select webtoons.raw_data
     from public.match_profile_recommendations recommendations
     join public.webtoons webtoons
@@ -72,11 +77,12 @@ async function withCurrentRecommendationTaste(snapshot: StoredSnapshot) {
       and webtoons.catalog_status = 'active'
     order by recommendations.sort_order asc
   `;
-  return applyRecommendationTaste(
+  const blend = () => applyRecommendationTaste(
     snapshot,
     rows.map((row) => row.raw_data?.recommendation).filter(Boolean),
     questionSeed,
   ) as StoredSnapshot;
+  return read ? read.measure('taste_blend', blend) : blend();
 }
 
 const SNAPSHOT_SELECT = `
@@ -166,6 +172,14 @@ export async function getTasteSnapshot(publicProfileId: string) {
   const database = getMatchDatabase();
   const rows = await database.unsafe<SnapshotRow[]>(`${SNAPSHOT_SELECT} where snapshots.public_profile_id = $1 limit 1`, [publicProfileId]);
   return rows[0] ? withCurrentRecommendationTaste(storedSnapshot(rows[0])) : null;
+}
+
+/** Work details always follow this viewer's newest test and current recommendations. */
+export async function getLatestTasteSnapshotForAnonymousId(anonymousId: string, read?: WorkReadContext) {
+  const database = getMatchDatabase();
+  const statement = `${SNAPSHOT_SELECT} where profiles.anonymous_id = $1::uuid order by snapshots.completed_at desc, snapshots.snapshot_id desc limit 1`;
+  const rows = read ? await read.query<SnapshotRow[]>('taste_snapshot', statement, [anonymousId]) : await database.unsafe<SnapshotRow[]>(statement, [anonymousId]);
+  return rows[0] ? withCurrentRecommendationTaste(storedSnapshot(rows[0]), read) : null;
 }
 
 export async function getTasteSnapshotById(snapshotId: string) {

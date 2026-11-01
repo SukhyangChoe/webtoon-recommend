@@ -1,0 +1,53 @@
+/* Test-only colour migration. Layout, typography, artwork and selection logic stay unchanged. */
+.match-module.match-cyan :is(.match-question-page, .match-intro-page) {
+  --match-test-ring: color-mix(in srgb, var(--match-ui-accent) 20%, transparent);
+  --match-test-shadow: color-mix(in srgb, var(--match-ui-ink) 8%, transparent);
+}
+.match-module.match-cyan .match-question-text { color: var(--match-ui-ink) !important; }
+.match-module.match-cyan .match-building-stars span { color: var(--match-ui-accent); }
+.match-module.match-cyan .match-loading-bar { background: var(--match-ui-soft); }
+.match-module.match-cyan .match-loading-bar span { background: linear-gradient(90deg, var(--match-ui-accent), var(--match-ui-accentInk)); }
+.match-module.match-cyan .match-question-page .match-helper { font-size: 14px; line-height: 1.6; text-wrap: pretty; }
+.match-module.match-cyan .match-genre-card { box-shadow: 0 3px 12px color-mix(in srgb, var(--match-ui-ink) 4%, transparent); }
+.match-module.match-cyan .match-genre-card__visual {
+  background: linear-gradient(145deg, var(--match-ui-soft), var(--match-ui-paper));
+  color: var(--match-ui-accentInk);
+}
+.match-module.match-cyan .match-genre-pictogram { display: block; width: 30px; height: 30px; }
+.match-module.match-cyan .match-segmented { background: var(--match-ui-soft); }
+.match-module.match-cyan .match-segmented button { color: var(--match-ui-accentInk); }
+.match-module.match-cyan .match-segmented button.is-selected {
+  border-color: var(--match-ui-accent);
+  background: #fff;
+  color: var(--match-ui-accentInk);
+  box-shadow: 0 3px 10px var(--match-test-ring);
+}
+.match-module.match-cyan .match-duel-card.is-selected {
+  border-color: var(--match-ui-accent);
+  box-shadow: 0 0 0 2px var(--match-test-ring), 0 9px 22px var(--match-test-shadow);
+}
+.match-module.match-cyan .match-duel-image { background: var(--match-ui-soft); }
+.match-module.match-cyan .match-duel-image::after { background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--match-ui-ink) 72%, transparent)); }
+.match-module.match-cyan .match-duel-side { color: var(--match-ui-ink); box-shadow: 0 2px 8px var(--match-test-shadow); }
+.match-module.match-cyan .match-duel-assist__toggle { color: var(--match-ui-accentInk); }
+.match-module.match-cyan .match-duel-assist__toggle:hover,
+.match-module.match-cyan .match-duel-assist__toggle[aria-expanded="true"],
+.match-module.match-cyan .match-duel-assist.is-nudged .match-duel-assist__toggle { background: var(--match-ui-soft); color: var(--match-ui-accentInk); }
+.match-module.match-cyan .match-duel-assist.is-nudged .match-duel-assist__toggle { box-shadow: 0 0 0 4px var(--match-test-ring); }
+.match-module.match-cyan :is(.match-choice-button, .match-exclusive-button) { color: var(--match-ui-ink); }
+.match-module.match-cyan :is(.match-choice-button, .match-exclusive-button, .match-feature-card, .match-ranked-card).is-selected {
+  border-color: var(--match-ui-accent);
+  background: var(--match-ui-soft);
+  color: var(--match-ui-accentInk);
+}
+.match-module.match-cyan .match-primary-toggle:not(.is-primary) { color: var(--match-ui-accentInk); }
+.match-module.match-cyan :is(.match-rank-badge, .match-check-badge) { border-color: var(--match-ui-border); }
+.match-module.match-cyan .match-intro-page .match-check-row { background: var(--match-ui-soft); }
+.match-module.match-cyan .match-intro-page .match-challenge-form input:focus:not([aria-invalid="true"]) {
+  border-color: var(--match-ui-accentInk);
+  box-shadow: 0 0 0 3px var(--match-test-ring);
+}
+.match-module.match-cyan :is(.match-question-page, .match-intro-page) :focus-visible {
+  outline: 2px solid var(--match-ui-accentInk);
+  outline-offset: 3px;
+}

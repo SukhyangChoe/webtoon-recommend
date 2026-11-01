@@ -8,6 +8,8 @@ type Panel = Exclude<Stage, 'collapsed'>;
 
 /** One persistent sheet: the handle owns expansion, the body owns ordinary reading. */
 export function useWorkDetailSheet(enabled: boolean, firstPanel: Panel = 'reasons') {
+  const firstPanelRef = useRef(firstPanel);
+  useEffect(() => { firstPanelRef.current = firstPanel; }, [firstPanel]);
   const [stage, setStage] = useState<Stage>('collapsed');
   const [compact, setCompact] = useState(false);
   const root = useRef<HTMLElement>(null);
@@ -146,7 +148,7 @@ export function useWorkDetailSheet(enabled: boolean, firstPanel: Panel = 'reason
       const travel = Math.max(0, opening ? -dy : dy);
       if (!travel && !drag.target) return;
       event.preventDefault();
-      drag.target = opening ? firstPanel : 'collapsed'; drag.travel = travel;
+      drag.target = opening ? firstPanelRef.current : 'collapsed'; drag.travel = travel;
       preview.dataset.dragging = 'true'; preview.dataset.morph = opening ? 'opening' : 'closing';
       const distance = Math.abs(geometry[drag.target] - geometry[drag.source]);
       setHeight(geometry[drag.source] + (opening ? 1 : -1) * Math.min(travel, distance));
@@ -161,7 +163,7 @@ export function useWorkDetailSheet(enabled: boolean, firstPanel: Panel = 'reason
       else cancelDrag();
       if (grip.hasPointerCapture(event.pointerId)) grip.releasePointerCapture(event.pointerId);
     };
-    const click = (event: MouseEvent) => { if (event.detail === 0) { if (current === 'collapsed') open(firstPanel); else close(); } };
+    const click = (event: MouseEvent) => { if (event.detail === 0) { if (current === 'collapsed') open(firstPanelRef.current); else close(); } };
     const key = (event: KeyboardEvent) => {
       if (event.key === 'Escape') { if (drag) cancelDrag(); else close(); }
       if (current !== 'collapsed' && preview.contains(document.activeElement) && ['PageDown', 'PageUp', 'Home', 'End'].includes(event.key) && !(event.target instanceof HTMLElement && event.target.closest('input,textarea,select,[contenteditable]'))) {
@@ -171,7 +173,7 @@ export function useWorkDetailSheet(enabled: boolean, firstPanel: Panel = 'reason
         else scroller.scrollTop += (event.key === 'PageDown' ? 1 : -1) * scroller.clientHeight * .8;
       }
       if (event.target !== grip) return;
-      if (['ArrowUp', 'ArrowDown'].includes(event.key)) { event.preventDefault(); if (event.key === 'ArrowUp' && current === 'collapsed') open(firstPanel); else if (event.key === 'ArrowDown') close(); }
+      if (['ArrowUp', 'ArrowDown'].includes(event.key)) { event.preventDefault(); if (event.key === 'ArrowUp' && current === 'collapsed') open(firstPanelRef.current); else if (event.key === 'ArrowDown') close(); }
     };
     const cancel = () => cancelDrag();
     const hidden = () => { if (document.hidden) cancelDrag(); };
@@ -203,7 +205,7 @@ export function useWorkDetailSheet(enabled: boolean, firstPanel: Panel = 'reason
       cover?.removeEventListener('pointerdown', coverDown); cover?.removeEventListener('pointerup', coverUp); cover?.removeEventListener('pointercancel', coverCancel); cover?.removeEventListener('click', coverClick);
       actions.current = { open: () => {}, close: () => {} };
     };
-  }, [enabled, firstPanel]);
+  }, [enabled]);
 
   return { stage, compact, root, sheet, summary, header, body, info, footer, handle, openPanel: (next: Panel) => actions.current.open(next), closePanel: () => actions.current.close() };
 }

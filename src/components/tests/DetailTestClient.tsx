@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { BackIcon } from '@/components/layout/BackIcon';
 import { AppButton } from "@/components/ui/AppButton";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { getDetailChoiceImageSrc } from "@/data/tests/detailChoiceImages";
@@ -714,8 +715,8 @@ ${window.location.href}`);
   return (
     <main className="detail-test-page detail-result-page">
       <PageContainer size="test" className="detail-result-container">
-        <a href="/tests" className="detail-test-back-link">
-          ← 다른 테스트 보기
+        <a href="/tests" className="detail-test-back-link site-back-control" aria-label="다른 테스트 보기">
+          <BackIcon />
         </a>
 
         <section className="detail-result-hero">
@@ -1202,8 +1203,8 @@ export function DetailTestClient({ config }: { config: DetailTestConfig }) {
     return (
       <main className="detail-test-page detail-test-intro-page">
         <PageContainer size="test" className="detail-test-intro-container">
-          <a href="/tests" className="detail-test-back-link">
-            ← 다른 테스트 보기
+          <a href="/tests" className="detail-test-back-link site-back-control" aria-label="다른 테스트 보기">
+            <BackIcon />
           </a>
 
           <section className="detail-test-intro-card">
@@ -1288,7 +1289,7 @@ export function DetailTestClient({ config }: { config: DetailTestConfig }) {
     <main className="detail-test-page detail-test-question-page">
       <PageContainer size="test" className="detail-test-question-container">
         <header className="detail-test-question-header">
-          <a href="/tests">← 장르 취향 테스트</a>
+          <a href="/tests" className="site-back-control" aria-label="장르 취향 테스트"><BackIcon /></a>
           <span>
             {currentQuestionIndex + 1} / {questions.length}
           </span>

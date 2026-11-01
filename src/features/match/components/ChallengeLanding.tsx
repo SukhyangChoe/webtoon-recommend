@@ -78,7 +78,7 @@ export function ChallengeLanding({ challengeCode }: { challengeCode: string }) {
   function continueWithExisting() {
     if (!nicknameValidation.valid || !agreed) return;
     writePendingChallenge(window.localStorage, challengeCode, nicknameValidation.nickname);
-    window.location.assign(MATCH_ROUTES.result(existingResultId));
+    window.location.assign(MATCH_ROUTES.building);
   }
 
   async function startFresh() {

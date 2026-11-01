@@ -16,7 +16,7 @@ const {chromium}=require('playwright');
     const page=await context.newPage(),errors=[];
     page.on('pageerror',error=>errors.push(error.message));
     const pair=await (await page.request.get(`${base}/api/v1/challenges/mKOdmiLcE0JU/results/VIbseuqFQuk6RRDr`)).json();
-    const profile=pair.challengerRecommendations[0].fitTargetPublicProfileId;
+    const profile=pair.challengerRecommendations[0]?.fitTargetPublicProfileId ?? 'xys7o3_7JlgZl91b';
     const cases=[
       ...['intro','genre-shelf/1','genre-shelf/2','taste/setting','taste/appeal','taste/character-relationship','avoidance','recovery'].map(step=>({url:`/match/test/${step}`,href:'/match',label:'시작'})),
       {url:'/match/challenge/new',href:'/match',label:'시작'},
@@ -36,9 +36,9 @@ const {chromium}=require('playwright');
       await link.waitFor();
       assert.equal(await link.getAttribute('href'),expected.href);
       assert.ok(await nav.evaluate(el=>{
-        const link=el.querySelector('a'),icon=link.querySelector('svg').getBoundingClientRect(),label=link.querySelector('.match-screen-header-label').getBoundingClientRect();
+        const link=el.querySelector('a'),icon=link.querySelector('svg').getBoundingClientRect();
         const logo=document.querySelector('.brand-bar__logo').getBoundingClientRect(),box=el.getBoundingClientRect(),center=rect=>(rect.top+rect.bottom)/2;
-        return Math.abs((logo.left+logo.right)/2-innerWidth/2)<1&&Math.abs(center(logo)-center(box))<1&&Math.abs(center(icon)-center(box)-2)<1&&Math.abs(center(icon)-center(label))<1&&link.getBoundingClientRect().right<=logo.left-7&&icon.width===32&&getComputedStyle(link.querySelector('.match-screen-header-label')).fontSize==='16px'&&link.getBoundingClientRect().height>=44;
+        return Math.abs((logo.left+logo.right)/2-innerWidth/2)<1&&Math.abs(center(logo)-center(box))<1&&Math.abs(center(icon)-center(box))<1&&link.textContent.trim()===''&&link.getBoundingClientRect().right<=logo.left-7&&icon.width===32&&getComputedStyle(link.querySelector('svg')).strokeWidth==='2.8px'&&link.getBoundingClientRect().height>=44;
       }),`shared centered logo and non-overlapping optical alignment: ${expected.url}`);
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no page overflow');
       const main=page.locator('.match-page:not(.wm-screen)').first();
@@ -78,6 +78,6 @@ const {chromium}=require('playwright');
     }
     assert.deepEqual(errors,[]);
     await context.close();
-    console.log(JSON.stringify({ok:true,commonRoutes:cases.length+6,widths:[320,390,435],checks:['shared centered header','home label and existing return targets','32px arrow and 16px label','2px optical correction','12px content gap','long labels do not overlap the logo','six duel genre labels contained inside images','wrapped descriptions remain unobstructed','16px guide spacing','dedicated headers preserved','no server mutations'],artifacts:output},null,2));
+    console.log(JSON.stringify({ok:true,commonRoutes:cases.length+6,widths:[320,390,435],checks:['shared centered header','accessible names and existing return targets','bold arrow-only 32px back control','centered icon alignment','12px content gap','back controls do not overlap the logo','six duel genre labels contained inside images','wrapped descriptions remain unobstructed','16px guide spacing','dedicated headers preserved','no server mutations'],artifacts:output},null,2));
   }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

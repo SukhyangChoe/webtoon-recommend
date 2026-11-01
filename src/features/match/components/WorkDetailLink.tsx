@@ -4,11 +4,11 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { workDetailHref } from '../config/workDetailPresentation.mjs';
 
-export function WorkDetailLink({ id, profileId, returnTo, children, className, label, newTab = false, onOpen }: {
-  id: string; profileId?: string | null; returnTo: string; children: ReactNode;
+export function WorkDetailLink({ id, returnTo, children, className, label, newTab = false, onOpen }: {
+  id: string; returnTo: string; children: ReactNode;
   className?: string; label?: string; newTab?: boolean; onOpen?: () => void;
 }) {
-  const href = workDetailHref(id, profileId, returnTo);
+  const href = workDetailHref(id, returnTo);
   return <Link href={href} className={className} aria-label={label} prefetch={false}
     target={newTab ? '_blank' : undefined} rel={newTab ? 'noopener noreferrer' : undefined}
     onClick={event => {

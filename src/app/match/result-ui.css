@@ -7,10 +7,8 @@ body:has(.wm-result-screen) > .brand-bar {
 }
 body:has(.wm-result-screen) > .brand-bar .brand-bar__inner { max-width: 540px; padding: 0 18px; }
 body:has(.wm-result-screen) > .brand-bar .brand-bar__logo {
-  left: 50%; right: auto; min-width: 105px; transform: translate(-50%, -50%); pointer-events: auto;
+  left: 50%; right: auto; min-width: 110px; transform: translate(-50%, -50%); pointer-events: auto;
 }
-body:has(.wm-result-screen) > .brand-bar .brand-bar__mark,
-body:has(.wm-result-screen) > .brand-bar .brand-bar__mark::after { background: transparent; }
 .match-module:has(.wm-result-screen) { min-height: 100dvh; }
 .match-module .wm-screen {
   --match-ink: #193640; --match-muted: #6d8793; --match-purple: #007e98;
@@ -30,7 +28,7 @@ body:has(.wm-result-screen) > .brand-bar .brand-bar__mark::after { background: t
 .wm-screen .match-button { min-height: 50px; padding: 12px 14px; border: 1px solid #00b8d7; border-radius: 14px; background: #00c8ea; color: #073c47; box-shadow: none; font-size: 15px; font-weight: 750; text-align: center; display: flex; align-items: center; justify-content: center; gap: 12px; }
 .wm-screen .match-button--secondary { background: #fff; color: #00697f; border-color: #cbdde5; }
 .wm-local-nav { position: relative; z-index: 3; display: flex; gap: 12px; align-items: center; height: 48px; font-size: 13px; font-weight: 650; color: #456874; }
-.wm-local-nav a { width: 36px; height: 40px; display: grid; place-items: center; color: inherit; font-size: 30px; text-decoration: none; }
+.wm-manager-screen .wm-local-nav a { width: auto; min-height: 44px; }
 .match-module .wm-result-screen { min-height: 100dvh; padding-top: 56px; padding-bottom: calc(110px + env(safe-area-inset-bottom)); }
 .match-module .wm-result-loading { padding-top: 64px; }
 .wm-screen .wm-eyebrow { font-size: 12px; color: #00697f; font-weight: 750; margin-bottom: 8px; }
@@ -46,11 +44,25 @@ body:has(.wm-result-screen) > .brand-bar .brand-bar__mark::after { background: t
 .wm-recommendations-heading > a > .wm-icon { width: 18px; height: 18px; }
 .wm-result-hero { --wm-genre-scroll-gap: 18px; position: relative; isolation: isolate; padding: 28px 0 var(--wm-genre-scroll-gap); }
 .wm-result-hero::before { position: absolute; content: ''; z-index: -2; inset: -56px -18px -12px; background: radial-gradient(ellipse at 75% 25%, #d0f9ff 0%, #ebf7fb 38%, #f3fafc 75%); }
-.wm-hero-copy { position: relative; z-index: 1; min-height: 180px; width: 51%; }
-.wm-screen .wm-hero-copy h1 { font-size: clamp(24px, 6vw, 32px); font-weight: 800; line-height: 1.18; letter-spacing: -.045em; max-width: 280px; overflow-wrap: anywhere; }
+.wm-result-identity { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; min-height: 44px; }
+.wm-result-identity > span:last-child { white-space: nowrap; }
+.wm-result-nickname { min-width: 0; overflow-wrap: anywhere; }
+.wm-result-intro { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 44%); align-items: start; gap: 8px; }
+.wm-hero-copy { position: relative; z-index: 1; min-width: 0; }
+.wm-screen .wm-hero-copy h1 { font-size: clamp(24px, 6vw, 32px); font-weight: 800; line-height: 1.18; letter-spacing: -.045em; max-width: 280px; overflow-wrap: normal; word-break: keep-all; text-wrap: balance; }
+.wm-result-title-phrase { display: inline-block; white-space: nowrap; }
 .wm-screen .wm-result-meta { font-size: 12px; color: #547581; line-height: 1.5; margin-top: 12px; }
-.wm-persona-image { position: absolute; z-index: -1; right: -6px; top: 0; width: 47%; height: 228px; object-fit: contain; object-position: right bottom; filter: drop-shadow(0 8px 18px #4084a126); }
-.wm-nickname-edit { display: block; background: transparent; border: 0; color: #547581; font-size: 11px !important; min-height: 44px; padding: 10px 2px; }
+.wm-persona-frame { position: relative; min-width: 0; height: 202px; padding: 2px 3px; }
+.wm-persona-image { position: static; display: block; width: 100%; height: 100%; object-fit: contain; object-position: center bottom; filter: drop-shadow(0 8px 18px #4084a126); }
+/* Fade the portrait itself so the cyan hero background remains seamless. */
+.wm-persona-image {
+  -webkit-mask-image: linear-gradient(to bottom, #000 60%, rgb(0 0 0 / .75) 80%, rgb(0 0 0 / .2) 93%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 60%, rgb(0 0 0 / .75) 80%, rgb(0 0 0 / .2) 93%, transparent 100%);
+}
+.wm-nickname-edit { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-height: 44px; padding: 5px 10px; border: 1px solid #9bdbe7; border-radius: 10px; background: #ffffffd9; color: #00697f; font-size: inherit; font-weight: 750; cursor: pointer; }
+.wm-nickname-edit > span { min-width: 0; overflow-wrap: anywhere; text-align: left; }
+.wm-nickname-edit > svg { flex-shrink: 0; }
+.wm-nickname-edit:hover { background: #e3f8fc; border-color: #00a9c7; }
 .wm-genre-ranking { position: relative; z-index: 2; min-width: 0; }
 .wm-top-genres { display: grid; grid-auto-flow: column; grid-auto-columns: calc((100% - 16px) / 3); gap: 8px; padding-block: 2px 7px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; }
 .wm-top-genres::-webkit-scrollbar { display: none; }
@@ -73,9 +85,9 @@ body:has(.wm-result-screen) > .brand-bar .brand-bar__mark::after { background: t
 .wm-screen .wm-taste-group h2 { display: flex; align-items: center; gap: 7px; font-size: 16px; font-weight: 750; margin-bottom: 12px; }
 .wm-taste-group h2 > span { color: #7694a1; font-size: 20px; }
 .wm-taste-group:first-of-type h2 > span { color: #ee86ac; }
-.wm-taste-tiles { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.wm-taste-tiles { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 132px), 1fr)); gap: 6px; }
 .wm-taste-tiles li { min-width: 0; min-height: 64px; background: #f1faff; border: 1px solid #deeff6; border-radius: 12px; padding: 11px 7px; display: flex; gap: 6px; align-items: center; }
-.wm-taste-icon { font-size: 22px; color: #0799b6; flex-shrink: 0; }
+.wm-taste-icon { display: block; width: 32px; height: 32px; color: #0799b6; flex-shrink: 0; }
 .wm-taste-tiles li div { min-width: 0; display: grid; gap: 3px; }
 .wm-taste-tiles li div > span { font-size: 11px; color: #5c7b89; }
 .wm-taste-tiles strong { font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; word-break: keep-all; }
@@ -144,6 +156,9 @@ body:has(.wm-result-screen) > .brand-bar .brand-bar__mark::after { background: t
 .wm-search-results .wm-work-cover { width: 62px; height: 90px; }
 .wm-search-results .wm-genre-tag { margin-top: 7px; }
 .wm-search-results .wm-note { margin-top: 7px; font-size: 11px; }
+.wm-search-section .wm-registration-policy-note { margin-top: 12px; }
+.wm-comment-retention-note { margin-bottom: 14px !important; }
+.wm-restored-comment { margin-top: 8px !important; color: #00697f !important; }
 .wm-search-results li > button { flex-shrink: 0; border: 1px solid #d8e7ee; background: #edf5f9; color: #007e98; border-radius: 10px; min-height: 40px; padding: 8px 10px; font-size: 12px; }
 .wm-return-link { display: block; text-align: center; padding: 25px 0 10px; color: #678391; font-size: 12px; text-decoration: none; }
 .wm-save-tray { position: fixed; z-index: 40; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 540px; background: #fffffff5; border-top: 1px solid #e0edf2; border-radius: 21px 21px 0 0; padding: 14px 18px calc(14px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 18px; box-shadow: 0 -5px 24px #2949590c; }
@@ -160,8 +175,6 @@ body:has(.wm-result-screen) > .brand-bar .brand-bar__mark::after { background: t
 @media (max-width: 360px) {
   .match-module .wm-screen { padding-left: 12px; padding-right: 12px; }
   .wm-result-hero::before { inset: -56px -12px -12px; }
-  .wm-hero-copy { width: 51%; min-height: 176px; }
-  .wm-persona-image { height: 224px; right: -6px; }
   .wm-screen .wm-hero-copy h1 { font-size: 24px; }
   .wm-top-genres article { padding: 10px 7px; }
   .wm-top-genres strong { font-size: 13px; }
@@ -169,7 +182,7 @@ body:has(.wm-result-screen) > .brand-bar .brand-bar__mark::after { background: t
   .wm-taste-tiles li { gap: 4px; padding: 9px 5px; }
   .wm-taste-icon { font-size: 18px; }
   .wm-taste-tiles strong { font-size: 12px; }
-  .wm-hero-book { width: 75px; transform: scale(.85); transform-origin: right center; }
+  .wm-hero-book { width: 75px; margin-right: 6px; transform: scale(.85); transform-origin: right center; }
   .wm-selected-list > li { padding: 11px; }
   .wm-selected-header { gap: 8px; }
   .wm-numbered-cover .wm-work-cover { width: 55px; height: 79px; }

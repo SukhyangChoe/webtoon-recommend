@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { FindRecommendationResult } from "@/components/find/FindRecommendationResult";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { BackIcon } from '@/components/layout/BackIcon';
 import { AppButton } from "@/components/ui/AppButton";
 import { StatePanel } from "@/components/ui/StatePanel";
 import webtoonSeedData from "@/data/webtoons/webtoons_seed_current.json";
@@ -182,8 +183,8 @@ export default function FindResultsPage() {
               className="find-results-page__nav"
               aria-label="추천 결과 보조 이동"
             >
-              <AppButton href="/find" variant="ghost">
-                ← 다시 찾아보기
+              <AppButton href="/find" variant="ghost" className="site-back-control" ariaLabel="다시 찾아보기">
+                <BackIcon />
               </AppButton>
               <AppButton href="/tests" variant="ghost">
                 취향 테스트 보기

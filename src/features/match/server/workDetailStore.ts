@@ -1,12 +1,13 @@
 import 'server-only';
 import questionSeed from '../data/questionSeed.v0.4.json';
 import { getMatchDatabase } from './database';
-import { getTasteSnapshot } from './resultStore';
+import { getLatestTasteSnapshotForAnonymousId } from './resultStore';
 import { calculateRecommendationFit } from '../engine/recommendationFitEngine.mjs';
 import { recommendationGenreLabel, safeWorkCoverUrl } from '../config/recommendationPresentation.mjs';
 import { rankedWorkLabels, safeOfficialWorkUrl, sharedFitReasons, WORK_POINT_ICONS, workArtStyleCards, workStatusLabel } from '../config/workDetailPresentation.mjs';
 import { tagLabelMap } from '@/data/tags/tagLabels';
 import { CONTENT_AXIS_LABELS } from '@/data/contentAxis/contentAxisLabels';
+import type { WorkReadContext } from './workReadDeadline';
 
 type ScoreMap = Record<string, number>;
 type Recommendation = { tagScores?: ScoreMap; contentAxisScores?: ScoreMap; artStyleScores?: ScoreMap; recommendationReason?: string };
@@ -18,27 +19,24 @@ type DetailRow = {
   recommendation: Recommendation | null;
 };
 
-export async function getWorkDetail(id: string, requestedProfile?: string | null, anonymousId?: string | null) {
+async function readWorkRow(id: string, read?: WorkReadContext) {
   const sql = getMatchDatabase();
-  const [row] = await sql<DetailRow[]>`
+  const rows = read ? await read.query<DetailRow[]>('work', `
+    select w.canonical_webtoon_id,w.title,w.platform,w.main_genre,w.official_url,
+      coalesce(d.cover_url,w.raw_data->>'coverUrl',w.raw_data#>>'{metadata,coverUrl}',w.raw_data#>>'{cover,src}') as cover_url,
+      d.synopsis,d.synopsis_kind,d.creators,d.imported_data,w.raw_data->'recommendation' as recommendation
+    from public.webtoons w left join public.webtoon_details d using(canonical_webtoon_id)
+    where w.canonical_webtoon_id=$1 and w.catalog_status='active' limit 1`, [id]) : await sql<DetailRow[]>`
     select w.canonical_webtoon_id,w.title,w.platform,w.main_genre,w.official_url,
       coalesce(d.cover_url,w.raw_data->>'coverUrl',w.raw_data#>>'{metadata,coverUrl}',w.raw_data#>>'{cover,src}') as cover_url,
       d.synopsis,d.synopsis_kind,d.creators,d.imported_data,w.raw_data->'recommendation' as recommendation
     from public.webtoons w left join public.webtoon_details d using(canonical_webtoon_id)
     where w.canonical_webtoon_id=${id} and w.catalog_status='active' limit 1
   `;
-  if (!row) return null;
-  let profileId = requestedProfile;
-  if (!profileId && anonymousId) {
-    const [profile] = await sql<{ public_profile_id: string }[]>`
-      select s.public_profile_id from public.match_taste_snapshots s join public.match_profiles p using(profile_id)
-      where p.anonymous_id=${anonymousId}::uuid order by s.completed_at desc limit 1
-    `;
-    profileId = profile?.public_profile_id;
-  }
-  const snapshot = profileId ? await getTasteSnapshot(profileId) : null;
-  const fit = snapshot ? calculateRecommendationFit(snapshot.tasteVector, row.recommendation, questionSeed) : null;
-  const comparable = fit && fit.comparableAxes.length >= 2;
+  return rows[0] ?? null;
+}
+
+function workInfo(row: DetailRow) {
   const recommendation = row.recommendation;
   const creators = (Array.isArray(row.creators) ? row.creators : []).flatMap(creator => typeof creator?.name === 'string' && creator.name.trim()
     ? [{ name: creator.name.trim().slice(0, 100), roles: Array.isArray(creator.roles) ? creator.roles.filter(role => typeof role === 'string').slice(0, 3) : [] }] : []);
@@ -53,10 +51,39 @@ export async function getWorkDetail(id: string, requestedProfile?: string | null
     contentLabels: rankedWorkLabels(recommendation?.contentAxisScores, CONTENT_AXIS_LABELS, {}, 3),
     appreciationPoints: rankedWorkLabels(recommendation?.tagScores, tagLabelMap, WORK_POINT_ICONS, 2),
     artStyles: workArtStyleCards(recommendation?.artStyleScores, 2),
-    fit: comparable ? { percent: Math.round(fit.score * 100), highlighted: fit.highlighted,
-      profilePublicId: snapshot!.publicProfileId, nickname: snapshot!.profileDisplayName || null,
-      reasons: sharedFitReasons(snapshot!.tasteVector, recommendation, tagLabelMap, CONTENT_AXIS_LABELS) } : null,
+    fitStatus: 'pending' as const, fit: null,
   };
 }
 
-export type WorkDetail = NonNullable<Awaited<ReturnType<typeof getWorkDetail>>>;
+async function workFit(row: DetailRow, anonymousId?: string | null, read?: WorkReadContext) {
+  const snapshot = anonymousId ? await getLatestTasteSnapshotForAnonymousId(anonymousId, read) : null;
+  const calculate = () => snapshot ? calculateRecommendationFit(snapshot.tasteVector, row.recommendation, questionSeed) : null;
+  const fit = read ? read.measure('fit_compute', calculate) : calculate();
+  const comparable = fit && fit.comparableAxes.length >= 2;
+  return {
+    fitStatus: !snapshot ? 'test_required' as const : comparable ? 'ready' as const : 'insufficient_data' as const,
+    fit: comparable ? { percent: Math.round(fit.score * 100), highlighted: fit.highlighted,
+      profilePublicId: snapshot!.publicProfileId, nickname: snapshot!.profileDisplayName || null,
+      reasons: sharedFitReasons(snapshot!.tasteVector, row.recommendation, tagLabelMap, CONTENT_AXIS_LABELS) } : null,
+  };
+}
+
+export async function getWorkInfo(id: string, read?: WorkReadContext) {
+  const row = await readWorkRow(id, read);
+  return row ? workInfo(row) : null;
+}
+
+export async function getWorkFit(id: string, anonymousId?: string | null, read?: WorkReadContext) {
+  const row = await readWorkRow(id, read);
+  return row ? workFit(row, anonymousId, read) : null;
+}
+
+// Legacy API clients can still request the combined representation, with the same live viewer policy.
+export async function getWorkDetail(id: string, anonymousId?: string | null, read?: WorkReadContext) {
+  const row = await readWorkRow(id, read);
+  return row ? { ...workInfo(row), ...await workFit(row, anonymousId, read) } : null;
+}
+
+type CompletedWork = NonNullable<Awaited<ReturnType<typeof getWorkDetail>>>;
+export type WorkDetail = Omit<CompletedWork, 'fitStatus'> & { fitStatus: CompletedWork['fitStatus'] | 'pending' };
+export type WorkFit = NonNullable<Awaited<ReturnType<typeof getWorkFit>>>;

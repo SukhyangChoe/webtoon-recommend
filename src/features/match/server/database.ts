@@ -1,6 +1,7 @@
 import "server-only";
 
 import postgres from "postgres";
+import { createWorkReadDatabase, type WorkReadDatabase } from './workReadDatabase';
 
 const MATCH_DATABASE_ENV = "WEBTOON_MATCH_DATABASE_URL";
 
@@ -15,7 +16,16 @@ type MatchDatabaseClient = ReturnType<typeof postgres>;
 
 const globalDatabase = globalThis as typeof globalThis & {
   __webtoonMatchDatabase?: MatchDatabaseClient;
+  __webtoonWorkReadDatabaseV2?: WorkReadDatabase;
 };
+
+/** A single bounded read-only lane prevents analytics/writes from starving work detail reads. */
+export function getWorkReadDatabase(): WorkReadDatabase {
+  if (globalDatabase.__webtoonWorkReadDatabaseV2) return globalDatabase.__webtoonWorkReadDatabaseV2;
+  const connectionString = process.env[MATCH_DATABASE_ENV]?.trim();
+  if (!connectionString) throw new MatchDatabaseNotConfiguredError();
+  return globalDatabase.__webtoonWorkReadDatabaseV2 = createWorkReadDatabase(connectionString);
+}
 
 export function getMatchDatabase(): MatchDatabaseClient {
   if (globalDatabase.__webtoonMatchDatabase) return globalDatabase.__webtoonMatchDatabase;

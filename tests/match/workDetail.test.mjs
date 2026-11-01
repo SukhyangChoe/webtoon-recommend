@@ -35,7 +35,10 @@ test('detail navigation and official URLs reject offsite returns, script protoco
   assert.equal(safeOfficialWorkUrl('javascript:alert(1)'),null);
   assert.equal(safeOfficialWorkUrl('/match'),null);
   assert.equal(safeOfficialWorkUrl('https://user:password@example.com'),null);
-  assert.match(workDetailHref('wt_001','profile-1','/match/result/profile-1'),/^\/match\/work\/wt_001\?profile=profile-1&returnTo=/);
+  const href = new URL(workDetailHref('wt_001','/match/result/profile-1'), 'http://localhost');
+  assert.equal(href.pathname, '/match/work/wt_001');
+  assert.equal(href.searchParams.get('returnTo'), '/match/result/profile-1');
+  assert.equal(href.searchParams.has('profile'), false, 'navigation cannot select another person’s fit');
 });
 test('feature cards omit unknown and zero values, retain label provenance and distinct art groups',()=>{
   assert.deepEqual(rankedWorkLabels({a:0,b:3,c:2},{a:'A',b:'B'}),[{key:'b',label:'B',icon:'spark'}]);
@@ -58,7 +61,7 @@ test('detail storage and API isolate presentation from source imports and privat
   const store=readFileSync(new URL('../../src/features/match/server/workDetailStore.ts',import.meta.url),'utf8');
   assert.match(store,/calculateRecommendationFit/);
   assert.match(store,/comparableAxes.length >= 2/);
-  const route=readFileSync(new URL('../../src/app/api/v1/webtoons/[canonicalWebtoonId]/route.ts',import.meta.url),'utf8');
+  const route=readFileSync(new URL('../../src/features/match/server/workDetailResponse.ts',import.meta.url),'utf8');
   assert.match(route,/private, no-store/);
 });
 

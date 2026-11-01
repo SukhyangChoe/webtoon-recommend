@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { MatchIcon } from './MatchIcon';
+import { BackIcon } from '@/components/layout/BackIcon';
+import { searchBackPath } from '../config/workSearchPresentation.mjs';
 
 export function MatchScreenHeader() {
   const path = usePathname();
@@ -14,6 +15,10 @@ export function MatchScreenHeader() {
   if (/^\/match\/c\/[^/]+\/ranking$/.test(path) || /^\/match\/c\/[^/]+\/match\//.test(path)) return <div className="match-screen-header is-relationship" aria-hidden="true" />;
   let label = "시작";
   let href = "/match";
+  if (path === '/match/search') {
+    href = searchBackPath(query.get('from'));
+    label = href === '/match' ? '시작' : /^\/match\/result\/[\w-]+$/.test(href) ? '내 취향 결과' : '이전 화면';
+  }
   if (path.startsWith("/match/share/")) {
     const code = query.get("challengeCode");
     const resultId = query.get("resultId");
@@ -22,5 +27,5 @@ export function MatchScreenHeader() {
     href = profileId ? `/match/result/${encodeURIComponent(profileId)}` : code ? resultId ? `/match/c/${encodeURIComponent(code)}/match/${encodeURIComponent(resultId)}` : `/match/c/${encodeURIComponent(code)}/ranking` : "/match";
     if (href === '/match') label = '시작';
   }
-  return <nav className={`match-screen-header${path === "/match" ? " is-home" : " has-navigation"}${isIntro ? ' is-test-intro' : ''}`} aria-label="화면 이동">{path !== "/match" ? <Link href={href} aria-label={label} title={label}><MatchIcon name="chevron" className="is-back" /><span className="match-screen-header-label">{label}</span></Link> : null}</nav>;
+  return <nav className={`match-screen-header${path === "/match" ? " is-home" : " has-navigation"}${isIntro ? ' is-test-intro' : ''}`} aria-label="화면 이동">{path !== "/match" ? <Link className="site-back-control" href={href} aria-label={label}><BackIcon /></Link> : null}</nav>;
 }

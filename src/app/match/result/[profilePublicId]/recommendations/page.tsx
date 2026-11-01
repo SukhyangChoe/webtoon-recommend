@@ -5,8 +5,9 @@ import { getProfileRecommendations } from "@/features/match/server/webtoonCatalo
 export const metadata: Metadata = { title: "내 추천작 관리", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
 
-export default async function MatchRecommendationsPage({ params }: { params: Promise<{ profilePublicId: string }> }) {
+export default async function MatchRecommendationsPage({ params, searchParams }: { params: Promise<{ profilePublicId: string }>; searchParams: Promise<{ returnTo?: string }> }) {
   const { profilePublicId } = await params;
   const initialSelected = await getProfileRecommendations(profilePublicId).catch(() => null);
-  return <RecommendationManager publicProfileId={profilePublicId} initialSelected={initialSelected ?? []} initialLoadFailed={initialSelected === null} />;
+  const query = await searchParams;
+  return <RecommendationManager publicProfileId={profilePublicId} returnTo={typeof query.returnTo === 'string' ? query.returnTo : undefined} initialSelected={initialSelected ?? []} initialLoadFailed={initialSelected === null} />;
 }

@@ -61,11 +61,11 @@ node --env-file=.env.local scripts/import-webtoon-covers.mjs --archive /absolute
 
 - 내부 화면: `/match/work/[canonicalWebtoonId]`.
 - 조회 API: `/api/v1/webtoons/[canonicalWebtoonId]`.
-- `profile`은 공개 결과 ID로 계산 대상을 명시한다. 생략하면 기존 익명 사용자 식별자를 통해 본인의 최신 결과를 찾고, 결과가 없으면 개인 점수/이유를 숨긴다.
+- 계산 대상은 항상 현재 사용자의 익명 식별자로 찾은 본인의 최신 결과다. 이전 링크의 `profile` 쿼리는 무시한다. 결과가 없으면 개인 점수/이유를 숨기고 테스트를 안내한다.
 - API는 `private, no-store`. 원본 벡터, 익명 ID, 원본 검수 문장 및 출처 묶음을 브라우저에 반환하지 않는다.
 - 원본의 `recommendationReason`은 작품 소개용 문장이지 개인화 이유가 아니다. 개인화 이유는 실제 사용자/작품의 공통 양수 신호에서만 생성한다.
 - 기존 `calculateRecommendationFit`를 공유한다. 원점수 0.70 이상이며 비교 축 2개 이상이면 카드 하이라이트. 상세의 %는 같은 점수의 표시값이다.
-- 궁합 카드마다 `fitTargetPublicProfileId`를 전달해 하이라이트의 수신자와 상세 점수의 대상이 일치한다. ‘OO님의 핏점수’로 대상을 표시한다.
+- 궁합 카드의 하이라이트 대상과 무관하게 상세에서는 방문자 본인과 작품을 비교하고 문구는 ‘핏점수’로 표시한다. 최신 완료 테스트·현재 추천작·현재 작품 벡터를 매번 읽어 계산하며 점수를 DB에 저장하거나 캐시하지 않는다.
 - 표지와 제목은 내부 상세로, 감상 CTA만 검증된 HTTPS 공식 URL로 이동한다. 좋아요는 별도 버튼이다.
 - 상세에서 뒤로가기 시 기존 목록 위치를 복원한다. 추천 관리 화면에서는 미저장 코멘트를 잃지 않도록 상세를 새 탭으로 연다.
 - 없는 제작진·등급·소개·태그는 해당 항목을 숨긴다. 표지 미등록은 공통 대체 표시를 사용한다. 기존 시안의 모의 82% 및 안내 문구는 사용하지 않는다.
@@ -73,12 +73,23 @@ node --env-file=.env.local scripts/import-webtoon-covers.mjs --archive /absolute
 - 표지는 화면 위쪽 끝부터 로고 뒤까지 `object-fit: cover`로 채운다. 로고 아래의 부드러운 그라데이션으로 가독성을 확보하며 표지·감상 CTA의 위치는 시트 단계와 무관하게 유지한다. 기본 시트는 제목과 핏점수를 가로로 배치하고 이유 미리보기를 중복 노출하지 않아 표지가 더 많이 보이게 한다. 기본 화면·소개 본문의 중복 ‘작품 정보’ 링크는 없애고 확장 화면의 상단 탭으로만 전환한다.
 - 궁합·소개와 작품 정보는 동일한 확장 높이를 공유하며 선택한 탭의 내용만 표시한다. 각 탭의 본문은 일반 스크롤이고 읽던 위치를 개별 복원한다. 짧은 화면에서도 탭은 유지한다. 표지 탭·접기·Escape 및 손잡이 키보드 조작을 지원한다. 모션 감소 설정에서는 전환 애니메이션을 생략한다.
 
+### 분리 로딩, 제한 시간과 지연 진단
+
+- 화면은 `GET /api/v1/webtoons/:id?view=info`로 표지·소개·작품 정보를 먼저 표시한 뒤 `GET /api/v1/webtoons/:id/fit`로 개인 점수만 가져온다. 기존 통합 API는 호환성을 유지한다. 핏점수 도착이 열어둔 시트나 탭을 초기화하지 않는다.
+- 각 화면 요청은 3초가 지나면 지연 안내를 표시한다. 클라이언트는 응답 본문 파싱을 포함해 시도당 10초로 제한하고, 일시적인 네트워크/408/500/502/503/504 오류만 350ms 후 한 번 자동 재시도한다. 404는 자동 재시도하지 않는다. 실패 후 수동 재시도와 이전 화면 이동이 가능하며 핏점수만 재시도하면 기본 정보를 다시 받지 않는다. 화면을 떠나면 요청 및 재시도 대기를 취소한다.
+- 서버는 요청 전체를 8초로 제한하고 연결은 4초, SQL은 5초, 잠금 대기는 1초로 제한한다. 작품 읽기는 기존 분석 이벤트·쓰기용 연결과 분리된 최대 1개 연결을 사용한다. 대기 요청은 취소 시 대기열에서 제거하고 실행 요청은 쿼리 취소 및 해당 읽기 전용 연결 종료로 해제한다.
+- 현재 DB 중계기는 연결 시작 설정을 무시하므로 SQL 제한은 반드시 `BEGIN READ ONLY` 안의 `SET LOCAL`로 적용한다. 다른 풀 사용자에게 세션 설정을 남기지 않는다. DB 시간 초과는 504 및 `Retry-After: 1`, 요청 취소는 499로 응답한다.
+- 서버의 `work_detail_read` 구조화 로그에서 `requestId`, 작품 ID, 요청 종류(`info`/`fit`/`detail`), 상태, 전체 시간과 단계별 시간을 확인한다. 단계는 `work`, `taste_snapshot`, `recommendations`; 계산은 `taste_blend`, `fit_compute`다. `waitConnectMs`는 대기열·연결·트랜잭션 준비를 합친 시간이고 `queryMs`는 드라이버 전송부터 결과까지의 시간이다. DB 내부 실행 시간만을 뜻하지 않는다.
+- 같은 요청 ID는 응답 `X-Request-Id`, 시간 요약은 `Server-Timing`에도 제공한다. 식별자·닉네임·취향 벡터·SQL·매개변수·원본 예외를 진단 로그에 기록하지 않는다.
+
 ## 검증 명령
 
 ```sh
 node --test tests/match/*.test.mjs
 npx tsc --noEmit --incremental false
 CHROME_PATH='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' NODE_PATH=/absolute/path/to/playwright/node_modules node tests/browser/work-detail.smoke.cjs
+CHROME_PATH='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' NODE_PATH=/absolute/path/to/playwright/node_modules node tests/browser/work-detail-loading.smoke.cjs
+node --env-file=.env.local tests/browser/work-read-deadline.integration.cjs
 ```
 
 브라우저 검사는 실제 DB를 읽되 데이터를 저장하지 않는다. 결측·긴 제목 테스트만 네트워크 mock으로 격리하고, 사용자에게 보여주는 캡처에는 실제 작품과 실제 계산값만 사용한다.

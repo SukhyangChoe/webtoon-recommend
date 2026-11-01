@@ -2,7 +2,6 @@
 .match-module:has(.wm-share-page) { background:#f3fafc; }
 .match-module.match-cyan .match-page.wm-share-page { max-width:435px; min-height:calc(100dvh - 56px); padding:12px 20px 20px; display:grid; align-content:start; gap:14px; color:#193640; font-size:16px; }
 .match-module.match-cyan .wm-share-page h1 { margin:0 0 3px; font-family:'WebtoonFit Nanum Gothic',sans-serif; font-size:26px; line-height:1.4; font-weight:700; letter-spacing:-.045em; word-break:keep-all; overflow-wrap:anywhere; }
-.match-module:has(.wm-share-page) > .match-screen-header .match-screen-header-label { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
 .wm-share-card { min-width:0; margin:0; }
 .wm-share-card > img { display:block; width:100%; height:auto; border-radius:20px; }
 .wm-share-actions { display:grid; gap:10px; min-width:0; }

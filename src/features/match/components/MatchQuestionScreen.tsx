@@ -12,6 +12,8 @@ import type { DuelChoice, GenreChoice, MatchAnswers } from "../storage/draftType
 import { getSettingWeights, needsGenreRecovery, normalizeSettingSelection, promotePrimarySelection, shouldSwapDuel, toggleDuelSide, toggleExclusiveSelection, togglePrimarySelection, validateSettingSelection } from "../engine/selectionPolicy.mjs";
 
 import { MatchQuestionLayout as QuestionShell, MatchNavigation as Navigation } from "./MatchUI";
+import { GenrePictogram } from './GenrePictogram';
+import { DUEL_HELP_COPY } from '../config/testPresentation.mjs';
 
 type Screen =
   | { type: "genre"; page: 1 | 2 }
@@ -87,7 +89,7 @@ export function MatchQuestionScreen({ screen }: { screen: Screen }) {
           {question.genreKeys?.map((genreKey) => {
             const genre = matchGenreMap[genreKey];
             return <article className="match-genre-card" key={genreKey}>
-              <span className="match-genre-card__visual" aria-hidden="true">•</span>
+              <span className="match-genre-card__visual" aria-hidden="true"><GenrePictogram genre={genreKey} /></span>
               <div><h2>{genre.displayLabel}</h2><p>{genre.shortScope}</p></div>
               <div className="match-segmented" aria-label={`${genre.displayLabel} 선택`}>
                 {choices.map((choice) => <button key={choice.choiceKey} type="button" aria-pressed={genreAnswers[genreKey] === choice.choiceKey} className={genreAnswers[genreKey] === choice.choiceKey ? "is-selected" : ""} onClick={() => { trackAnswer(`${question.questionId}:${genreKey}`, choice.choiceKey, { selected: true }); update({ ...answers, genre: { ...genreAnswers, [genreKey]: choice.choiceKey } }); }}>{choice.displayLabel}</button>)}
@@ -142,7 +144,7 @@ export function MatchQuestionScreen({ screen }: { screen: Screen }) {
           </button>;
         })}
       </div>
-      <p className="match-duel-caption">마음이 가는 장면을 골라 주세요.</p>
+      <p className="match-helper match-duel-caption">{DUEL_HELP_COPY}</p>
       <div className="match-choice-grid match-duel-assist-choices">{assistChoices.map(choice => <button type="button" aria-pressed={selected === choice.choiceKey} className={`match-choice-button ${selected === choice.choiceKey ? "is-selected" : ""}`} key={choice.choiceKey} onClick={() => selectChoice(choice.choiceKey)}>{choice.displayLabel}</button>)}</div>
       <Navigation previous={previous} disabled={!selected} onNext={() => router.push(next)} />
     </QuestionShell>;
@@ -163,7 +165,7 @@ export function MatchQuestionScreen({ screen }: { screen: Screen }) {
       update({ ...answers, setting: { ...normalized, weights: getSettingWeights(normalized) } });
     }
     return <QuestionShell {...question}>
-      <div className="match-feature-grid">{question.optionFeatureKeys?.map((key) => { const feature = getFeature(key); const selected = setting.selected.includes(key); return <div className={`match-feature-card ${selected ? "is-selected" : ""}`} key={key}><button type="button" onClick={() => select(key)}><strong>{feature.displayLabel}</strong><span>{selected ? "✓ 선택됨" : feature.description}</span></button>{selected ? <button className={`match-primary-toggle ${setting.primary === key ? "is-primary" : ""}`} type="button" aria-label={`${feature.displayLabel} 대표 설정`} onClick={() => { trackAnswer(question.questionId, key, { selected: true, selectionRole: "primary" }); update({ ...answers, setting: { ...setting, primary: key, weights: getSettingWeights({ ...setting, primary: key }) } }); }}>{setting.primary === key ? "★" : "☆"}</button> : null}</div>; })}</div>
+      <div className="match-feature-grid">{question.optionFeatureKeys?.map((key) => { const feature = getFeature(key); const selected = setting.selected.includes(key); return <div className={`match-feature-card ${selected ? "is-selected" : ""}`} key={key}><button type="button" aria-pressed={selected} onClick={() => select(key)}><strong>{feature.displayLabel}</strong><span>{feature.description}</span></button>{selected ? <button className={`match-primary-toggle ${setting.primary === key ? "is-primary" : ""}`} type="button" aria-label={`${feature.displayLabel} 대표 설정`} onClick={() => { trackAnswer(question.questionId, key, { selected: true, selectionRole: "primary" }); update({ ...answers, setting: { ...setting, primary: key, weights: getSettingWeights({ ...setting, primary: key }) } }); }}>{setting.primary === key ? "★" : "☆"}</button> : null}</div>; })}</div>
       <button type="button" className={`match-exclusive-button ${setting.indifferent ? "is-selected" : ""}`} onClick={() => { trackAnswer(question.questionId, "setting_indifferent", { selected: !setting.indifferent, selectionRole: "exclusive" }); update({ ...answers, setting: { selected: [], primary: null, indifferent: !setting.indifferent, weights: {} } }); }}>설정은 크게 안 따짐</button>
       {notice ? <p className="match-notice" role="alert">{notice}</p> : null}
       {setting.selected.length >= 2 && !setting.primary ? <p className="match-notice">선택한 설정 중 대표 하나에 ★를 표시해 주세요.</p> : null}
@@ -176,13 +178,13 @@ export function MatchQuestionScreen({ screen }: { screen: Screen }) {
     const question = getMatchQuestion(meta.questionId);
     const selected = [...new Set(answers[screen.kind] ?? [])].slice(0, 4);
     const maxSelect = 4;
-    return <QuestionShell {...question} helperText="최대 4개까지 골라 주세요. 처음 고른 항목이 대표 취향(★)이 돼요. 선택한 항목의 별표를 누르면 대표를 바꿀 수 있어요.">
+    return <QuestionShell {...question}>
       <div className="match-feature-grid">{question.optionFeatureKeys?.map((key) => {
         const feature = getFeature(key);
         const isSelected = selected.includes(key);
         const isPrimary = selected[0] === key;
         return <div className={`match-feature-card ${isSelected ? "is-selected" : ""}`} key={key}>
-          <button type="button" onClick={() => {
+          <button type="button" aria-pressed={isSelected} onClick={() => {
             const next = togglePrimarySelection(selected, key, maxSelect);
             if (next.length === selected.length && !isSelected) setNotice(`최대 ${maxSelect}개까지 고를 수 있어요.`);
             else {
@@ -192,7 +194,7 @@ export function MatchQuestionScreen({ screen }: { screen: Screen }) {
             }
           }}>
             <strong>{feature.displayLabel}</strong>
-            <span>{isSelected ? "✓ 선택됨" : feature.description}</span>
+            <span>{feature.description}</span>
           </button>
           {isSelected ? <button className={`match-primary-toggle ${isPrimary ? "is-primary" : ""}`} type="button" aria-label={`${feature.displayLabel} 대표 취향`} onClick={() => {
             const next = promotePrimarySelection(selected, key, maxSelect);
@@ -211,7 +213,7 @@ export function MatchQuestionScreen({ screen }: { screen: Screen }) {
     const question = getMatchQuestion("wm_avoidance_01");
     const maxSelect = question.maxSelect ?? 3;
     const selected = [...new Set(answers.avoidance ?? [])].slice(0, maxSelect);
-    return <QuestionShell {...question} helperText={`최대 ${maxSelect}개 선택`}>
+    return <QuestionShell {...question}>
       <div className="match-feature-grid">{question.optionFeatureKeys?.map((key) => {
         const feature = getFeature(key);
         const isSelected = selected.includes(key);

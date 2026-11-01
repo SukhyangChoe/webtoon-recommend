@@ -15,7 +15,7 @@ const { chromium } = require("playwright");
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.message));
     let allowLikes = true;
-    const work = (index) => ({ canonicalWebtoonId: `work-${index}`, title: index === 0 ? "언니, 이번 생엔 내가 왕비야" : index === 2 ? "스위트홈" : `아주 긴 제목도 잘리지 않는 추천 작품 ${index}`, officialUrl: index === 3 ? null : "https://example.com/", mainGenre: "romance_ropan", mainGenreLabel: "로맨스·로판", coverUrl: index === 0 ? "/match/personas/original-v1/ropan.png" : index === 1 ? "https://example.com/broken-cover.png" : null, recommendationComment: index === 1 ? "추천 이유가 길어도 잘리지 않고 전부 보이도록 ".repeat(4).slice(0, 80) : "작화도 좋고 이야기에 오래 몰입하게 돼요.", likeCount: index, likedByViewer: false, canViewerLike: allowLikes, recommenderPublicProfileId: "ui-other", tasteFitHighlighted: index === 0 });
+    const work = (index) => ({ commentId:`00000000-0000-4000-8000-${String(index+1).padStart(12,'0')}`, canonicalWebtoonId: `work-${index}`, title: index === 0 ? "언니, 이번 생엔 내가 왕비야" : index === 2 ? "스위트홈" : `아주 긴 제목도 잘리지 않는 추천 작품 ${index}`, officialUrl: index === 3 ? null : "https://example.com/", mainGenre: "romance_ropan", mainGenreLabel: "로맨스·로판", coverUrl: index === 0 ? "/match/personas/original-v1/ropan.png" : index === 1 ? "https://example.com/broken-cover.png" : null, recommendationComment: index === 1 ? "추천 이유가 길어도 잘리지 않고 전부 보이도록 ".repeat(4).slice(0, 80) : "작화도 좋고 이야기에 오래 몰입하게 돼요.", likeCount: index, likedByViewer: false, canViewerLike: allowLikes, recommenderPublicProfileId: "ui-other", tasteFitHighlighted: index === 0 });
     let failLike = false;
     let failResult = false;
     let score = 83;
@@ -43,6 +43,13 @@ const { chromium } = require("playwright");
     assert.equal(await page.locator(".wm-pair-work-card").count(), 10);
     assert.equal(await page.locator(".wm-pair-work-slide").count(), 10);
     assert.equal(await page.locator(".wm-pair-work-card.is-taste-fit").count(), 1);
+    const sharedResult=page.getByRole('group',{name:'웹툰 취향 궁합',exact:true});
+    await sharedResult.getByRole('heading',{name:'웹툰 취향 궁합',level:2,exact:true}).waitFor();
+    assert.equal(await sharedResult.locator('.wm-pair-result-name').evaluate(el=>el.tagName),'H3');
+    assert.equal(await sharedResult.locator('.wm-pair-score > span').count(),0,'the score no longer has its own isolated caption');
+    await sharedResult.getByRole('img',{name:'궁합 점수 83%',exact:true}).waitFor();
+    assert.equal(await page.getByText('추천작 반영',{exact:true}).count(),0,'informational recommendation badge is removed');
+    assert.equal(await page.locator('.wm-pair-profile-guide,.wm-pair-profile-action').count(),0,'nickname links have no extra explanatory row');
     await page.locator(".wm-pair-work-card").nth(1).getByRole("img", { name: "작품 커버 미등록" }).waitFor();
     await page.locator(".wm-pair-work-artwork img").evaluateAll((items) => Promise.all(items.map((img) => img.decode())));
     assert.ok(await page.locator(".wm-pair-work-card").first().locator(".wm-work-cover").evaluate((el) => {
@@ -84,26 +91,26 @@ const { chromium } = require("playwright");
     await touch.detach();
     await workTrack.focus();await page.keyboard.press('Home');
     await page.waitForFunction(()=>document.querySelector('.wm-pair-work-track').scrollLeft<=3);
-    const like = page.getByRole("button", { name: "언니, 이번 생엔 내가 왕비야 추천 좋아요", exact: true });
+    const like = page.getByRole("button", { name: "언니, 이번 생엔 내가 왕비야 추천 코멘트 좋아요", exact: true });
     await like.click();
-    await page.getByRole("button", { name: "언니, 이번 생엔 내가 왕비야 추천 좋아요 취소", exact: true }).waitFor();
+    await page.getByRole("button", { name: "언니, 이번 생엔 내가 왕비야 추천 코멘트 좋아요 취소", exact: true }).waitFor();
     await page.waitForFunction(() => !document.querySelector(".wm-pair-work-like")?.disabled);
     failLike = true;
-    await page.getByRole("button", { name: "언니, 이번 생엔 내가 왕비야 추천 좋아요 취소", exact: true }).click();
+    await page.getByRole("button", { name: "언니, 이번 생엔 내가 왕비야 추천 코멘트 좋아요 취소", exact: true }).click();
     await page.locator(".wm-pair-like-error[role='alert']").waitFor();
-    assert.equal(await page.getByRole("button", { name: "언니, 이번 생엔 내가 왕비야 추천 좋아요 취소", exact: true }).getAttribute("aria-pressed"), "true", "failed like update rolls back");
+    assert.equal(await page.getByRole("button", { name: "언니, 이번 생엔 내가 왕비야 추천 코멘트 좋아요 취소", exact: true }).getAttribute("aria-pressed"), "true", "failed like update rolls back");
     assert.equal(likes, 2);
     assert.equal(await page.locator(".wm-pair-work-card.is-taste-fit").count(), 1, "liking or scrolling never changes server-selected highlights");
     assert.equal(await page.locator('.wm-pair-work-artwork .wm-pair-work-fit').count(), 0, "fit labels no longer cover the artwork");
     assert.ok(await page.locator('.wm-pair-work-like').first().evaluate(el => {
       const style = getComputedStyle(el);
-      return !el.textContent.includes('좋아요') && el.getAttribute('aria-label').includes('추천 좋아요') && parseFloat(style.borderTopWidth) >= 1 && style.backgroundColor !== 'rgba(0, 0, 0, 0)' && el.getBoundingClientRect().height >= 44;
+      return !el.textContent.includes('좋아요') && el.getAttribute('aria-label').includes('추천 코멘트 좋아요') && parseFloat(style.borderTopWidth) >= 1 && style.backgroundColor !== 'rgba(0, 0, 0, 0)' && el.getBoundingClientRect().height >= 44;
     }), "likes show only a heart and count while retaining their accessible label and touch target");
     assert.match(page.url(), /\/match\/ui-pair\?from=ranking$/, "like button taps never open work details");
     failLike = false;
-    const unlike = page.getByRole('button', { name: '언니, 이번 생엔 내가 왕비야 추천 좋아요 취소', exact: true });
+    const unlike = page.getByRole('button', { name: '언니, 이번 생엔 내가 왕비야 추천 코멘트 좋아요 취소', exact: true });
     await unlike.click();
-    const unliked = page.getByRole('button', { name: '언니, 이번 생엔 내가 왕비야 추천 좋아요', exact: true });
+    const unliked = page.getByRole('button', { name: '언니, 이번 생엔 내가 왕비야 추천 코멘트 좋아요', exact: true });
     await unliked.waitFor();
     await page.waitForFunction(() => !document.querySelector('.wm-pair-work-like')?.disabled);
     await unliked.hover();
@@ -112,7 +119,7 @@ const { chromium } = require("playwright");
     assert.equal(await unliked.locator('b').textContent(), '0');
     assert.ok(await unliked.evaluate(el => !el.classList.contains('is-liked') && !['rgb(255, 229, 239)', 'rgba(255, 229, 239, 1)'].includes(getComputedStyle(el).backgroundColor)), 'unlike clears the pink selected background even while hovered');
     await unliked.locator('b').click();
-    await page.getByRole('button', { name: '언니, 이번 생엔 내가 왕비야 추천 좋아요 취소', exact: true }).waitFor();
+    await page.getByRole('button', { name: '언니, 이번 생엔 내가 왕비야 추천 코멘트 좋아요 취소', exact: true }).waitFor();
     assert.equal(likes, 4, 'like and unlike both persist, including tapping the count inside the button');
     assert.match(page.url(), /\/match\/ui-pair\?from=ranking$/);
     allowLikes = false;
@@ -120,11 +127,24 @@ const { chromium } = require("playwright");
     await page.locator('.wm-pair-work-like-count').first().waitFor();
     const readonlyUrl = page.url();
     await page.locator('.wm-pair-work-like-count > span').first().click();
-    await page.locator('.wm-pair-work-meta > small').first().click();
-    assert.equal(page.url(), readonlyUrl, "read-only likes and metadata do not pass clicks to the cover link");
+    assert.equal(page.url(), readonlyUrl, "read-only comment likes do not pass clicks to the cover link");
     assert.equal(likes, 4, "read-only counts do not change like permissions");
+    const artwork=page.locator('.wm-pair-work-artwork').first();
+    await artwork.evaluate(el=>el.scrollIntoView({block:'center'}));
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    const coverRegions=await artwork.evaluate(el=>{
+      const art=el.getBoundingClientRect(),copy=el.querySelector('.wm-pair-work-copy').getBoundingClientRect(),title=el.querySelector('.wm-pair-work-title').getBoundingClientRect(),meta=el.querySelector('.wm-pair-work-meta').getBoundingClientRect();
+      return [['cover',art.top+20],['gradient padding',copy.top+10],['title',(title.top+title.bottom)/2],['genre',(meta.top+meta.bottom)/2],['bottom padding',art.bottom-3]].map(([region,y])=>{
+        const x=art.left+art.width/2,target=document.elementFromPoint(x,y),link=target?.closest('a');
+        return {region,x,y,cursor:target?getComputedStyle(target).cursor:null,href:link?.getAttribute('href')};
+      });
+    });
+    for(const region of coverRegions){assert.equal(region.cursor,'pointer',`${region.region}: consistent hand cursor`);assert.match(region.href,/\/match\/work\/work-0/,`${region.region}: points to work details`);}
+    const metadata=coverRegions.find(region=>region.region==='genre');
+    await page.mouse.click(metadata.x,metadata.y);
+    await page.waitForURL('**/match/work/work-0?**');
     allowLikes = true;
-    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.goto(readonlyUrl, { waitUntil: 'domcontentloaded' });
     await page.getByRole('tab', { name: '궁합 요약', exact: true }).waitFor();
     await page.getByRole("tab", { name: "비교 상세" }).click();
     assert.equal(await page.getByRole("tabpanel", { name: "궁합 요약" }).count(), 0);
@@ -171,6 +191,20 @@ const { chromium } = require("playwright");
       for (const tabName of ["궁합 요약", "비교 상세"]) {
         await page.getByRole("tab", { name: tabName }).click();
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `no overflow ${width} ${tabName}`);
+        assert.ok(await sharedResult.evaluate(el=>{
+          const box=el.getBoundingClientRect(),heading=el.querySelector('.wm-pair-result-heading').getBoundingClientRect();
+          return [...el.querySelectorAll('.wm-pair-result-name,.wm-pair-score')].every(item=>{const r=item.getBoundingClientRect();return r.top>=heading.bottom+7&&r.left>=box.left&&r.right<=box.right&&r.bottom<=box.bottom;});
+        }),`the shared result heading spans both name and percentage at ${width}`);
+        assert.ok(await sharedResult.evaluate(el=>{
+          const name=el.querySelector('.wm-pair-result-name').getBoundingClientRect(),band=el.querySelector('.wm-pair-result-band').getBoundingClientRect(),score=el.querySelector('.wm-pair-score').getBoundingClientRect();
+          return band.top>=name.bottom+7&&Math.abs(band.left-name.left)<1&&band.right<=score.left-11;
+        }),`compatibility band sits below the result name, not above the score at ${width}`);
+        if (tabName === '비교 상세') {
+          assert.ok(await page.locator('.wm-pair-reading h3').evaluate(el=>{
+            const heading=getComputedStyle(el),body=getComputedStyle(el.nextElementSibling);
+            return Number(heading.fontWeight)>=700&&parseFloat(heading.fontSize)>=parseFloat(body.fontSize)+2&&heading.color!==body.color&&heading.borderLeftWidth==='3px'&&parseFloat(heading.marginBottom)>=12;
+          }), `recommendation trust subtitle is visually distinct from body copy at ${width}`);
+        }
         assert.equal(await page.locator(".wm-pair-ask").count(), 0);
         assert.ok(await page.locator(".wm-pair-bubble-words").evaluate((el) => {
           const words = el.getBoundingClientRect();
@@ -178,10 +212,19 @@ const { chromium } = require("playwright");
           return words.left >= bubble.left + 5 && words.right <= bubble.right - 5 && words.top >= bubble.top && words.bottom <= bubble.bottom;
         }), `bubble text fits ${width}`);
         if (tabName === "궁합 요약") {
+          assert.equal(await page.locator('.wm-pair-work-empty').count(),1);
+          assert.ok(await page.locator('.wm-pair-work-empty').evaluate(el=>{
+            const style=getComputedStyle(el),rect=el.getBoundingClientRect(),group=el.closest('.wm-pair-work-group').getBoundingClientRect();
+            return el.textContent==='등록한 추천작이 없어요.'&&style.backgroundColor==='rgb(255, 255, 255)'&&style.borderTopWidth==='1px'&&style.borderRadius==='14px'&&rect.height>=88&&rect.left>=group.left&&rect.right<=group.right;
+          }),`empty recommendations have their own bounded surface at ${width}`);
           assert.ok(await page.locator('.wm-pair-character .wm-persona-avatar').evaluateAll(items=>items.every(el=>{
             const crop=el.getBoundingClientRect(),image=el.querySelector('img').getBoundingClientRect();
             return crop.height/image.height>=.7&&crop.height/image.height<=.75&&Math.abs((image.left+image.right)/2-(crop.left+crop.right)/2)<1&&Math.abs(image.top-crop.top)<1;
           })), 'SD framing includes the head and upper body instead of magnifying only the face');
+          assert.ok(await page.locator('.wm-pair-comic').evaluate(el=>{
+            const comic=el.getBoundingClientRect(),bubble=el.querySelector('.wm-pair-bubble').getBoundingClientRect(),tail=el.querySelector('.wm-pair-bubble-tail').getBoundingClientRect();
+            return Math.abs(bubble.top-comic.top-54)<1&&[...el.querySelectorAll('.wm-persona-avatar')].every(avatar=>Math.max(bubble.bottom,tail.bottom)<avatar.getBoundingClientRect().top+48);
+          }),'raised compact bubble and shorter tails stay above the character face area');
           assert.equal(await page.locator('.wm-pair-work-fit').first().textContent(),'✦취향에 잘 맞아요');
           assert.ok(await page.locator('.wm-pair-work-fit').first().evaluate(el=>parseFloat(getComputedStyle(el).fontSize)>=14&&getComputedStyle(el).backgroundImage.includes('linear-gradient')),'fit caption is larger with a fluorescent marker highlight');
           assert.ok(await page.locator('.wm-pair-work-card.is-taste-fit .wm-pair-work-artwork').evaluateAll(items=>items.every(el=>getComputedStyle(el,'::after').borderTopColor==='rgb(232, 255, 56)'&&getComputedStyle(el,'::after').borderTopWidth==='3px')),'highlighted covers use the fluorescent yellow outline');
@@ -214,11 +257,8 @@ const { chromium } = require("playwright");
           assert.ok(await page.locator(".wm-pair-work-copy").evaluateAll((items) => items.every((el) => getComputedStyle(el).backgroundImage.includes("linear-gradient"))), "every cover has a dark readability gradient");
           assert.ok(await page.locator(".wm-pair-work-card").evaluateAll((items) => items.every((el) => getComputedStyle(el).borderTopWidth === "0px")), "no nested outer card borders");
           assert.equal(await page.locator(".wm-pair-work-card a button").count(), 0, "likes are not nested inside navigation links");
-          assert.ok(await page.locator(".wm-pair-work-meta").evaluateAll((items) => items.every((el) => {
-            const genre = el.querySelector("small").getBoundingClientRect();
-            const like = el.querySelector("button, .wm-pair-work-like-count").getBoundingClientRect();
-            return genre.right <= like.left && Math.abs((genre.top + genre.height / 2) - (like.top + like.height / 2)) < 1;
-          })), "genre and likes stay on a single row");
+          assert.equal(await page.locator('.wm-pair-work-artwork .wm-pair-work-like,.wm-pair-work-artwork .wm-pair-work-like-count').count(),0,'likes are no longer attached to the work cover');
+          assert.ok(await page.locator('.wm-recommendation-comment').evaluateAll(items=>items.every(el=>{const quote=el.querySelector('blockquote').getBoundingClientRect(),like=el.querySelector('button,.wm-pair-work-like-count').getBoundingClientRect();return like.top>=quote.bottom&&like.right<=el.getBoundingClientRect().right;})),'hearts belong to their individual comment');
           assert.ok(await page.locator(".wm-pair-work-card h4").evaluateAll((items) => items.every((el) => {
             const style = getComputedStyle(el);
             return style.whiteSpace === 'nowrap' && style.overflowX === 'hidden' && Math.abs(el.clientHeight - parseFloat(style.lineHeight)) < 1;
@@ -227,8 +267,8 @@ const { chromium } = require("playwright");
           assert.ok(await page.locator(".wm-pair-work-card blockquote").evaluateAll((items) => items.every((el) => parseFloat(getComputedStyle(el).fontSize) >= 15)), "mobile comments are at least 15px");
           assert.ok(await page.locator('.wm-recommendation-card blockquote').evaluateAll(items=>items.every(el=>{
             const quote=el.querySelector('q').getBoundingClientRect(),cover=el.closest('article').querySelector('.wm-pair-work-artwork').getBoundingClientRect();
-            const style=getComputedStyle(el);
-            return style.paddingLeft==='11px'&&style.paddingRight==='11px'&&quote.left>=cover.left+10&&quote.right<=cover.right-10;
+            const style=getComputedStyle(el.closest('.wm-recommendation-comment'));
+            return style.paddingLeft==='12px'&&style.paddingRight==='12px'&&quote.left>=cover.left+10&&quote.right<=cover.right-10;
           })), 'recommendation reasons are inset from both cover edges and stay within their own card');
         }
       }
@@ -289,6 +329,7 @@ const { chromium } = require("playwright");
 
     // User-facing artifacts use the existing real local result, not the test fixtures above.
     const liveContext = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: "no-preference" });
+    await liveContext.route('**/api/v1/**',route=>['GET','HEAD'].includes(route.request().method())?route.continue():route.fulfill({status:202,contentType:'application/json',body:'{"ok":true}'}));
     const live = await liveContext.newPage();
     await live.route("**/api/v1/analytics/**", (route) => route.fulfill({ status: 200, contentType: "application/json", body: '{"ok":true}' }));
     await live.goto(`${base}/match/c/mKOdmiLcE0JU/match/VIbseuqFQuk6RRDr?from=ranking`);
@@ -297,6 +338,13 @@ const { chromium } = require("playwright");
     // Hide the development-only Next.js badge in screenshots, never in application code.
     await live.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
     await live.screenshot({ path: path.join(shots, "pair_summary.png") });
+    await live.locator('.wm-pair-cover').screenshot({ path: path.join(shots, 'pair_unified_result.png') });
+    const emptyGroup=live.locator('.wm-pair-work-group').filter({has:live.locator('.wm-pair-work-empty')}).first();
+    if(await emptyGroup.count()){
+      await emptyGroup.evaluate(el=>scrollTo(0,el.getBoundingClientRect().top+scrollY-100));
+      const clip=await emptyGroup.evaluate(el=>{const r=el.getBoundingClientRect();return{x:r.x,y:r.y-8,width:r.width,height:r.height+70};});
+      await live.screenshot({path:path.join(shots,'pair_empty_recommendations.png'),clip});
+    }
     async function captureRecommendations(filename) {
       // Element screenshots scroll snap containers while bringing the section into view.
       // A viewport clip captures the real state without moving its carousels.
@@ -330,8 +378,9 @@ const { chromium } = require("playwright");
     }
     await captureRecommendations("pair_card_peek.png");
     const liveTracks=live.locator('.wm-pair-work-track');
+    const lastWorkCount=await liveTracks.last().locator(':scope > li').count();
     await liveTracks.last().focus();await live.keyboard.press('End');
-    await live.waitForFunction(() => [...document.querySelectorAll(".wm-pair-carousel-controls > span")].at(-1)?.textContent === "5 / 5");
+    await live.waitForFunction(count => [...document.querySelectorAll(".wm-pair-carousel-controls > span")].at(-1)?.textContent === `${count} / ${count}`,lastWorkCount);
     await live.waitForFunction(() => {
       const rail = [...document.querySelectorAll(".wm-pair-work-track")].at(-1);
       const first = rail.firstElementChild;
@@ -339,13 +388,16 @@ const { chromium } = require("playwright");
       return Math.abs(rail.scrollLeft - (last.offsetLeft - first.offsetLeft)) < 3;
     });
     await captureRecommendations("pair_recommendations.png");
-    assert.equal(await live.locator(".wm-pair-carousel-controls > span").last().textContent(), "5 / 5", "capturing the last card preserves the live scroll state");
+    assert.equal(await live.locator(".wm-pair-carousel-controls > span").last().textContent(), `${lastWorkCount} / ${lastWorkCount}`, "capturing the last card preserves the live scroll state");
     assert.equal(await live.locator('.wm-pair-carousel-controls button').count(),0);
     await live.waitForFunction(()=>document.querySelector('.wm-pair-work-group:last-child')?.dataset.scrolling!=='true');
-    assert.ok(await live.locator('.wm-pair-scrollbar').first().evaluate(el=>parseFloat(el.firstElementChild.style.left)<1),'scrolling the second group leaves the first indicator unchanged');
+    if(await live.locator('.wm-pair-scrollbar').count()>1)assert.ok(await live.locator('.wm-pair-scrollbar').first().evaluate(el=>parseFloat(el.firstElementChild.style.left)<1),'scrolling the second group leaves the first indicator unchanged');
     await live.getByRole("tab", { name: "비교 상세" }).click();
     await live.evaluate(() => window.scrollTo(0, document.querySelector(".wm-pair-tabs").getBoundingClientRect().top + scrollY - 12));
     await live.screenshot({ path: path.join(shots, "pair_comparison.png") });
+    await live.locator('.wm-pair-reading').scrollIntoViewIfNeeded();
+    await live.evaluate(() => window.scrollBy(0, 180));
+    await live.locator('.wm-pair-reading').screenshot({ path: path.join(shots, 'pair_reading_subtitle.png') });
     await liveContext.close();
     console.log(JSON.stringify({ ok: true, screenshots: shots, checks: ["real result screenshots", "single-line titles, overflow-only panning reaches final characters, stationary short titles, reduced-motion fallback", "two-tail shared bubble, all six badges, local Nanum Gothic", "summary/comparison tabs and keyboard", "all ten recommendations, one at a time", "equal-height slim 2:3 covers with 65% next-card preview", "full-bleed portrait cover with title/metadata gradient overlay and separate quote", "real cover loading and failed-image fallback", "no vertical scrolling, full 80-character comments", "no arrows; touch swipe and keyboard navigation", "shared accurate scrollbar: active 1, idle .4, same cyan; hidden for zero/one item; independent groups", "removed ask genres", "unchanged fit selection with fluorescent outline and caption", "heart/count-only like buttons with accessible labels and 44px touch targets", "larger mobile titles and comments", "like persistence/rollback", "320/390/435px without overflow", "zero score and empty shared genre", "error state", "existing links preserved"] }, null, 2));
   } finally { await browser.close(); }

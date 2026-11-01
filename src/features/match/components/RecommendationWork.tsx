@@ -6,6 +6,7 @@ import { WorkDetailLink } from './WorkDetailLink';
 import { useHorizontalScrollIndicator } from './useHorizontalScrollIndicator';
 
 export type RecommendationWorkItem = {
+  commentId?: string | null;
   canonicalWebtoonId: string;
   title: string;
   mainGenre: string;
@@ -57,9 +58,8 @@ function RecommendationTitle({ title, level }: { title: string; level: 3 | 4 }) 
 }
 
 // Personal and pair results share the same presentation and separate link/like hit areas.
-export function RecommendationCard({ item, profileId, returnTo, onOpen, headingLevel = 4, likeAction }: {
+export function RecommendationCard({ item, returnTo, onOpen, headingLevel = 4, likeAction }: {
   item: RecommendationWorkItem;
-  profileId?: string | null;
   returnTo: string;
   onOpen: () => void;
   headingLevel?: 3 | 4;
@@ -67,21 +67,16 @@ export function RecommendationCard({ item, profileId, returnTo, onOpen, headingL
 }) {
   return <article className={`wm-recommendation-card wm-pair-work-card${item.tasteFitHighlighted ? ' is-taste-fit' : ''}`}>
     <div className="wm-pair-work-artwork">
-      <WorkDetailLink id={item.canonicalWebtoonId} profileId={profileId} returnTo={returnTo} onOpen={onOpen} label={`${item.title} 작품 상세 보기`} className="wm-work-card-link"><WorkCover item={item} sizes="(max-width: 540px) 61vw, 300px" /></WorkDetailLink>
+      <WorkDetailLink id={item.canonicalWebtoonId} returnTo={returnTo} onOpen={onOpen} label={`${item.title} 작품 상세 보기`} className="wm-work-card-link"><WorkCover item={item} sizes="(max-width: 540px) 61vw, 300px" /></WorkDetailLink>
       <div className="wm-pair-work-copy">
-        <WorkDetailLink id={item.canonicalWebtoonId} profileId={profileId} returnTo={returnTo} onOpen={onOpen} className="wm-pair-work-title"><RecommendationTitle title={item.title} level={headingLevel} /></WorkDetailLink>
-        <div className="wm-pair-work-meta"><small>{item.mainGenreLabel ?? recommendationGenreLabel(item.mainGenre)}</small>
-          {likeAction ? <button type="button" className={`wm-pair-work-like${likeAction.liked ? ' is-liked' : ''}`} disabled={likeAction.saving} aria-pressed={likeAction.liked} aria-label={`${item.title} 추천 ${likeAction.liked ? '좋아요 취소' : '좋아요'}`} onClick={event => {
-            event.preventDefault();
-            event.stopPropagation();
-            likeAction.onToggle();
-          }}><span aria-hidden="true">{likeAction.liked ? '♥' : '♡'}</span><b>{item.likeCount ?? 0}</b></button>
-            : <span className="wm-pair-work-like-count" aria-label={`좋아요 ${item.likeCount ?? 0}개`} onClick={event => { event.preventDefault(); event.stopPropagation(); }}><span aria-hidden="true">♡</span> {item.likeCount ?? 0}</span>}
-        </div>
+        <WorkDetailLink id={item.canonicalWebtoonId} returnTo={returnTo} onOpen={onOpen} className="wm-pair-work-title"><RecommendationTitle title={item.title} level={headingLevel} /></WorkDetailLink>
+        <div className="wm-pair-work-meta"><small>{item.mainGenreLabel ?? recommendationGenreLabel(item.mainGenre)}</small></div>
       </div>
     </div>
     {item.tasteFitHighlighted ? <span className="wm-pair-work-fit"><span aria-hidden="true">✦</span>취향에 잘 맞아요</span> : null}
-    {item.recommendationComment ? <blockquote><q>{item.recommendationComment}</q></blockquote> : null}
+    {item.recommendationComment?.trim() ? <div className="wm-recommendation-comment" data-comment-id={item.commentId ?? undefined}><blockquote><q>{item.recommendationComment}</q></blockquote><div className="wm-comment-actions">
+      {likeAction ? <button type="button" className={`wm-pair-work-like${likeAction.liked ? ' is-liked' : ''}`} disabled={likeAction.saving} aria-pressed={likeAction.liked} aria-label={`${item.title} 추천 코멘트 ${likeAction.liked ? '좋아요 취소' : '좋아요'}`} onClick={event => { event.preventDefault(); event.stopPropagation(); likeAction.onToggle(); }}><span aria-hidden="true">{likeAction.liked ? '♥' : '♡'}</span><b>{item.likeCount ?? 0}</b></button> : <span className="wm-pair-work-like-count" aria-label={`추천 코멘트 좋아요 ${item.likeCount ?? 0}개`}><span aria-hidden="true">♡</span> {item.likeCount ?? 0}</span>}
+    </div></div> : null}
   </article>;
 }
 
@@ -207,7 +202,7 @@ export function PersonalRecommendationCarousel({ items, publicProfileId }: { ite
   return <div ref={containerRef} className="wm-personal-carousel">
     <div className="wm-carousel-controls"><span aria-live="polite">추천작 {position.index + 1} / {items.length}</span></div>
     <ol ref={listRef} className={`wm-pair-work-track${items.length === 1 ? ' is-single' : ''}`} tabIndex={items.length > 1 ? 0 : undefined} aria-label="내 추천작 목록" onKeyDown={onKeyDown}>{items.map((item, itemIndex) => <li className="wm-pair-work-slide" key={item.canonicalWebtoonId} aria-label={`추천작 ${itemIndex + 1} / ${items.length}`}>
-      <RecommendationCard item={item} profileId={publicProfileId} returnTo={returnTo} onOpen={() => prepareNavigation(itemIndex)} headingLevel={3} />
+      <RecommendationCard item={item} returnTo={returnTo} onOpen={() => prepareNavigation(itemIndex)} headingLevel={3} />
     </li>)}</ol>
     {items.length > 1 ? <div ref={barRef} className="wm-rail-scrollbar wm-personal-scrollbar" aria-hidden="true"><span ref={thumbRef} /></div> : null}
   </div>;

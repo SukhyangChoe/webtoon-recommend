@@ -29,6 +29,7 @@ const recommendationSocialMigration = readFileSync(recommendationSocialMigration
 const resultStore = readFileSync(resultStorePath, "utf8");
 const challengeStore = readFileSync(challengeStorePath, "utf8");
 const catalogStore = readFileSync(catalogStorePath, "utf8");
+const commentStore = readFileSync(new URL('../../src/features/match/server/recommendationCommentStore.ts',import.meta.url), 'utf8');
 const recommendationLikeRoute = readFileSync(recommendationLikeRoutePath, "utf8");
 const database = readFileSync(databasePath, "utf8");
 
@@ -98,7 +99,8 @@ test("catalog store searches server-side and preserves recommendation rows while
   assert.match(catalogStore, /const boundedLimit = Math\.max\(1, Math\.min\(30, limit\)\)/);
   assert.match(catalogStore, /replaceAll\(" ", ""\)/);
   assert.match(catalogStore, /replace\(normalized_title, ' ', ''\) like/);
-  assert.match(catalogStore, /limit \$\{boundedLimit\}/);
+  assert.match(catalogStore, /searchCatalogPage\(query, true, boundedLimit, 1\)/);
+  assert.match(catalogStore, /limit \$\{pageSize \+ 1\} offset/);
   assert.match(catalogStore, /input\.recommendations\.length > 10/);
   assert.match(catalogStore, /delete from public\.match_profile_recommendations/);
   assert.match(catalogStore, /on conflict \(profile_id, canonical_webtoon_id\) do update set/);
@@ -130,10 +132,10 @@ test("recommendation social migration stores comments and one profile like per r
 
 test("recommendation likes require a completed anonymous profile and cannot like oneself", () => {
   assert.match(recommendationLikeRoute, /isAnonymousId\(body\.anonymousId\)/);
-  assert.match(catalogStore, /LIKE_PROFILE_REQUIRED/);
-  assert.match(catalogStore, /SELF_RECOMMENDATION_LIKE_FORBIDDEN/);
-  assert.match(catalogStore, /on conflict do nothing/);
-  assert.match(catalogStore, /match_profile_recommendation_likes/);
+  assert.match(commentStore, /LIKE_PROFILE_REQUIRED/);
+  assert.match(commentStore, /SELF_RECOMMENDATION_LIKE_FORBIDDEN/);
+  assert.match(commentStore, /on conflict do nothing/);
+  assert.match(commentStore, /match_recommendation_comment_likes/);
 });
 
 test("reciprocal rankings only carry forward a directly viewed match from the same taste snapshot", () => {

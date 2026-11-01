@@ -1,6 +1,6 @@
 import { PERSONA_GENRE_KEYS } from "../config/personaImages.mjs";
 
-export const RELATIONSHIP_MIN_SCORE = 80;
+export const RELATIONSHIP_MIN_SCORE = 60;
 export const RELATIONSHIP_MAX_PEOPLE = 6;
 export const RELATIONSHIP_PAGE_SIZE = 6;
 

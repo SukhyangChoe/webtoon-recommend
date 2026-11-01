@@ -1,6 +1,7 @@
 "use client";
 
 import { PageContainer } from "@/components/layout/PageContainer";
+import { BackIcon } from '@/components/layout/BackIcon';
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import type {
   GenrePreferenceQuestion,
@@ -33,13 +34,12 @@ export default function GenrePairQuestionView({
           <header className="genre-question-topbar">
             <button
               type="button"
-              className="genre-question-back"
+              className="genre-question-back site-back-control"
               onClick={onPrevious}
               disabled={!canGoPrevious || isTransitioning}
               aria-label="이전 문항으로 돌아가기"
             >
-              <span aria-hidden="true">←</span>
-              <span>이전</span>
+              <BackIcon />
             </button>
             <strong className="genre-question-count">
               {question.order} / {totalCount}
