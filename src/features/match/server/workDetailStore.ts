@@ -26,12 +26,12 @@ async function readWorkRow(id: string, read?: WorkReadContext) {
       coalesce(d.cover_url,w.raw_data->>'coverUrl',w.raw_data#>>'{metadata,coverUrl}',w.raw_data#>>'{cover,src}') as cover_url,
       d.synopsis,d.synopsis_kind,d.creators,d.imported_data,w.raw_data->'recommendation' as recommendation
     from public.webtoons w left join public.webtoon_details d using(canonical_webtoon_id)
-    where w.canonical_webtoon_id=$1 and w.catalog_status='active' limit 1`, [id]) : await sql<DetailRow[]>`
+    where w.canonical_webtoon_id=$1 and w.catalog_status='active' and public.webtoon_is_public_safe(w.raw_data) limit 1`, [id]) : await sql<DetailRow[]>`
     select w.canonical_webtoon_id,w.title,w.platform,w.main_genre,w.official_url,
       coalesce(d.cover_url,w.raw_data->>'coverUrl',w.raw_data#>>'{metadata,coverUrl}',w.raw_data#>>'{cover,src}') as cover_url,
       d.synopsis,d.synopsis_kind,d.creators,d.imported_data,w.raw_data->'recommendation' as recommendation
     from public.webtoons w left join public.webtoon_details d using(canonical_webtoon_id)
-    where w.canonical_webtoon_id=${id} and w.catalog_status='active' limit 1
+    where w.canonical_webtoon_id=${id} and w.catalog_status='active' and public.webtoon_is_public_safe(w.raw_data) limit 1
   `;
   return rows[0] ?? null;
 }

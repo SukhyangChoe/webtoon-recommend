@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { appendRecommendationReason, recommendationCarouselState, recommendationGenreLabel, reorderRecommendation, safeWorkCoverUrl } from '../../src/features/match/config/recommendationPresentation.mjs';
+import { appendRecommendationReason, recommendationGenreLabel, reorderRecommendation, safeWorkCoverUrl } from '../../src/features/match/config/recommendationPresentation.mjs';
 
 test('recommendation genres use readable Korean labels', () => {
   assert.equal(recommendationGenreLabel('drama_daily'), '드라마·일상');
@@ -26,19 +26,4 @@ test('reordering preserves comments, membership, and input', () => {
   assert.deepEqual(items.map(x => x.canonicalWebtoonId), ['a', 'b', 'c']);
   assert.equal(reorderRecommendation(items, 'missing', 'c'), items);
   assert.equal(reorderRecommendation(items, 'a', 'a'), items);
-});
-
-test('a two-page carousel enables only its available direction, including intermediate scroll positions', () => {
-  for (const index of [0, .01, .25, .49, .5, .75, .99, 1]) {
-    const state = recommendationCarouselState(index, 2);
-    assert.equal(Number(state.left) + Number(state.right), 1);
-  }
-  assert.deepEqual(recommendationCarouselState(0, 2), { index: 0, left: false, right: true });
-  assert.deepEqual(recommendationCarouselState(1, 2), { index: 1, left: true, right: false });
-});
-test('carousel arrows correctly handle empty, single, middle, and out-of-range cards', () => {
-  for (const count of [0, 1]) assert.deepEqual(recommendationCarouselState(0, count), { index: 0, left: false, right: false });
-  assert.deepEqual(recommendationCarouselState(1, 3), { index: 1, left: true, right: true });
-  assert.deepEqual(recommendationCarouselState(100, 3), { index: 2, left: true, right: false });
-  assert.deepEqual(recommendationCarouselState(-1, 3), { index: 0, left: false, right: true });
 });

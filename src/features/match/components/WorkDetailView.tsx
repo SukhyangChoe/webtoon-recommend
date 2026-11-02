@@ -1,5 +1,7 @@
 "use client";
 
+import { MatchLoading } from './MatchLoading';
+
 import { BackIcon } from '@/components/layout/BackIcon';
 
 import { useEffect, useRef, useState } from 'react';
@@ -78,7 +80,7 @@ export function WorkDetailView({ id, returnTo }: { id: string; returnTo?: string
   }
 
   const backControl = <button className="wm-work-back site-back-control" type="button" onClick={goBack} aria-label="이전 화면으로 돌아가기"><BackIcon /></button>;
-  if (loading) return <main className="wm-work-page wm-work-state">{backControl}<p role="status">{slow ? '작품 정보를 불러오는 데 시간이 걸리고 있어요. 연결을 다시 확인하고 있어요.' : '작품을 불러오는 중…'}</p><Link href={back}>이전 화면으로 돌아가기</Link></main>;
+  if (loading) return <main className="wm-work-page wm-work-state">{backControl}<MatchLoading message={slow ? '작품 정보를 불러오는 데 시간이 걸리고 있어요. 연결을 다시 확인하고 있어요.' : '작품을 불러오는 중…'} /><Link href={back}>이전 화면으로 돌아가기</Link></main>;
   if (error || !work) return <main className="wm-work-page wm-work-state">{backControl}<h1>{error || '작품을 찾지 못했어요.'}</h1><button type="button" onClick={() => { setLoading(true); setSlow(false); setFitLoading(true); setFitError(''); setFitSlow(false); setRetry(value => value + 1); }}>다시 시도</button><Link href={back}>이전 화면으로 돌아가기</Link></main>;
 
   const credits = work.creators.map(creator => `${creator.roles.join('·')}${creator.roles.length ? ' ' : ''}${creator.name}`).join(' · ');
@@ -90,7 +92,7 @@ export function WorkDetailView({ id, returnTo }: { id: string; returnTo?: string
     <div className="wm-work-hero"><WorkCover item={work} eager /></div>
     <button className="wm-work-cover-close" type="button" aria-label="표지를 눌러 작품 정보 접기" hidden={!expanded} />
     <section ref={sheet} className="wm-work-sheet" role={expanded ? 'dialog' : undefined} aria-modal={expanded ? false : undefined} aria-labelledby={expanded ? 'wm-work-detail-title' : undefined}>
-      <button ref={handle} type="button" className="wm-work-grab" disabled={!hasReading && !hasInfo} aria-controls="wm-work-reading" aria-expanded={expanded} aria-label={expanded ? '아래로 드래그하여 기본 화면으로 돌아가기' : '위로 드래그하여 작품 소개 열기'}><span /></button>
+      <button ref={handle} type="button" className="wm-work-grab" disabled={!hasReading && !hasInfo} aria-controls="wm-work-reading" aria-expanded={expanded} aria-label={expanded ? '누르거나 아래로 드래그하여 작품 정보 접기' : '누르거나 위로 드래그하여 작품 소개 열기'}><span /></button>
       <div className="wm-work-header-clip" aria-hidden={!expanded} inert={!expanded}><div ref={header}>
         <header className="wm-work-sheet-header"><div><span className="wm-work-eyebrow">{work.mainGenreLabel}</span><h2 id="wm-work-detail-title" tabIndex={-1}>{compact ? '작품 상세' : work.title}</h2></div><button type="button" onClick={closePanel} aria-label="작품 정보 접기"><MatchIcon name="close" /></button></header>
         <div className="wm-work-tabs" role="tablist" aria-label="작품 상세 정보" onKeyDown={event => { if (['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) { event.preventDefault(); const next = !hasReading ? 'info' : !hasInfo ? 'reasons' : event.key === 'Home' ? 'reasons' : event.key === 'End' ? 'info' : stage === 'reasons' ? 'info' : 'reasons'; openPanel(next); (next === 'reasons' ? reasonTab : infoTab).current?.focus(); } }}>
@@ -100,7 +102,7 @@ export function WorkDetailView({ id, returnTo }: { id: string; returnTo?: string
       <div ref={body} className="wm-work-dialog-body" tabIndex={expanded ? 0 : -1} aria-label="작품 상세 세로 스크롤">
     <div ref={summary} className="wm-work-summary" aria-hidden={expanded} inert={expanded}>
       <div className="wm-work-summary-heading"><div className="wm-work-summary-title"><span className="wm-work-eyebrow">{work.mainGenreLabel}</span><h1>{work.title}</h1>{credits ? <p className="wm-work-credits">{credits}</p> : null}</div>
-        {work.fit ? <div className="wm-work-fit"><div><span><WorkFeatureIcon name="spark" />핏점수</span><strong>{work.fit.percent}<small>%</small></strong></div><div className="wm-work-fit-track" role="meter" aria-label={fitLabel} aria-valuenow={work.fit.percent} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${work.fit.percent}%` }} /></div></div> : fitLoading ? <div className="wm-work-fit wm-work-fit-pending" role="status">핏점수<br />확인 중…</div> : null}
+        {work.fit ? <div className="wm-work-fit"><div><span><WorkFeatureIcon name="spark" />핏점수</span><strong>{work.fit.percent}<small>%</small></strong></div><div className="wm-work-fit-track" role="meter" aria-label={fitLabel} aria-valuenow={work.fit.percent} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${work.fit.percent}%` }} /></div></div> : fitLoading ? <div className="wm-work-fit wm-work-fit-pending" ><MatchLoading compact message="핏점수 확인 중…" /></div> : null}
       </div>
       {fitLoading && fitSlow ? <p className="wm-work-fit-note" role="status">핏점수 확인에 시간이 걸리고 있어요. 작품 정보는 먼저 볼 수 있어요.</p> : null}
       {fitError ? <div className="wm-work-fit-error" role="alert"><p>{fitError}</p><button type="button" onClick={() => { setFitLoading(true); setFitSlow(false); setFitError(''); setFitRetry(value => value + 1); }}>핏점수 다시 불러오기</button></div> : !fitLoading && !work.fit ? work.fitStatus === 'test_required' ? <WorkTasteTestButton workId={id} returnTo={back} /> : <p className="wm-work-fit-note">비교할 취향 정보가 부족해 핏점수를 표시하지 않아요.</p> : null}

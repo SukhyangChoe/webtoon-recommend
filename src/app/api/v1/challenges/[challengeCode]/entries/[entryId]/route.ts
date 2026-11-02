@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { readMatchJson } from '@/features/match/server/requestBody';
+import { matchJson } from '@/features/match/server/apiResponse';
 import { updateChallengeEntryVisibility } from "@/features/match/server/challengeStore";
 import { toMatchApiFailure } from "@/features/match/server/apiErrors";
 import { isAnonymousId } from "@/features/match/storage/anonymousIdentity.mjs";
@@ -18,9 +19,9 @@ function ownerAnonymousId(request: Request) {
 export async function PATCH(request: Request, { params }: { params: Promise<{ challengeCode: string; entryId: string }> }) {
   try {
     const { challengeCode, entryId } = await params;
-    const body = await request.json() as { hiddenByOwner?: boolean };
+    const body = await readMatchJson(request) as { hiddenByOwner?: boolean };
     if (typeof body.hiddenByOwner !== "boolean") {
-      return NextResponse.json({ error: "INVALID_ENTRY_VISIBILITY" }, { status: 400 });
+      return matchJson(request, { error: "INVALID_ENTRY_VISIBILITY" }, { status: 400 });
     }
     const updated = await updateChallengeEntryVisibility({
       challengeCode,
@@ -29,9 +30,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ch
       ownerManageToken: ownerToken(request),
       ownerAnonymousId: ownerAnonymousId(request),
     });
-    return NextResponse.json(updated);
+    return matchJson(request, updated);
   } catch (error) {
     const failure = toMatchApiFailure(error, "CHALLENGE_ENTRY_UPDATE_FAILED");
-    return NextResponse.json({ error: failure.error }, { status: failure.status });
+    return matchJson(request, { error: failure.error }, { status: failure.status });
   }
 }

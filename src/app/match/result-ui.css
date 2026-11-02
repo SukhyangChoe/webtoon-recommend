@@ -95,8 +95,6 @@ body:has(.wm-result-screen) > .brand-bar .brand-bar__logo {
 .wm-avoidance { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 7px; }
 .wm-avoidance li { color: #456874; background: #eef6fa; border-radius: 20px; padding: 8px 11px; font-size: 12px; line-height: 1.5; }
 .wm-empty { color: #6d8793; font-size: 12px; padding: 12px 0; line-height: 1.6; }
-.wm-carousel-controls { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; min-height: 32px; }
-.wm-carousel-controls > span { color: #547581; font-size: 12px; }
 .wm-work-cover { width: 83px; height: 129px; border-radius: 9px; object-fit: cover; flex-shrink: 0; }
 .wm-work-cover--empty { background: linear-gradient(145deg, #e0f6fc, #f5fafd); border: 1px solid #d9ebf2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #86a7b5; font-size: 9px; }
 .wm-cover-book { display: block; width: 30px; height: 41px; border: 2px solid #8cc5d5; border-radius: 3px 5px 5px 3px; box-shadow: 3px 3px #bddfe9; transform: rotate(-8deg); position: relative; }

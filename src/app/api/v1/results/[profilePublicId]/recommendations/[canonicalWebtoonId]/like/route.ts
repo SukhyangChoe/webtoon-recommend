@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { readMatchJson } from '@/features/match/server/requestBody';
+import { matchJson } from '@/features/match/server/apiResponse';
 import { isAnonymousId } from "@/features/match/storage/anonymousIdentity.mjs";
 import { setProfileRecommendationLike } from "@/features/match/server/webtoonCatalogStore";
 import { toMatchApiFailure } from "@/features/match/server/apiErrors";
@@ -11,11 +12,11 @@ export async function PUT(
 ) {
   try {
     const { profilePublicId, canonicalWebtoonId } = await params;
-    const body = await request.json() as { anonymousId?: string; liked?: boolean };
+    const body = await readMatchJson(request) as { anonymousId?: string; liked?: boolean };
     if (!body.anonymousId || !isAnonymousId(body.anonymousId) || typeof body.liked !== "boolean") {
-      return NextResponse.json({ error: "INVALID_REQUEST_BODY" }, { status: 400 });
+      return matchJson(request, { error: "INVALID_REQUEST_BODY" }, { status: 400 });
     }
-    return NextResponse.json(await setProfileRecommendationLike({
+    return matchJson(request, await setProfileRecommendationLike({
       recommenderPublicProfileId: profilePublicId,
       canonicalWebtoonId,
       likerAnonymousId: body.anonymousId,
@@ -23,6 +24,6 @@ export async function PUT(
     }));
   } catch (error) {
     const failure = toMatchApiFailure(error, "RECOMMENDATION_LIKE_SAVE_FAILED");
-    return NextResponse.json({ error: failure.error }, { status: failure.status });
+    return matchJson(request, { error: failure.error }, { status: failure.status });
   }
 }

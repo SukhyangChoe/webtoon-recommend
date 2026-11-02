@@ -1,5 +1,7 @@
 "use client";
 
+import { MatchLoading } from './MatchLoading';
+
 import { useEffect, useRef, useState } from "react";
 import { RECOMMENDATION_COMMENT_MAX_LENGTH, RECOMMENDATION_SEARCH_POLICY_VERSION, RECOMMENDATION_AGE_RESTRICTION_MESSAGE, isRecommendationRegistrationBlocked } from "../config/recommendationPolicy.mjs";
 import { ensureAnonymousId } from "../storage/anonymousIdentity.mjs";
@@ -62,7 +64,7 @@ export function RecommendationManager({ publicProfileId, returnTo, initialSelect
       searchController.current?.abort();
       const controller = new AbortController();
       searchController.current = controller;
-      const response = await fetch(`/api/v1/webtoons/search?q=${encodeURIComponent(query.trim())}&registrationPolicy=${RECOMMENDATION_SEARCH_POLICY_VERSION}`, { signal: controller.signal, cache: 'no-store' });
+      const response = await fetch(`/api/v1/webtoons/search?q=${encodeURIComponent(query.trim())}&registrationPolicy=${RECOMMENDATION_SEARCH_POLICY_VERSION}`, { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]), cache: 'no-store' });
       const body = await response.json();
       if (!response.ok) throw new Error();
       setResults(Array.isArray(body.items) ? body.items.filter((item: Webtoon) => !isRecommendationRegistrationBlocked(item)) : []);
@@ -190,7 +192,7 @@ export function RecommendationManager({ publicProfileId, returnTo, initialSelect
       </li>)}</ol> : !initialLoadFailed ? <p className="wm-empty">검색해서 추천작을 추가해 주세요.</p> : null}
     </section>
     <section className="wm-manager-section wm-search-section"><h2>작품 검색</h2><form className="wm-search-form" onSubmit={search}><div className="wm-search-input"><span aria-hidden="true">⌕</span><input type="search" value={query} onChange={event => { setQuery(event.target.value); setSearched(false); }} placeholder="작품명을 입력해 주세요" aria-label="추천할 웹툰 검색" />{query ? <button type="button" aria-label="검색어 지우기" onClick={() => { setQuery(""); setResults([]); setSearched(false); }}>×</button> : null}</div><button className="match-button" type="submit" disabled={searching || !query.trim()}>{searching ? "검색 중" : "검색"}</button></form>
-      {results.length ? <ul className="wm-search-results">{results.map(item => { const added = selected.some(selectedItem => selectedItem.canonicalWebtoonId === item.canonicalWebtoonId); return <li key={item.canonicalWebtoonId}><WorkDetailLink id={item.canonicalWebtoonId} returnTo={managerHref} className="wm-work-card-link" newTab label={`${item.title} 작품 상세 보기 (새 탭)`}><WorkCover item={item} /></WorkDetailLink><div className="wm-work-copy"><WorkDetailLink id={item.canonicalWebtoonId} returnTo={managerHref} className="wm-work-card-link" newTab><h3>{item.title}</h3></WorkDetailLink><span className="wm-genre-tag">{recommendationGenreLabel(item.mainGenre)}</span>{item.introduction ? <p className="wm-note">{item.introduction}</p> : null}</div><button type="button" disabled={saving || initialLoadFailed || Boolean(addingId) || added || selected.length >= 10} onClick={() => void add(item)}>{addingId === item.canonicalWebtoonId ? '불러오는 중…' : added ? "추가됨" : "추가"}</button></li>; })}</ul> : searched && !searching ? <p className="wm-empty">검색 결과가 없어요.</p> : null}
+      {searching ? <MatchLoading message="추천할 작품을 찾고 있어요…" /> : null}{saving ? <MatchLoading compact message="추천작을 저장하고 있어요…" /> : null}{results.length ? <ul className="wm-search-results">{results.map(item => { const added = selected.some(selectedItem => selectedItem.canonicalWebtoonId === item.canonicalWebtoonId); return <li key={item.canonicalWebtoonId}><WorkDetailLink id={item.canonicalWebtoonId} returnTo={managerHref} className="wm-work-card-link" newTab label={`${item.title} 작품 상세 보기 (새 탭)`}><WorkCover item={item} /></WorkDetailLink><div className="wm-work-copy"><WorkDetailLink id={item.canonicalWebtoonId} returnTo={managerHref} className="wm-work-card-link" newTab><h3>{item.title}</h3></WorkDetailLink><span className="wm-genre-tag">{recommendationGenreLabel(item.mainGenre)}</span>{item.introduction ? <p className="wm-note">{item.introduction}</p> : null}</div><button type="button" disabled={saving || initialLoadFailed || Boolean(addingId) || added || selected.length >= 10} onClick={() => void add(item)}>{addingId === item.canonicalWebtoonId ? '불러오는 중…' : added ? "추가됨" : "추가"}</button></li>; })}</ul> : searched && !searching ? <p className="wm-empty">검색 결과가 없어요.</p> : null}
       <p className="wm-note wm-registration-policy-note">성인 인증이 필요한 작품은 추천작 등록에서 제외됩니다.</p>
     </section>
     <Link className="wm-return-link" href={destination}>{returnLinkLabel} ›</Link>

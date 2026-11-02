@@ -59,7 +59,7 @@ test("W7 migration enforces one active link and one ranking row per challenger",
 test("W7 server stores use the server-only Postgres client instead of process Maps", () => {
   assert.match(database, /import "server-only"/);
   assert.match(database, /process\.env\[MATCH_DATABASE_ENV\]/);
-  assert.match(database, /max: 1/);
+  assert.match(database, /max: 2/);
   assert.match(database, /prepare: false/);
   assert.match(database, /ssl: "require"/);
 

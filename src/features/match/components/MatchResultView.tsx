@@ -1,10 +1,13 @@
 "use client";
 
+import { MatchLoading } from './MatchLoading';
+
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { trackMatchEvent } from "../analytics/client";
 import { requestActiveChallenge, type ActiveChallengeInfo } from "../api/activeChallenge";
+import { loadWorkResource } from '../api/loadWorkResource.mjs';
 import { ensureAnonymousId } from "../storage/anonymousIdentity.mjs";
 import { readPublicResult, writePublicResult } from "../storage/resultStorage.mjs";
 import { readMatchDraft, writeMatchDraft } from "../storage/draft.mjs";
@@ -34,6 +37,8 @@ type RecommendedWebtoon = {
 export function MatchResultView({ publicProfileId }: { publicProfileId: string }) {
   const [result, setResult] = useState<PublicResult | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [retry, setRetry] = useState(0);
   const [activeChallenge, setActiveChallenge] = useState<ActiveChallengeInfo | null>(null);
   const [challengeLoading, setChallengeLoading] = useState(true);
   const [recommendations, setRecommendations] = useState<RecommendedWebtoon[]>([]);
@@ -45,39 +50,40 @@ export function MatchResultView({ publicProfileId }: { publicProfileId: string }
 
   useEffect(() => {
     let active = true;
+    const controller = new AbortController();
+    setLoadError('');
     const load = async () => {
       const cached = readPublicResult(window.localStorage, publicProfileId) as PublicResult | null;
+      if (cached) { setResult({ ...cached, canManage: false }); setLoading(false); }
       try {
         const identity = ensureAnonymousId({ cookieText: document.cookie, storage: window.localStorage });
-        const response = await fetch(`/api/v1/results/${publicProfileId}?anonymousId=${encodeURIComponent(identity.anonymousId)}`);
-        if (!response.ok) throw new Error("not found");
-        const fresh = await response.json() as PublicResult;
+        const fresh = await loadWorkResource(`/api/v1/results/${publicProfileId}?anonymousId=${encodeURIComponent(identity.anonymousId)}`, {signal:controller.signal,timeoutMs:8000,notFoundMessage:'이 결과를 찾지 못했어요.'}) as PublicResult;
         writePublicResult(window.localStorage, fresh);
         if (active) {
           setResult(fresh);
         }
-      } catch {
-        if (active) {
-          setResult(cached);
-        }
+      } catch(error) {
+        if (active && error && typeof error==='object' && 'status' in error && [403,404].includes(Number(error.status))) setResult(null);
+        if (active && !controller.signal.aborted) setLoadError(error instanceof Error ? error.message : '결과를 불러오지 못했어요.');
       }
       finally { if (active) setLoading(false); }
     };
     void load();
-    return () => { active = false; };
-  }, [publicProfileId]);
+    return () => { active = false; controller.abort(); };
+  }, [publicProfileId,retry]);
 
   useEffect(() => {
     let active = true;
+    const controller = new AbortController();
     const identity = ensureAnonymousId({ cookieText: document.cookie, storage: window.localStorage });
-    void fetch(`/api/v1/results/${publicProfileId}/recommendations`, {
+    void loadWorkResource(`/api/v1/results/${publicProfileId}/recommendations`, {
       headers: { "x-match-anonymous-id": identity.anonymousId },
+      signal:controller.signal,timeoutMs:8000,
     })
-      .then(async (response) => response.ok ? response.json() : { items: [] })
       .then((body) => { if (active) setRecommendations(Array.isArray(body.items) ? body.items : []); })
       .catch(() => undefined);
-    return () => { active = false; };
-  }, [publicProfileId]);
+    return () => { active = false; controller.abort(); };
+  }, [publicProfileId,retry]);
 
   useEffect(() => {
     if (!result || resultTracked.current) return;
@@ -133,11 +139,12 @@ export function MatchResultView({ publicProfileId }: { publicProfileId: string }
     }
   }
 
-  if (loading) return <main className="match-page wm-screen wm-result-screen wm-result-loading"><section className="match-card match-hero"><p>결과를 불러오는 중이에요…</p></section></main>;
-  if (!result) return <main className="match-page wm-screen wm-result-screen wm-result-loading"><section className="match-card match-hero"><p className="match-eyebrow">결과 없음</p><h1>이 결과를 찾지 못했어요</h1><p>같은 브라우저에서 테스트를 다시 완료해 주세요.</p><a className="match-button" href="/match">처음부터 시작</a></section></main>;
+  if (loading) return <main className="match-page wm-screen wm-result-screen wm-result-loading"><section className="match-card match-hero"><MatchLoading message="결과를 불러오는 중이에요…" /></section></main>;
+  if (!result) return <main className="match-page wm-screen wm-result-screen wm-result-loading"><section className="match-card match-hero"><h1>{loadError || '이 결과를 찾지 못했어요'}</h1><button className="match-button" onClick={() => {setLoading(true);setRetry(value=>value+1);}}>다시 불러오기</button><Link href="/match">홈으로</Link></section></main>;
   const leadGenre = result.topGenres[0];
   const persona = personalArchetypeFor(leadGenre?.genreKey);
   return <main className="match-page match-result-page wm-screen wm-result-screen">
+    {loadError ? <p role="status" className="wm-load-error">저장된 결과를 표시하고 있어요. <button onClick={()=>setRetry(value=>value+1)}>최신 결과 다시 불러오기</button></p> : null}
     <section className="wm-result-hero">
       <div className="wm-result-intro">
         <div className="wm-hero-copy">

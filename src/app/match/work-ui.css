@@ -16,8 +16,8 @@ body:has(.wm-work-page) .brand-bar__logo { left:50% !important; right:auto !impo
 .wm-work-hero .wm-work-cover { display:block; width:100%; height:100%; object-fit:cover; object-position:center top; border:0; border-radius:0; }
 .wm-work-hero .wm-work-cover--empty { display:flex; min-height:100%; background:radial-gradient(ellipse at 50% 20%,#e3faff,#edf7fb 75%); }
 .wm-work-sheet { position:absolute; inset:auto 0 0; height:var(--work-sheet-height); display:flex; flex-direction:column; padding-bottom:var(--work-footer-height); border-radius:24px 24px 0 0; background:#fff; box-shadow:0 -6px 25px #19364012; overflow:hidden; transition:height 260ms cubic-bezier(.24,.75,.28,1); }
-.wm-work-page .wm-work-grab { display:grid; place-items:center; flex:0 0 44px; width:128px; height:44px; margin:0 auto; border:0; padding:0; background:transparent; touch-action:none; cursor:grab; }
-.wm-work-grab>span { display:block; width:34px; height:4px; border-radius:6px; background:#dcebef; }
+.wm-work-page .wm-work-grab { display:grid; place-items:center; flex:0 0 44px; width:100%; height:44px; margin:0 auto; border:0; padding:0; background:transparent; touch-action:none; cursor:grab; }
+.wm-work-grab>span { display:block; width:72px; height:5px; border-radius:6px; background:#a9cdd6; }
 .wm-work-grab:disabled { cursor:default; }
 .wm-work-grab:disabled>span { visibility:hidden; }
 .wm-work-cover-close { position:absolute; inset:0 0 auto; width:100%; height:calc(100% - var(--work-sheet-height)); border:0; padding:0; background:transparent; }

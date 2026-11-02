@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { recommendationCarouselState, recommendationGenreLabel, workCoverSources } from "../config/recommendationPresentation.mjs";
+import { recommendationGenreLabel, recommendationScrollTarget, recommendationTitleMotion, workCoverSources } from "../config/recommendationPresentation.mjs";
+import { readRailOffset, writeRailOffset } from '../storage/workReturnStorage.mjs';
 import { WorkDetailLink } from './WorkDetailLink';
 import { useHorizontalScrollIndicator } from './useHorizontalScrollIndicator';
 
@@ -37,11 +38,12 @@ function RecommendationTitle({ title, level }: { title: string; level: 3 | 4 }) 
     let disposed = false;
     const measure = () => {
       if (disposed) return;
-      const distance = Math.max(0, text.offsetWidth - heading.clientWidth);
+      const overflow = Math.max(0, text.offsetWidth - heading.clientWidth);
+      const { travel, duration } = recommendationTitleMotion(overflow ? overflow + 2 : 0);
       // Keep the entire title as one accessible heading, without duplicated text.
-      heading.dataset.overflow = String(heading.clientWidth > 0 && distance > 1);
-      text.style.setProperty('--wm-title-travel', `${-distance}px`);
-      text.style.setProperty('--wm-title-duration', `${Math.max(12, distance / 22 * 2 + 4)}s`);
+      heading.dataset.overflow = String(heading.clientWidth > 0 && overflow > 1);
+      text.style.setProperty('--wm-title-travel', `${-travel}px`);
+      text.style.setProperty('--wm-title-duration', `${duration}s`);
     };
     const resize = new ResizeObserver(measure);
     resize.observe(heading);
@@ -67,7 +69,7 @@ export function RecommendationCard({ item, returnTo, onOpen, headingLevel = 4, l
 }) {
   return <article className={`wm-recommendation-card wm-pair-work-card${item.tasteFitHighlighted ? ' is-taste-fit' : ''}`}>
     <div className="wm-pair-work-artwork">
-      <WorkDetailLink id={item.canonicalWebtoonId} returnTo={returnTo} onOpen={onOpen} label={`${item.title} 작품 상세 보기`} className="wm-work-card-link"><WorkCover item={item} sizes="(max-width: 540px) 61vw, 300px" /></WorkDetailLink>
+      <WorkDetailLink id={item.canonicalWebtoonId} returnTo={returnTo} onOpen={onOpen} label={`${item.title} 작품 상세 보기`} className="wm-work-card-link"><WorkCover item={item} sizes="160px" /></WorkDetailLink>
       <div className="wm-pair-work-copy">
         <WorkDetailLink id={item.canonicalWebtoonId} returnTo={returnTo} onOpen={onOpen} className="wm-pair-work-title"><RecommendationTitle title={item.title} level={headingLevel} /></WorkDetailLink>
         <div className="wm-pair-work-meta"><small>{item.mainGenreLabel ?? recommendationGenreLabel(item.mainGenre)}</small></div>
@@ -80,129 +82,52 @@ export function RecommendationCard({ item, returnTo, onOpen, headingLevel = 4, l
   </article>;
 }
 
-// Both result screens share settled positions and detail-page return restoration.
-export function useRecommendationCarousel(count: number, restorationKey?: string) {
+// Free native scrolling: persist pixels without snapping/re-aligning a selected card.
+export function useRecommendationCarousel(count: number, restorationKey: string) {
   const listRef = useRef<HTMLOListElement>(null);
-  const [index, setIndex] = useState(0);
-  const activeIndex = useRef(0);
-  const pendingScroll = useRef<{ index: number; left: number } | null>(null);
-  const position = recommendationCarouselState(index, count);
   useEffect(() => {
     const list = listRef.current;
     if (!list) return;
-    const remember = (value: number) => {
-      if (restorationKey) { try { sessionStorage.setItem(`wm-rail:${restorationKey}`, String(value)); } catch { /* Optional storage. */ } }
+    let storage: Storage | undefined;
+    try { storage=window.sessionStorage; } catch { /* Optional storage. */ }
+    let restored = false;
+    const remember = () => {
+      if (list.clientWidth) writeRailOffset(storage, restorationKey, list.scrollLeft);
     };
-    let settleTimer: number | undefined;
-    pendingScroll.current = null;
-    const update = () => {
-      if (!list.clientWidth) return; // A hidden comparison tab must not reset the current card.
-      const first = list.firstElementChild as HTMLElement | null;
-      const gap = Number.parseFloat(getComputedStyle(list).columnGap) || 0;
-      const step = (first?.getBoundingClientRect().width ?? list.clientWidth) + gap;
-      const current = recommendationCarouselState(list.scrollLeft / Math.max(1, step), count).index;
-      activeIndex.current = current;
-      setIndex(current);
-      remember(current);
+    const restore = () => {
+      if (restored || !list.clientWidth) return;
+      restored = true;
+      const left = Math.min(readRailOffset(storage, restorationKey), Math.max(0, list.scrollWidth-list.clientWidth));
+      list.scrollTo({ left, behavior: 'instant' });
     };
-    const settle = () => {
-      window.clearTimeout(settleTimer);
-      pendingScroll.current = null;
-      update();
-    };
-    const onScroll = () => {
-      window.clearTimeout(settleTimer);
-      const pending = pendingScroll.current;
-      // Keep the requested card's arrows throughout its smooth transition.
-      // A partly scrolled first/last card is not an extra available card.
-      if (pending && Math.abs(list.scrollLeft - pending.left) > 2) {
-        settleTimer = window.setTimeout(settle, 200);
-        return;
-      }
-      settle();
-    };
-    const onScrollEnd = () => {
-      if (!pendingScroll.current || Math.abs(list.scrollLeft - pendingScroll.current.left) <= 2) settle();
-    };
-    let previousWidth = list.clientWidth;
-    const onResize = () => {
-      const width = list.clientWidth;
-      // Fitting a page's height must not cancel an in-flight horizontal move.
-      if (!width || Math.abs(width - previousWidth) < 1) return;
-      previousWidth = width;
-      window.clearTimeout(settleTimer);
-      pendingScroll.current = null;
-      const next = recommendationCarouselState(activeIndex.current, count).index;
-      const first = list.firstElementChild as HTMLElement | null;
-      const target = list.children[next] as HTMLElement | undefined;
-      if (first && target) list.scrollTo({ left: target.offsetLeft - first.offsetLeft, behavior: "instant" });
-      update();
-    };
-    if (restorationKey) {
-      try {
-        const saved = recommendationCarouselState(Number(sessionStorage.getItem(`wm-rail:${restorationKey}`)), count).index;
-        const first = list.firstElementChild as HTMLElement | null;
-        const target = list.children[saved] as HTMLElement | undefined;
-        if (first && target && list.clientWidth) list.scrollTo({ left: target.offsetLeft - first.offsetLeft, behavior: 'instant' });
-      } catch { /* Keep the first card when storage is unavailable. */ }
-    }
-    update();
-    list.addEventListener("scroll", onScroll, { passive: true });
-    list.addEventListener("scrollend", onScrollEnd);
-    list.addEventListener("pointerdown", settle, { passive: true });
-    list.addEventListener("wheel", settle, { passive: true });
-    list.addEventListener("keydown", settle);
-    const observer = new ResizeObserver(onResize);
+    restore();
+    const observer = new ResizeObserver(restore);
     observer.observe(list);
-    return () => {
-      window.clearTimeout(settleTimer);
-      list.removeEventListener("scroll", onScroll);
-      list.removeEventListener("scrollend", onScrollEnd);
-      list.removeEventListener("pointerdown", settle);
-      list.removeEventListener("wheel", settle);
-      list.removeEventListener("keydown", settle);
-      observer.disconnect();
-    };
+    list.addEventListener('scroll', remember, { passive: true });
+    return () => { remember(); observer.disconnect(); list.removeEventListener('scroll', remember); };
   }, [count, restorationKey]);
-  function scroll(direction: number) {
+  function prepareNavigation() {
     const list = listRef.current;
-    const first = list?.firstElementChild as HTMLElement | null;
-    if (!list || !first) return;
-    const next = recommendationCarouselState(activeIndex.current + direction, count).index;
-    const target = list.children[next] as HTMLElement | undefined;
-    if (!target) return;
-    const left = Math.max(0, Math.min(list.scrollWidth - list.clientWidth, target.offsetLeft - first.offsetLeft));
-    activeIndex.current = next;
-    pendingScroll.current = { index: next, left };
-    setIndex(next);
-    list.scrollTo({ left, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
-  }
-  function prepareNavigation(index: number) {
-    const list = listRef.current;
-    const first = list?.firstElementChild as HTMLElement | null;
-    const target = list?.children[index] as HTMLElement | undefined;
-    if (list && first && target) list.scrollTo({ left: target.offsetLeft - first.offsetLeft, behavior: 'instant' });
-    activeIndex.current = index;
-    pendingScroll.current = null;
-    if (restorationKey) { try { sessionStorage.setItem(`wm-rail:${restorationKey}`, String(index)); } catch { /* Optional storage. */ } }
+    if (list) { try { writeRailOffset(sessionStorage, restorationKey, list.scrollLeft); } catch { /* Optional storage. */ } }
   }
   function onKeyDown(event: KeyboardEvent<HTMLOListElement>) {
-    if (count <= 1 || event.target !== event.currentTarget || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    if (count <= 1 || event.target !== event.currentTarget || !['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
     event.preventDefault();
-    scroll(event.key === 'Home' ? -count : event.key === 'End' ? count : event.key === 'ArrowRight' ? 1 : -1);
+    const list = event.currentTarget;
+    const left = recommendationScrollTarget(list.scrollLeft, list.clientWidth, list.scrollWidth, event.key);
+    list.scrollTo({ left, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
   }
-  return { listRef, position, scroll, prepareNavigation, onKeyDown };
+  return { listRef, prepareNavigation, onKeyDown, railKey: restorationKey };
 }
 
 export function PersonalRecommendationCarousel({ items, publicProfileId }: { items: RecommendationWorkItem[]; publicProfileId?: string }) {
   const returnTo = publicProfileId ? `/match/result/${publicProfileId}` : '/match';
-  const { listRef, position, prepareNavigation, onKeyDown } = useRecommendationCarousel(items.length, `${returnTo}:${items.map(item => item.canonicalWebtoonId).join(',')}`);
+  const { listRef, railKey, prepareNavigation, onKeyDown } = useRecommendationCarousel(items.length, `personal:${returnTo}`);
   const { containerRef, barRef, thumbRef } = useHorizontalScrollIndicator(listRef, items.length);
   if (!items.length) return <p className="wm-empty">아직 등록한 추천작이 없어요.</p>;
   return <div ref={containerRef} className="wm-personal-carousel">
-    <div className="wm-carousel-controls"><span aria-live="polite">추천작 {position.index + 1} / {items.length}</span></div>
-    <ol ref={listRef} className={`wm-pair-work-track${items.length === 1 ? ' is-single' : ''}`} tabIndex={items.length > 1 ? 0 : undefined} aria-label="내 추천작 목록" onKeyDown={onKeyDown}>{items.map((item, itemIndex) => <li className="wm-pair-work-slide" key={item.canonicalWebtoonId} aria-label={`추천작 ${itemIndex + 1} / ${items.length}`}>
-      <RecommendationCard item={item} returnTo={returnTo} onOpen={() => prepareNavigation(itemIndex)} headingLevel={3} />
+    <ol ref={listRef} data-recommendation-rail={railKey} className={`wm-pair-work-track${items.length === 1 ? ' is-single' : ''}`} tabIndex={items.length > 1 ? 0 : undefined} aria-label="내 추천작 목록" onKeyDown={onKeyDown}>{items.map((item, itemIndex) => <li className="wm-pair-work-slide" key={item.canonicalWebtoonId} aria-label={`추천작 ${itemIndex + 1} / ${items.length}`}>
+      <RecommendationCard item={item} returnTo={returnTo} onOpen={prepareNavigation} headingLevel={3} />
     </li>)}</ol>
     {items.length > 1 ? <div ref={barRef} className="wm-rail-scrollbar wm-personal-scrollbar" aria-hidden="true"><span ref={thumbRef} /></div> : null}
   </div>;

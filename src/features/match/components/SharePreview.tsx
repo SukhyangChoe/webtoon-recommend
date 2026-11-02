@@ -8,6 +8,8 @@ import { downloadBlob, renderShareCardPng, renderShareCardSvg, shareCardSize, ty
 import { createPairShareCard, createPersonalShareCard, createRankingShareCard, SHARE_PAGE_TITLES, shareCardDescription } from '../share/shareCardPresentation.mjs';
 import { pairShareCopy, personalShareCopy, rankingShareCopy, threadsIntentUrl } from '../share/sharePolicy.mjs';
 import { MatchIcon } from './MatchIcon';
+import { MatchLoading } from './MatchLoading';
+import { loadWorkResource } from '../api/loadWorkResource.mjs';
 
 type ShareType = 'personal' | 'pair' | 'ranking';
 type Payload = { card: ShareCardModel; shareText: string; shareUrl: string; templateKey: string; svg: string; previewUrl: string };
@@ -17,9 +19,7 @@ type PairResult = { ownerNickname: string; challengerNickname: string; ownerGenr
 type RankingResult = { ownerNickname: string; ownerGenreKey?: string; entryCount: number; rankingVisibility?: string; canManage?: boolean; top20: Array<{ rank: number; nickname: string; score: number; genreKey?: string; sharedGenres: string[] }> };
 
 async function responseJson<T>(url: string, headers?: HeadersInit): Promise<T> {
-  const response = await fetch(url, { headers });
-  if (!response.ok) throw new Error('공유할 결과를 불러오지 못했어요.');
-  return response.json();
+  return loadWorkResource(url, { headers, timeoutMs: 8000, notFoundMessage: '공유할 결과를 찾지 못했어요.' }) as Promise<T>;
 }
 async function copyToClipboard(text: string) {
   if (navigator.clipboard?.writeText) {
@@ -115,7 +115,7 @@ export function SharePreview({ type, profilePublicId, challengeCode, resultId }:
         <button className="wm-share-primary" type="button" onClick={openThreads}><MatchIcon name="share" />Threads에 공유하기</button>
         <div className="wm-share-secondary"><button type="button" disabled={saving} onClick={() => void saveImage()}><MatchIcon name="download" />{saving ? '저장 중…' : '이미지 저장'}</button><button type="button" onClick={() => void copyLink()}><MatchIcon name="link" />링크 복사</button></div>
       </section>
-    </> : <section className="wm-share-state" role="status">공유 카드를 만드는 중이에요…</section>}
+    </> : <section className="wm-share-state"><MatchLoading message="공유 카드를 만드는 중이에요…" /></section>}
     <p className={`wm-share-toast${message ? ' is-visible' : ''}`} role="status" aria-live="polite">{message}</p>
   </main>;
 }

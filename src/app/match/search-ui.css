@@ -1,5 +1,5 @@
 /* Public discovery shares the result/editor palette, without recommendation editing controls. */
-.wm-floating-search { position:fixed; z-index:75; top:calc((var(--brand-bar-height,56px) - 44px)/2 + env(safe-area-inset-top)); right:max(12px,calc((100vw - 540px)/2 + 12px)); display:grid; place-items:center; width:44px; height:44px; border:0; border-radius:8px; background:transparent; color:#00697f; box-shadow:none; text-decoration:none; -webkit-tap-highlight-color:transparent; }
+.wm-floating-search { position:fixed; z-index:75; top:calc((var(--brand-bar-height,56px) - 44px)/2 + env(safe-area-inset-top)); right:max(12px,calc((100vw - 540px)/2 + 12px)); display:grid; place-items:center; width:44px; height:44px; border:1px solid #88cddd; border-radius:13px; background:#edfafe; color:#00697f; box-shadow:none; text-decoration:none; -webkit-tap-highlight-color:transparent; }
 .match-module:has(.wm-result-screen) .wm-floating-search { top:calc(6px + env(safe-area-inset-top)); }
 .wm-floating-search .wm-icon { width:22px; height:22px; }
 .wm-floating-search:hover { color:#00a4c1; }

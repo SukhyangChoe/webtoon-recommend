@@ -1,6 +1,7 @@
 import { createEmptyMatchDraft, getMatchHomeState, readMatchDraft, writeMatchDraft } from './draft.mjs';
 import { clearPendingChallenge, clearPairResultPrompt } from './challengeStorage.mjs';
 import { safeWorkReturnPath, workDetailHref } from '../config/workDetailPresentation.mjs';
+import { clearWorkReturn } from './workReturnStorage.mjs';
 
 export const WORK_TEST_CONTINUATION_KEY = 'webtoon-match:work-test-continuation:v1';
 const MAX_AGE = 24 * 60 * 60 * 1000;
@@ -13,6 +14,7 @@ export function beginWorkTasteTest({ storage, session, workId, returnTo, now = D
   session.setItem(WORK_TEST_CONTINUATION_KEY, JSON.stringify({ workId, returnTo: safeWorkReturnPath(returnTo), startedAt: draft.startedAt, savedAt: now }));
   // After the test, browser history points at a question, not the original search page.
   session.removeItem('wm-work-entry');
+  clearWorkReturn(session);
   writeMatchDraft(storage, draft);
   // An explicit work-test entry is not consent to join an old invitation.
   clearPendingChallenge(storage);

@@ -2,6 +2,7 @@ import "server-only";
 
 import { normalizeRecommendationComment } from "../config/recommendationPolicy.mjs";
 import { safeWorkCoverUrl } from "../config/recommendationPresentation.mjs";
+import { CATALOG_ACCESS_POLICY_VERSION } from '../config/catalogAgePolicy.mjs';
 import { getMatchDatabase } from "./database";
 import { writeRecommendationComment, setRecommendationCommentLike } from './recommendationCommentStore';
 
@@ -64,7 +65,7 @@ const globalCatalogCache = globalThis as typeof globalThis & {
   __webtoonSearchCache?: Map<string, SearchCacheEntry>;
 };
 const searchCache = globalCatalogCache.__webtoonSearchCache ??= new Map<string, SearchCacheEntry>();
-const SEARCH_CACHE_TTL_MS = 10 * 60 * 1000;
+const SEARCH_CACHE_TTL_MS = 60 * 1000;
 
 function toSummary(row: WebtoonRow): WebtoonSummary {
   return {
@@ -134,7 +135,7 @@ export async function searchWebtoons(query: string, limit = 20) {
   return (await searchCatalogPage(query, true, boundedLimit, 1)).items;
 }
 
-/** General browsing includes active works that cannot be registered as recommendations. */
+/** General browsing is independent of recommendation eligibility, but always age-safe. */
 export async function searchCatalogWebtoons(query: string, page = 1) {
   return searchCatalogPage(query, false, 20, page);
 }
@@ -144,7 +145,7 @@ async function searchCatalogPage(query: string, eligibleOnly: boolean, pageSize:
   const compact = compactWebtoonTitle(query);
   if (compact.length < 1) return { items: [], hasMore: false };
   if (normalized.length > 100 || !Number.isInteger(page) || page < 1 || page > 10000) throw new Error('INVALID_WEBTOON_SEARCH');
-  const cacheKey = `paged-v2-sexual-core:${eligibleOnly}:${normalized}:${pageSize}:${page}`;
+  const cacheKey = `paged:${CATALOG_ACCESS_POLICY_VERSION}:${eligibleOnly}:${normalized}:${pageSize}:${page}`;
   const cached = searchCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) return { items: cached.items, hasMore: cached.hasMore };
   const literal = (value: string) => value.replace(/[\\%_]/g, '\\$&');
@@ -153,14 +154,12 @@ async function searchCatalogPage(query: string, eligibleOnly: boolean, pageSize:
     select canonical_webtoon_id, title, platform, official_url, main_genre,
       coalesce(details.cover_url,raw_data->>'coverUrl', raw_data#>>'{metadata,coverUrl}', raw_data#>>'{cover,src}') as cover_url,
       left(coalesce(details.synopsis,raw_data->>'introduction', raw_data#>>'{metadata,description}',raw_data#>>'{recommendation,recommendationReason}'), 200) as introduction,
-      coalesce(raw_data#>>'{metadata,sexualCore}' = 'true', false) as recommendation_registration_blocked
+      not public.webtoon_is_public_safe(raw_data) as recommendation_registration_blocked
     from public.webtoons
     left join public.webtoon_details details using(canonical_webtoon_id)
     where catalog_status = 'active'
-      and (${eligibleOnly} = false or (
-        recommendation_eligible = true
-        and coalesce(raw_data#>>'{metadata,sexualCore}', 'false') <> 'true'
-      ))
+      and public.webtoon_is_public_safe(raw_data)
+      and (${eligibleOnly} = false or recommendation_eligible = true)
       and (
         normalized_title like ${`%${literal(normalized)}%`}
         or replace(normalized_title, ' ', '') like ${`%${literal(compact)}%`}
@@ -205,7 +204,7 @@ export async function getProfileRecommendations(publicProfileId: string, viewerA
       webtoons.platform,
       webtoons.official_url,
       webtoons.main_genre,
-      bool_or(coalesce(webtoons.raw_data#>>'{metadata,sexualCore}' = 'true', false)) as recommendation_registration_blocked,
+      bool_or(not public.webtoon_is_public_safe(webtoons.raw_data)) as recommendation_registration_blocked,
       max(coalesce(details.cover_url,webtoons.raw_data->>'coverUrl', webtoons.raw_data#>>'{metadata,coverUrl}', webtoons.raw_data#>>'{cover,src}')) as cover_url,
       max(left(coalesce(details.synopsis,webtoons.raw_data->>'introduction', webtoons.raw_data#>>'{metadata,description}',webtoons.raw_data#>>'{recommendation,recommendationReason}'), 200)) as introduction,
       count(likes.liker_profile_id)::int as like_count,
@@ -220,6 +219,7 @@ export async function getProfileRecommendations(publicProfileId: string, viewerA
     left join public.match_recommendation_comment_likes likes on likes.comment_id = comments.comment_id
     where snapshots.public_profile_id = ${publicProfileId}
       and webtoons.catalog_status = 'active'
+      and public.webtoon_is_public_safe(webtoons.raw_data)
     group by
       recommendations.profile_id,
       recommendations.sort_order,
@@ -252,7 +252,7 @@ export async function getRecommendationsForProfiles(profileIds: string[], viewer
       webtoons.platform,
       webtoons.official_url,
       webtoons.main_genre,
-      webtoons.raw_data,
+      jsonb_build_object('recommendation',webtoons.raw_data->'recommendation') as raw_data,
       max(coalesce(details.cover_url,webtoons.raw_data->>'coverUrl',webtoons.raw_data#>>'{metadata,coverUrl}',webtoons.raw_data#>>'{cover,src}')) as cover_url,
       max(left(coalesce(details.synopsis,webtoons.raw_data#>>'{recommendation,recommendationReason}'),200)) as introduction,
       count(likes.liker_profile_id)::int as like_count,
@@ -266,6 +266,7 @@ export async function getRecommendationsForProfiles(profileIds: string[], viewer
     left join public.match_recommendation_comment_likes likes on likes.comment_id = comments.comment_id
     where recommendations.profile_id = any(${uniqueProfileIds}::uuid[])
       and webtoons.catalog_status = 'active'
+      and public.webtoon_is_public_safe(webtoons.raw_data)
     group by
       recommendations.profile_id,
       recommendations.sort_order,
@@ -327,13 +328,7 @@ export async function replaceProfileRecommendations(input: { publicProfileId: st
     let available: WebtoonRow[] = [];
     if (ids.length) {
       available = await sql<WebtoonRow[]>`
-        select canonical_webtoon_id, title, platform, official_url, main_genre,
-          coalesce(raw_data#>>'{metadata,sexualCore}' = 'true', false) as recommendation_registration_blocked
-        from public.webtoons
-        where canonical_webtoon_id = any(${ids}::text[])
-          and catalog_status = 'active'
-          and recommendation_eligible = true
-        for share
+        select * from public.lock_recommendation_catalog(${ids}::text[])
       `;
       if (available.length !== ids.length) throw new Error("WEBTOON_NOT_AVAILABLE");
       // Check trusted, current DB metadata before any list mutation. The row lock
@@ -388,7 +383,7 @@ export async function replaceProfileRecommendations(input: { publicProfileId: st
         webtoons.platform,
         webtoons.official_url,
         webtoons.main_genre,
-        bool_or(coalesce(webtoons.raw_data#>>'{metadata,sexualCore}' = 'true', false)) as recommendation_registration_blocked,
+        bool_or(not public.webtoon_is_public_safe(webtoons.raw_data)) as recommendation_registration_blocked,
         max(coalesce(details.cover_url,webtoons.raw_data->>'coverUrl', webtoons.raw_data#>>'{metadata,coverUrl}', webtoons.raw_data#>>'{cover,src}')) as cover_url,
         max(left(coalesce(details.synopsis,webtoons.raw_data->>'introduction', webtoons.raw_data#>>'{metadata,description}',webtoons.raw_data#>>'{recommendation,recommendationReason}'), 200)) as introduction,
         count(likes.liker_profile_id)::int as like_count,

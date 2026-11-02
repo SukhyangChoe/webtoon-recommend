@@ -685,3 +685,11 @@
   .match-module .match-share-card.has-character .match-share-rows span { font-size: .67rem; }
   .match-module .match-share-card.has-character footer { padding-top: 7px; font-size: .6rem; }
 }
+.wm-loading { width:100%; max-width:440px; margin:0 auto; padding:16px 0; color:var(--match-ui-muted,#647e87); }
+.wm-loading p { margin:0 0 14px; font-size:14px; line-height:1.6; }
+.wm-loading-track { width:100%; height:5px; overflow:hidden; border-radius:99px; background:var(--match-ui-border,#dcebef); }
+.wm-loading-track>span { display:block; width:38%; height:100%; border-radius:inherit; background:var(--match-ui-accent,#00c8ea); animation:wm-loading-sweep 1.3s ease-in-out infinite alternate; }
+.wm-loading--compact { padding:8px 0; }
+.wm-loading--compact p { font-size:12px; margin-bottom:8px; }
+@keyframes wm-loading-sweep { from { transform:translateX(-105%); } to { transform:translateX(265%); } }
+@media(prefers-reduced-motion:reduce) { .wm-loading-track>span { animation:none; width:55%; margin:auto; } }

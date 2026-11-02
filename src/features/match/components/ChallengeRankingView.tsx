@@ -1,5 +1,7 @@
 "use client";
 
+import { MatchLoading } from './MatchLoading';
+
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { trackMatchEvent } from "../analytics/client";
@@ -40,7 +42,7 @@ async function requestRanking(challengeCode: string, identity: Identity, page: n
   const abort = () => controller.abort();
   if (signal?.aborted) controller.abort();
   signal?.addEventListener("abort", abort, { once: true });
-  const timeout = window.setTimeout(abort, 20000);
+  const timeout = window.setTimeout(abort, 10000);
   try {
     const response = await fetch(`/api/v1/challenges/${challengeCode}/ranking?${query}`, { headers: ownerHeaders(identity), signal: controller.signal });
     const body = await response.json();
@@ -180,7 +182,7 @@ export function ChallengeRankingView({ challengeCode }: { challengeCode: string 
     listRef.current?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "start" });
   }
 
-  if (!ranking) return <main className="match-page wm-relationship-page"><section className="wm-ranking-empty"><h1>{loading ? "관계도를 불러오는 중이에요…" : "관계도를 불러오지 못했어요"}</h1>{!loading ? <><p>{message}</p><button className="match-button" type="button" onClick={() => window.location.reload()}>다시 시도</button><Link href="/match">웹툰핏 홈으로</Link></> : null}</section></main>;
+  if (!ranking) return <main className="match-page wm-relationship-page"><section className="wm-ranking-empty">{loading ? <MatchLoading message="관계도를 불러오는 중이에요…" /> : <h1>관계도를 불러오지 못했어요</h1>}{!loading ? <><p>{message}</p><button className="match-button" type="button" onClick={() => window.location.reload()}>다시 시도</button><Link href="/match">웹툰핏 홈으로</Link></> : null}</section></main>;
 
   const rankingIsPrivate = ranking.rankingVisibility === "private" && !ranking.canManage;
   const personalResultId = viewerProfileId || (ranking.canManage ? ranking.ownerPublicProfileId : null);

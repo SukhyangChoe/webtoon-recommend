@@ -132,9 +132,11 @@ export function useWorkDetailSheet(enabled: boolean, firstPanel: Panel = 'reason
       finish('collapsed');
     };
     actions.current = { open, close };
+    let suppressClick = false;
     const down = (event: PointerEvent) => {
       if (drag) { cancelDrag(); return; }
       if (!event.isPrimary || (event.pointerType === 'mouse' && event.button !== 0)) return;
+      suppressClick = false;
       clearTimeout(settleTimer); clearMorph();
       drag = { id: event.pointerId, x: event.clientX, y: event.clientY, source: current, axis: '', target: null, travel: 0, scroll: scroller.scrollTop };
       grip.setPointerCapture(event.pointerId);
@@ -142,6 +144,7 @@ export function useWorkDetailSheet(enabled: boolean, firstPanel: Panel = 'reason
     const move = (event: PointerEvent) => {
       if (!drag || drag.id !== event.pointerId) return;
       const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
+      if (Math.hypot(dx, dy) >= WORK_SHEET_GESTURE.axisLock) suppressClick = true;
       if (!drag.axis && Math.max(Math.abs(dx), Math.abs(dy)) >= WORK_SHEET_GESTURE.axisLock) drag.axis = Math.abs(dy) >= Math.abs(dx) * WORK_SHEET_GESTURE.dominance ? 'y' : 'x';
       if (drag.axis !== 'y') return;
       const opening = drag.source === 'collapsed';
@@ -163,7 +166,11 @@ export function useWorkDetailSheet(enabled: boolean, firstPanel: Panel = 'reason
       else cancelDrag();
       if (grip.hasPointerCapture(event.pointerId)) grip.releasePointerCapture(event.pointerId);
     };
-    const click = (event: MouseEvent) => { if (event.detail === 0) { if (current === 'collapsed') open(firstPanelRef.current); else close(); } };
+    const click = (event: MouseEvent) => {
+      // Pointer clicks after a drag must not reverse its completed transition.
+      if (event.detail !== 0 && suppressClick) return;
+      if (current === 'collapsed') open(firstPanelRef.current); else close();
+    };
     const key = (event: KeyboardEvent) => {
       if (event.key === 'Escape') { if (drag) cancelDrag(); else close(); }
       if (current !== 'collapsed' && preview.contains(document.activeElement) && ['PageDown', 'PageUp', 'Home', 'End'].includes(event.key) && !(event.target instanceof HTMLElement && event.target.closest('input,textarea,select,[contenteditable]'))) {

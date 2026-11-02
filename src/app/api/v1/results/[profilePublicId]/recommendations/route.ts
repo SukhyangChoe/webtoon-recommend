@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { readMatchJson } from '@/features/match/server/requestBody';
+import { matchJson } from '@/features/match/server/apiResponse';
 import { isAnonymousId } from "@/features/match/storage/anonymousIdentity.mjs";
 import { getProfileRecommendations, replaceProfileRecommendations } from "@/features/match/server/webtoonCatalogStore";
 import { refreshCompatibilityForProfile } from "@/features/match/server/challengeStore";
@@ -14,25 +15,25 @@ export async function GET(request: Request, { params }: { params: Promise<{ prof
     const viewerAnonymousId = candidateAnonymousId && isAnonymousId(candidateAnonymousId)
       ? candidateAnonymousId
       : null;
-    return NextResponse.json({
+    return matchJson(request, {
       items: await getProfileRecommendations(profilePublicId, viewerAnonymousId),
     }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     const failure = toMatchApiFailure(error, "RECOMMENDATIONS_LOAD_FAILED");
-    return NextResponse.json({ error: failure.error }, { status: failure.status });
+    return matchJson(request, { error: failure.error }, { status: failure.status });
   }
 }
 
 export async function PUT(request: Request, { params }: { params: Promise<{ profilePublicId: string }> }) {
   try {
     const { profilePublicId } = await params;
-    const body = await request.json() as {
+    const body = await readMatchJson(request) as {
       anonymousId?: string;
       recommendations?: Array<{ canonicalWebtoonId?: string; recommendationComment?: string | null }>;
       canonicalWebtoonIds?: string[];
     };
     if (!body.anonymousId || !isAnonymousId(body.anonymousId)) {
-      return NextResponse.json({ error: "INVALID_REQUEST_BODY" }, { status: 400 });
+      return matchJson(request, { error: "INVALID_REQUEST_BODY" }, { status: 400 });
     }
     const recommendations = Array.isArray(body.recommendations)
       ? body.recommendations
@@ -40,7 +41,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ prof
         ? body.canonicalWebtoonIds.map((canonicalWebtoonId) => ({ canonicalWebtoonId }))
         : null;
     if (!recommendations || recommendations.some((item) => typeof item?.canonicalWebtoonId !== "string")) {
-      return NextResponse.json({ error: "INVALID_REQUEST_BODY" }, { status: 400 });
+      return matchJson(request, { error: "INVALID_REQUEST_BODY" }, { status: 400 });
     }
     const replacement = await replaceProfileRecommendations({
       publicProfileId: profilePublicId,
@@ -49,13 +50,13 @@ export async function PUT(request: Request, { params }: { params: Promise<{ prof
     });
     const refreshed = await refreshCompatibilityForProfile(replacement.profileId);
     const tasteResult = await getPublicTasteResult(profilePublicId);
-    return NextResponse.json({
+    return matchJson(request, {
       items: replacement.items,
       recommendationInfluence: tasteResult?.recommendationInfluence ?? { workCount: 0, recommendationPercent: 0, testPercent: 100 },
       ...refreshed,
     }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     const failure = toMatchApiFailure(error, "RECOMMENDATIONS_SAVE_FAILED");
-    return NextResponse.json({ error: failure.error }, { status: failure.status });
+    return matchJson(request, { error: failure.error }, { status: failure.status });
   }
 }

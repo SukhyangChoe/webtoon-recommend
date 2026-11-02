@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { matchJson } from '@/features/match/server/apiResponse';
 import { getChallengeRanking } from "@/features/match/server/challengeStore";
 import { toMatchApiFailure } from "@/features/match/server/apiErrors";
 import { isAnonymousId } from "@/features/match/storage/anonymousIdentity.mjs";
@@ -30,10 +30,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ chal
       ownerManageToken: ownerToken(request),
       ownerAnonymousId: ownerAnonymousId(request),
     });
-    if (!ranking) return NextResponse.json({ error: "CHALLENGE_NOT_FOUND" }, { status: 404 });
-    return NextResponse.json(ranking, { headers: { 'Cache-Control': 'private, no-store' } });
+    if (!ranking) return matchJson(request, { error: "CHALLENGE_NOT_FOUND" }, { status: 404 });
+    return matchJson(request, ranking, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     const failure = toMatchApiFailure(error, "RANKING_LOAD_FAILED");
-    return NextResponse.json({ error: failure.error }, { status: failure.status });
+    return matchJson(request, { error: failure.error }, { status: failure.status });
   }
 }

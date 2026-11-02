@@ -47,7 +47,7 @@ const {chromium}=require('playwright');
   for(const width of [320,390,900]){
    await page.setViewportSize({width,height:844});
    const search=page.getByRole('link',{name:'작품 검색',exact:true});
-   await search.hover();assert.ok(await search.evaluate(el=>{const css=getComputedStyle(el),r=el.getBoundingClientRect();return r.width>=44&&r.height>=44&&css.backgroundColor==='rgba(0, 0, 0, 0)'&&css.borderTopWidth==='0px'&&css.boxShadow==='none';}),'only the magnifier is painted, with a 44px accessible hit area');
+   await search.hover();assert.ok(await search.evaluate(el=>{const css=getComputedStyle(el),r=el.getBoundingClientRect();return r.width>=44&&r.height>=44&&css.backgroundColor==='rgb(237, 250, 254)'&&css.borderTopWidth==='1px';}),'teal outline and light background retain a 44px accessible hit area');
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   }
   baseMode='hold';await page.reload();

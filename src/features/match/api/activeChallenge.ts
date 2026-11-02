@@ -6,10 +6,12 @@ export type ActiveChallengeInfo = {
   ownerPublicProfileId: string | null;
 };
 
+import { loadWorkResource } from './loadWorkResource.mjs';
+
 export async function requestActiveChallenge(anonymousId: string) {
   const query = new URLSearchParams({ anonymousId });
-  const response = await fetch(`/api/v1/challenges?${query}`);
-  if (!response.ok) return null;
-  const body = await response.json();
-  return body.active ? body as ActiveChallengeInfo & { active: true } : null;
+  try {
+    const body = await loadWorkResource(`/api/v1/challenges?${query}`, { timeoutMs: 8000 });
+    return body.active ? body as ActiveChallengeInfo & { active: true } : null;
+  } catch { return null; }
 }

@@ -65,16 +65,17 @@ function storedSnapshot(row: SnapshotRow): StoredSnapshot {
 async function withCurrentRecommendationTaste(snapshot: StoredSnapshot, read?: WorkReadContext) {
   const database = getMatchDatabase();
   const rows = read ? await read.query<RecommendationVectorRow[]>('recommendations', `
-    select webtoons.raw_data from public.match_profile_recommendations recommendations
+    select jsonb_build_object('recommendation',webtoons.raw_data->'recommendation') as raw_data from public.match_profile_recommendations recommendations
     join public.webtoons webtoons on webtoons.canonical_webtoon_id = recommendations.canonical_webtoon_id
-    where recommendations.profile_id = $1::uuid and webtoons.catalog_status = 'active'
+    where recommendations.profile_id = $1::uuid and webtoons.catalog_status = 'active' and public.webtoon_is_public_safe(webtoons.raw_data)
     order by recommendations.sort_order asc`, [snapshot.profileId]) : await database<RecommendationVectorRow[]>`
-    select webtoons.raw_data
+    select jsonb_build_object('recommendation',webtoons.raw_data->'recommendation') as raw_data
     from public.match_profile_recommendations recommendations
     join public.webtoons webtoons
       on webtoons.canonical_webtoon_id = recommendations.canonical_webtoon_id
     where recommendations.profile_id = ${snapshot.profileId}::uuid
       and webtoons.catalog_status = 'active'
+      and public.webtoon_is_public_safe(webtoons.raw_data)
     order by recommendations.sort_order asc
   `;
   const blend = () => applyRecommendationTaste(
@@ -213,10 +214,10 @@ export async function getTasteSnapshotsByIds(snapshotIds: string[], { latestForP
   const profileIds = [...new Set(rows.map((row) => row.profile_id))];
   if (!profileIds.length) return {};
   const recommendations = await database.unsafe<Array<RecommendationVectorRow & { profile_id: string }>>(`
-    select recommendations.profile_id::text, webtoons.raw_data
+    select recommendations.profile_id::text, jsonb_build_object('recommendation',webtoons.raw_data->'recommendation') as raw_data
     from public.match_profile_recommendations recommendations
     join public.webtoons webtoons on webtoons.canonical_webtoon_id = recommendations.canonical_webtoon_id
-    where recommendations.profile_id = any($1::uuid[]) and webtoons.catalog_status = 'active'
+    where recommendations.profile_id = any($1::uuid[]) and webtoons.catalog_status = 'active' and public.webtoon_is_public_safe(webtoons.raw_data)
     order by recommendations.profile_id, recommendations.sort_order
   `, [database.array(profileIds)]);
   const vectors: Record<string, Record<string, unknown>[]> = {};

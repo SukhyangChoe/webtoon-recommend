@@ -1,6 +1,6 @@
 import { safeWorkReturnPath } from './workDetailPresentation.mjs';
 
-export const WORK_SEARCH_STATE_KEY = 'webtoon-match:work-search:v1';
+export const WORK_SEARCH_STATE_KEY = 'webtoon-match:work-search:is-adult-only-v3';
 
 export function showFloatingSearch(path) {
   return (path === '/match' || path.startsWith('/match/')) && !path.startsWith('/match/test/') && path !== '/match/result/building';
@@ -24,7 +24,7 @@ export function workSearchHref(query = '', from = '/match') {
 export function readWorkSearchState(storage, query, now = Date.now()) {
   try {
     const saved = JSON.parse(storage?.getItem(WORK_SEARCH_STATE_KEY) ?? 'null');
-    if (!saved || saved.query !== query || !Number.isFinite(saved.savedAt) || now < saved.savedAt || now - saved.savedAt > 24 * 60 * 60 * 1000 || !Number.isInteger(saved.page) || saved.page < 1 || saved.page > 10000 || typeof saved.hasMore !== 'boolean' || !Number.isFinite(saved.scrollY) || saved.scrollY < 0 || !Array.isArray(saved.items) || saved.items.length > 1000) return null;
+    if (!saved || saved.query !== query || !Number.isFinite(saved.savedAt) || now < saved.savedAt || now - saved.savedAt > 60 * 1000 || !Number.isInteger(saved.page) || saved.page < 1 || saved.page > 10000 || typeof saved.hasMore !== 'boolean' || !Number.isFinite(saved.scrollY) || saved.scrollY < 0 || !Array.isArray(saved.items) || saved.items.length > 1000) return null;
     if (!saved.items.every(item => item && typeof item.canonicalWebtoonId === 'string' && /^[\w-]{1,100}$/.test(item.canonicalWebtoonId) && typeof item.title === 'string' && typeof item.platform === 'string' && typeof item.mainGenre === 'string')) return null;
     return saved;
   } catch { return null; }

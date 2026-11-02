@@ -4,6 +4,8 @@ import postgres from "postgres";
 import { createWorkReadDatabase, type WorkReadDatabase } from './workReadDatabase';
 
 const MATCH_DATABASE_ENV = "WEBTOON_MATCH_DATABASE_URL";
+const RUNTIME_DATABASE_ENV = "WEBTOON_MATCH_RUNTIME_DATABASE_URL";
+const runtimeConnection = () => process.env[RUNTIME_DATABASE_ENV]?.trim() || process.env[MATCH_DATABASE_ENV]?.trim();
 
 export class MatchDatabaseNotConfiguredError extends Error {
   constructor() {
@@ -22,7 +24,7 @@ const globalDatabase = globalThis as typeof globalThis & {
 /** A single bounded read-only lane prevents analytics/writes from starving work detail reads. */
 export function getWorkReadDatabase(): WorkReadDatabase {
   if (globalDatabase.__webtoonWorkReadDatabaseV2) return globalDatabase.__webtoonWorkReadDatabaseV2;
-  const connectionString = process.env[MATCH_DATABASE_ENV]?.trim();
+  const connectionString = runtimeConnection();
   if (!connectionString) throw new MatchDatabaseNotConfiguredError();
   return globalDatabase.__webtoonWorkReadDatabaseV2 = createWorkReadDatabase(connectionString);
 }
@@ -30,19 +32,21 @@ export function getWorkReadDatabase(): WorkReadDatabase {
 export function getMatchDatabase(): MatchDatabaseClient {
   if (globalDatabase.__webtoonMatchDatabase) return globalDatabase.__webtoonMatchDatabase;
 
-  const connectionString = process.env[MATCH_DATABASE_ENV]?.trim();
+  const connectionString = runtimeConnection();
   if (!connectionString) throw new MatchDatabaseNotConfiguredError();
 
   globalDatabase.__webtoonMatchDatabase = postgres(connectionString, {
-    max: 1,
+    // Bounded per process: concurrent independent reads no longer serialize
+    // behind a single analytics write. Account for instance count in pool sizing.
+    max: 2,
     prepare: false,
     ssl: "require",
-    // Keep the single pooled connection around while a user moves from their
+    // Keep bounded pooled connections around while a user moves from their
     // result to recommendations and then searches. Reconnecting for each of
     // those screens was the largest avoidable part of the perceived delay.
     idle_timeout: 300,
     max_lifetime: 1800,
-    connect_timeout: 10,
+    connect_timeout: 4,
     onnotice: () => undefined,
   });
 

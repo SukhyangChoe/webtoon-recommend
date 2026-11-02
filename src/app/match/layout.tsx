@@ -15,6 +15,7 @@ import { Suspense, type CSSProperties } from "react";
 import { MatchScreenHeader } from "@/features/match/components/MatchScreenHeader";
 import { MATCH_UI_THEME } from "@/features/match/config/uiTheme.mjs";
 import { MatchFloatingTools } from '@/features/match/components/MatchFloatingTools';
+import { WorkReturnRestoration } from '@/features/match/components/WorkReturnRestoration';
 
 export const metadata: Metadata = {
   title: "웹툰궁합",
@@ -24,5 +25,5 @@ export const metadata: Metadata = {
 
 export default function MatchLayout({ children }: { children: React.ReactNode }) {
   const theme = Object.fromEntries(Object.entries(MATCH_UI_THEME).map(([key, value]) => [`--match-ui-${key}`, value])) as CSSProperties;
-  return <div className="match-module match-cyan" style={theme}><MatchAnalyticsTransport /><Suspense fallback={<div className="match-header-placeholder" />}><MatchScreenHeader /></Suspense>{children}<Suspense fallback={null}><MatchFloatingTools /></Suspense></div>;
+  return <div className="match-module match-cyan" style={theme}><MatchAnalyticsTransport /><Suspense fallback={<div className="match-header-placeholder" />}><MatchScreenHeader /></Suspense>{children}<Suspense fallback={null}><WorkReturnRestoration /><MatchFloatingTools /></Suspense></div>;
 }

@@ -36,7 +36,7 @@ export async function setRecommendationCommentLike(input: {commentId:string;like
     const rows=await sql<{comment_id:string;author_profile_id:string;canonical_webtoon_id:string}[]>`
       select c.comment_id::text,c.author_profile_id::text,c.canonical_webtoon_id
       from public.match_recommendation_comments c join public.webtoons w using(canonical_webtoon_id)
-      where c.comment_id=${input.commentId}::uuid and c.deleted_at is null and w.catalog_status='active' for update of c
+      where c.comment_id=${input.commentId}::uuid and c.deleted_at is null and w.catalog_status='active' and public.webtoon_is_public_safe(w.raw_data) for update of c
     `;
     const comment=rows[0];if(!comment)throw new Error('RECOMMENDATION_COMMENT_NOT_FOUND');
     const profiles=await sql<{profile_id:string}[]>`select profile_id::text from public.match_profiles where anonymous_id=${input.likerAnonymousId}::uuid limit 1`;

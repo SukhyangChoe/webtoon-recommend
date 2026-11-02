@@ -1,19 +1,20 @@
-import { NextResponse } from "next/server";
+import { readMatchJson } from '@/features/match/server/requestBody';
+import { matchJson } from '@/features/match/server/apiResponse';
 import { getPublicChallenge, updateChallenge } from "@/features/match/server/challengeStore";
 import { toMatchApiFailure } from "@/features/match/server/apiErrors";
 import { isAnonymousId } from "@/features/match/storage/anonymousIdentity.mjs";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(_request: Request, { params }: { params: Promise<{ challengeCode: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ challengeCode: string }> }) {
   try {
     const { challengeCode } = await params;
     const challenge = await getPublicChallenge(challengeCode);
-    if (!challenge) return NextResponse.json({ error: "CHALLENGE_NOT_FOUND" }, { status: 404 });
-    return NextResponse.json(challenge);
+    if (!challenge) return matchJson(request, { error: "CHALLENGE_NOT_FOUND" }, { status: 404 });
+    return matchJson(request, challenge);
   } catch (error) {
     const failure = toMatchApiFailure(error, "CHALLENGE_LOAD_FAILED");
-    return NextResponse.json({ error: failure.error }, { status: failure.status });
+    return matchJson(request, { error: failure.error }, { status: failure.status });
   }
 }
 
@@ -30,12 +31,12 @@ function ownerAnonymousId(request: Request) {
 export async function PATCH(request: Request, { params }: { params: Promise<{ challengeCode: string }> }) {
   try {
     const { challengeCode } = await params;
-    const body = await request.json() as { status?: string; rankingVisibility?: boolean };
+    const body = await readMatchJson(request) as { status?: string; rankingVisibility?: boolean };
     if (body.status !== undefined && body.status !== "active" && body.status !== "closed") {
-      return NextResponse.json({ error: "INVALID_CHALLENGE_STATUS" }, { status: 400 });
+      return matchJson(request, { error: "INVALID_CHALLENGE_STATUS" }, { status: 400 });
     }
     if (body.rankingVisibility !== undefined && typeof body.rankingVisibility !== "boolean") {
-      return NextResponse.json({ error: "INVALID_RANKING_VISIBILITY" }, { status: 400 });
+      return matchJson(request, { error: "INVALID_RANKING_VISIBILITY" }, { status: 400 });
     }
     const challenge = await updateChallenge({
       challengeCode,
@@ -44,10 +45,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ch
       ownerManageToken: ownerToken(request),
       ownerAnonymousId: ownerAnonymousId(request),
     });
-    return NextResponse.json(challenge);
+    return matchJson(request, challenge);
   } catch (error) {
     const failure = toMatchApiFailure(error, "CHALLENGE_UPDATE_FAILED");
     const activeChallengeCode = error && typeof error === "object" && "challengeCode" in error && typeof error.challengeCode === "string" ? error.challengeCode : null;
-    return NextResponse.json({ error: failure.error, ...(failure.error === "ACTIVE_CHALLENGE_EXISTS" && activeChallengeCode ? { challengeCode: activeChallengeCode } : {}) }, { status: failure.status });
+    return matchJson(request, { error: failure.error, ...(failure.error === "ACTIVE_CHALLENGE_EXISTS" && activeChallengeCode ? { challengeCode: activeChallengeCode } : {}) }, { status: failure.status });
   }
 }

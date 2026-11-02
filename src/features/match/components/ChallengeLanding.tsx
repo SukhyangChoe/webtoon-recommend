@@ -1,5 +1,9 @@
 "use client";
 
+import { MatchLoading } from './MatchLoading';
+import { loadWorkResource } from '../api/loadWorkResource.mjs';
+import { useRouter } from 'next/navigation';
+
 import { useEffect, useRef, useState } from "react";
 import { trackMatchEvent } from "../analytics/client";
 import { MATCH_ROUTES } from "../config/routes";
@@ -12,29 +16,31 @@ import { validateMatchNickname } from "../server/nickname.mjs";
 type ChallengeInfo = { ownerNickname: string; entryCount: number; topScore: number | null; questionSetVersion: string; status: string };
 
 export function ChallengeLanding({ challengeCode }: { challengeCode: string }) {
+  const router=useRouter();
   const [challenge, setChallenge] = useState<ChallengeInfo | null>(null);
   const [existingResultId, setExistingResultId] = useState("");
   const [isOwner, setIsOwner] = useState(false);
   const [nickname, setNickname] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState("");
+  const [retry, setRetry] = useState(0);
   const landingTracked = useRef(false);
   const restartPending = useRef(false);
   const nicknameValidation = validateMatchNickname(nickname);
 
   useEffect(() => {
     let active = true;
+    const controller=new AbortController();
+    setError('');
     const ownerToken = readOwnerManageToken(window.localStorage, challengeCode);
     const savedResult = readChallengeResult(window.localStorage, challengeCode);
     const pending = readPendingChallenge(window.localStorage);
     if (!ownerToken && savedResult?.resultId) {
       clearPendingChallenge(window.localStorage);
-      window.location.replace(`/match/c/${challengeCode}/match/${savedResult.resultId}`);
+      router.replace(`/match/c/${challengeCode}/match/${savedResult.resultId}`);
       return () => { active = false; };
     }
-    void fetch(`/api/v1/challenges/${challengeCode}`).then(async (response) => {
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error ?? "CHALLENGE_NOT_FOUND");
+    void loadWorkResource(`/api/v1/challenges/${challengeCode}`,{signal:controller.signal,timeoutMs:8000,notFoundMessage:'이 궁합 링크를 찾지 못했어요.'}).then(async (body) => {
       if (!active) return;
       if (pending?.challengeCode === challengeCode && pending.challengerNickname) {
         setNickname(pending.challengerNickname);
@@ -54,6 +60,7 @@ export function ChallengeLanding({ challengeCode }: { challengeCode: string }) {
         const identity = ensureAnonymousId({ cookieText: document.cookie, storage: window.localStorage });
         const existingResponse = await fetch(`/api/v1/challenges/${challengeCode}/entries`, {
           method: "POST",
+          signal:AbortSignal.any([controller.signal,AbortSignal.timeout(8000)]),
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ anonymousId: identity.anonymousId, challengerPublicProfileId: draft.resultPublicId, lookupOnly: true }),
         });
@@ -62,7 +69,7 @@ export function ChallengeLanding({ challengeCode }: { challengeCode: string }) {
         if (existingResponse.ok && existing.resultId) {
           writeChallengeResult(window.localStorage, challengeCode, existing.resultId, draft.resultPublicId);
           clearPendingChallenge(window.localStorage);
-          window.location.replace(`/match/c/${challengeCode}/match/${existing.resultId}`);
+          router.replace(`/match/c/${challengeCode}/match/${existing.resultId}`);
           return;
         }
         setExistingResultId(draft.resultPublicId);
@@ -71,14 +78,14 @@ export function ChallengeLanding({ challengeCode }: { challengeCode: string }) {
       }
       setChallenge(body);
       setIsOwner(Boolean(ownerToken));
-    }).catch(() => active && setError("이 궁합 링크를 찾지 못했어요."));
-    return () => { active = false; };
-  }, [challengeCode]);
+    }).catch(error => active && !controller.signal.aborted && setError(error instanceof Error?error.message:'초대 정보를 불러오지 못했어요.'));
+    return () => { active = false; controller.abort(); };
+  }, [challengeCode,retry,router]);
 
   function continueWithExisting() {
     if (!nicknameValidation.valid || !agreed) return;
     writePendingChallenge(window.localStorage, challengeCode, nicknameValidation.nickname);
-    window.location.assign(MATCH_ROUTES.building);
+    router.push(MATCH_ROUTES.building);
   }
 
   async function startFresh() {
@@ -90,7 +97,7 @@ export function ChallengeLanding({ challengeCode }: { challengeCode: string }) {
       const identity = ensureAnonymousId({ cookieText: document.cookie, storage: window.localStorage });
       await restartMatchTest({ anonymousId: identity.anonymousId, storage: window.localStorage });
       writePendingChallenge(window.localStorage, challengeCode, preparedNickname);
-      window.location.assign(MATCH_ROUTES.intro);
+      router.push(MATCH_ROUTES.intro);
     } catch (error) {
       setError(error instanceof Error ? error.message : '테스트를 다시 시작하지 못했어요.');
       restartPending.current = false;
@@ -103,8 +110,8 @@ export function ChallengeLanding({ challengeCode }: { challengeCode: string }) {
     else startFresh();
   }
 
-  if (error && !challenge) return <section className="match-card match-hero"><p className="match-eyebrow">링크 확인</p><h1>{error}</h1><a className="match-button" href="/match">내 취향 테스트하기</a></section>;
-  if (!challenge) return <section className="match-card match-hero"><p>초대 링크를 불러오는 중이에요…</p></section>;
+  if (error && !challenge) return <section className="match-card match-hero"><p className="match-eyebrow">링크 확인</p><h1>{error}</h1><button className="match-button" onClick={()=>setRetry(value=>value+1)}>다시 불러오기</button><a href="/match">홈으로</a></section>;
+  if (!challenge) return <section className="match-card match-hero"><MatchLoading message="초대 링크를 불러오는 중이에요…" /></section>;
   if (error && !existingResultId) return <section className="match-card"><p className="match-notice" role="alert">{error}</p><button className="match-button" type="button" onClick={() => void startFresh()}>다시 시도</button></section>;
   if (challenge.status !== "active") return <section className="match-card match-hero"><p className="match-eyebrow">초대 종료</p><h1>이 궁합 링크는 지금 닫혀 있어요</h1>{isOwner ? <a className="match-button" href={`/match/c/${challengeCode}/ranking`}>랭킹 관리에서 다시 열기</a> : <a className="match-button" href="/match">내 취향 테스트하기</a>}</section>;
 

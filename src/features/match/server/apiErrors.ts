@@ -29,6 +29,8 @@ const STATUS_BY_CODE: Record<string, number> = {
   PAIR_RESULT_NOT_FOUND: 404,
   QUESTION_VERSION_MISMATCH: 409,
   RATE_LIMITED: 429,
+  REQUEST_BODY_TOO_LARGE: 413,
+  REQUEST_BODY_TIMEOUT: 408,
   RESULT_NOT_FOUND: 404,
   RESULT_OWNER_MISMATCH: 403,
   RECOMMENDATION_NOT_FOUND: 404,
@@ -47,6 +49,9 @@ export function toMatchApiFailure(error: unknown, fallbackCode: string): MatchAp
   }
   if (error instanceof SyntaxError) {
     return { error: "INVALID_REQUEST_BODY", status: 400 };
+  }
+  if (error && typeof error === 'object' && 'code' in error && ['57014','55P03','CONNECT_TIMEOUT'].includes(String(error.code))) {
+    return {error:'MATCH_SERVICE_UNAVAILABLE',status:503};
   }
 
   const candidate = error instanceof Error ? error.message : "";

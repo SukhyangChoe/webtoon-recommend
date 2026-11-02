@@ -1,5 +1,8 @@
 "use client";
 
+import { MatchLoading } from './MatchLoading';
+import { loadWorkResource } from '../api/loadWorkResource.mjs';
+
 import { BackIcon } from '@/components/layout/BackIcon';
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
@@ -38,6 +41,7 @@ type PairResult = { ownerNickname: string; challengerNickname: string; viewerRol
 export function PairResultView({ challengeCode, resultId, showRankingReturn = false }: { challengeCode: string; resultId: string; showRankingReturn?: boolean }) {
   const [result, setResult] = useState<PairResult | null>(null);
   const [error, setError] = useState("");
+  const [retry, setRetry] = useState(0);
   const [personalResultId, setPersonalResultId] = useState<string | null>(null);
   const [likeSavingKey, setLikeSavingKey] = useState<ReadonlySet<string>>(new Set());
   const inFlightLikes = useRef(new Set<string>());
@@ -49,12 +53,13 @@ export function PairResultView({ challengeCode, resultId, showRankingReturn = fa
 
   useEffect(() => {
     let active = true;
+    const controller=new AbortController();
+    setError('');
     const identity = ensureAnonymousId({ cookieText: document.cookie, storage: window.localStorage });
-    void fetch(`/api/v1/challenges/${challengeCode}/results/${resultId}`, {
+    void loadWorkResource(`/api/v1/challenges/${challengeCode}/results/${resultId}`, {
       headers: { "x-match-anonymous-id": identity.anonymousId },
-    }).then(async (response) => {
-      const body = await response.json();
-      if (!response.ok) throw new Error();
+      signal:controller.signal,timeoutMs:8000,notFoundMessage:'이 궁합 결과를 찾지 못했어요.',
+    }).then((body) => {
       if (active) {
         setResult(body);
         setPersonalResultId(body.viewerPublicProfileId ?? readMatchDraft(window.localStorage)?.resultPublicId ?? '');
@@ -63,9 +68,9 @@ export function PairResultView({ challengeCode, resultId, showRankingReturn = fa
           trackMatchEvent("wm_pair_result_view", { challengeCode, scoreBand: body.band?.label ?? "", rank: body.rank ?? 0 });
         }
       }
-    }).catch(() => active && setError("이 궁합 결과를 찾지 못했어요."));
-    return () => { active = false; };
-  }, [challengeCode, resultId]);
+    }).catch(error => active && !controller.signal.aborted && setError(error instanceof Error ? error.message : '이 궁합 결과를 불러오지 못했어요.'));
+    return () => { active = false; controller.abort(); };
+  }, [challengeCode, resultId,retry]);
 
   async function toggleRecommendationLike(item: RecommendedWebtoon) {
     if (!result || !item.canViewerLike || !item.commentId || !item.recommendationComment?.trim()) return;
@@ -115,8 +120,8 @@ export function PairResultView({ challengeCode, resultId, showRankingReturn = fa
     }
   }
 
-  if (error) return <main className="match-page wm-pair-page"><section className="wm-pair-panel"><h1>{error}</h1><a className="match-button" href={`/match/c/${challengeCode}`}>초대 화면으로</a></section></main>;
-  if (!result) return <main className="match-page wm-pair-page"><section className="wm-pair-panel" role="status"><p>둘의 궁합을 불러오는 중이에요…</p></section></main>;
+  if (error) return <main className="match-page wm-pair-page"><section className="wm-pair-panel"><h1>{error}</h1><button className="match-button" onClick={()=>setRetry(value=>value+1)}>다시 불러오기</button><Link href={`/match/c/${challengeCode}`}>초대 화면으로</Link></section></main>;
+  if (!result) return <main className="match-page wm-pair-page"><section className="wm-pair-panel" role="status"><MatchLoading message="둘의 궁합을 불러오는 중이에요…" /></section></main>;
   const archetype = pairArchetypeFor(result.score);
   const [badgeLead, ...badgeRest] = archetype.badge.split(" ");
   const scoreStyle = { "--pair-score-angle": `${Math.max(0, Math.min(100, result.score)) * 3.6}deg` } as CSSProperties;
@@ -181,13 +186,13 @@ function RecommendationCarousel({ nickname, items, mainHeading = false, likeSavi
   likeSavingKey: ReadonlySet<string>;
   onToggleLike: (item: RecommendedWebtoon) => Promise<void>;
 }) {
-  const { listRef, position, prepareNavigation, onKeyDown } = useRecommendationCarousel(items.length, `pair:${items[0]?.recommenderPublicProfileId ?? nickname}:${items[0]?.fitTargetPublicProfileId ?? ''}:${items.map(item => item.canonicalWebtoonId).join(',')}`);
+  const { listRef, railKey, prepareNavigation, onKeyDown } = useRecommendationCarousel(items.length, `pair:${items[0]?.recommenderPublicProfileId ?? nickname}:${items[0]?.fitTargetPublicProfileId ?? ''}`);
   const { containerRef, barRef, thumbRef } = useHorizontalScrollIndicator(listRef, items.length);
   const highlightedCount = items.filter((item) => item.tasteFitHighlighted).length;
   const Heading = mainHeading ? 'h2' : 'h3';
 
-  return <div ref={containerRef} className="wm-pair-work-group"><header><div><Heading>{nickname}님의 추천 <small>{items.length}</small></Heading>{highlightedCount ? <span className="wm-pair-fit-note">상대 취향에 맞는 작품 {highlightedCount}</span> : null}</div>{items.length ? <div className="wm-pair-carousel-controls"><span role="status" aria-label={`${nickname}님의 추천작 위치`}>{position.index + 1} / {items.length}</span></div> : null}</header>{items.length ? <ol ref={listRef} className={`wm-pair-work-track${items.length === 1 ? " is-single" : ""}`} tabIndex={items.length > 1 ? 0 : undefined} aria-label={`${nickname}님의 추천작 목록`} onKeyDown={onKeyDown}>{items.map((item, itemIndex) => {
-      return <li className="wm-pair-work-slide" key={item.canonicalWebtoonId} aria-label={`추천작 ${itemIndex + 1} / ${items.length}`}><RecommendationCard item={item} returnTo={typeof window === 'undefined' ? '/match' : window.location.pathname + window.location.search} onOpen={() => prepareNavigation(itemIndex)} likeAction={item.canViewerLike && item.commentId ? { liked: item.likedByViewer, saving: likeSavingKey.has(item.commentId), onToggle: () => void onToggleLike(item) } : undefined} /></li>;
+  return <div ref={containerRef} className="wm-pair-work-group"><header><div><Heading>{nickname}님의 추천 <small>{items.length}</small></Heading>{highlightedCount ? <span className="wm-pair-fit-note">상대 취향에 맞는 작품 {highlightedCount}</span> : null}</div></header>{items.length ? <ol ref={listRef} data-recommendation-rail={railKey} className={`wm-pair-work-track${items.length === 1 ? " is-single" : ""}`} tabIndex={items.length > 1 ? 0 : undefined} aria-label={`${nickname}님의 추천작 목록`} onKeyDown={onKeyDown}>{items.map((item, itemIndex) => {
+      return <li className="wm-pair-work-slide" key={item.canonicalWebtoonId} aria-label={`추천작 ${itemIndex + 1} / ${items.length}`}><RecommendationCard item={item} returnTo={typeof window === 'undefined' ? '/match' : window.location.pathname + window.location.search} onOpen={prepareNavigation} likeAction={item.canViewerLike && item.commentId ? { liked: item.likedByViewer, saving: likeSavingKey.has(item.commentId), onToggle: () => void onToggleLike(item) } : undefined} /></li>;
     })}</ol> : <div className="wm-pair-work-empty"><p className="wm-pair-muted">등록한 추천작이 없어요.</p></div>}{items.length > 1 ? <div ref={barRef} className="wm-rail-scrollbar wm-pair-scrollbar" aria-hidden="true"><span ref={thumbRef} /></div> : null}</div>;
 }
 

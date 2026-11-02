@@ -3,7 +3,7 @@ import {
   recommendationToTasteVector,
 } from "./tasteVectorEngine.mjs";
 
-export const RECOMMENDATION_FIT_HIGHLIGHT_THRESHOLD = 0.7;
+export const RECOMMENDATION_FIT_HIGHLIGHT_THRESHOLD = 0.6;
 export const RECOMMENDATION_FIT_MIN_COMPARABLE_AXES = 2;
 
 const AXIS_WEIGHTS = Object.freeze({

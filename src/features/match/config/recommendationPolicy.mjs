@@ -1,6 +1,7 @@
 export const RECOMMENDATION_COMMENT_MAX_LENGTH = 80;
-export const RECOMMENDATION_SEARCH_POLICY_VERSION = 'sexual-core-v1';
-export const RECOMMENDATION_AGE_RESTRICTION_MESSAGE = '성인 인증이 필요한 작품은 아직 추천작으로 등록할 수 없어요.';
+import { CATALOG_ACCESS_POLICY_VERSION } from './catalogAgePolicy.mjs';
+export const RECOMMENDATION_SEARCH_POLICY_VERSION = CATALOG_ACCESS_POLICY_VERSION;
+export const RECOMMENDATION_AGE_RESTRICTION_MESSAGE = '성인 작품(isAdult=true)은 아직 추천작으로 등록할 수 없어요.';
 
 // Presentation guard only. The server always checks the current catalog itself.
 export function isRecommendationRegistrationBlocked(item) {

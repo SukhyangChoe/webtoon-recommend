@@ -80,14 +80,15 @@ const postgres = require('postgres');
     const pairTrack=page.locator('.wm-pair-work-track').first();
     if(await pairTrack.locator(':scope > li').count()>1){
       await pairTrack.focus();await page.keyboard.press('ArrowRight');
-      await page.waitForFunction(()=>document.querySelector('.wm-pair-carousel-controls>span')?.textContent.startsWith('2 /'));
+      await page.waitForFunction(()=>document.querySelector('.wm-pair-work-track').scrollLeft>20);
+      const returnLeft=await pairTrack.evaluate(el=>el.scrollLeft);
       const item=primaryRecommendations[1];
       await page.getByRole('link',{name:`${item.title} 작품 상세 보기`,exact:true}).first().click();
       await page.waitForURL(/\/match\/work\//);
       await page.getByRole('heading',{name:item.title,level:1,exact:true}).waitFor();
       await page.getByRole('button',{name:'이전 화면으로 돌아가기'}).click();
       await page.waitForURL(base+pairPath);
-      await page.waitForFunction(()=>document.querySelector('.wm-pair-carousel-controls>span')?.textContent.startsWith('2 /'));
+      await page.waitForFunction(left=>Math.abs(document.querySelector('.wm-pair-work-track').scrollLeft-left)<2,returnLeft);
     }
     const detailPath=`/match/work/wt_romance_ropan_016?profile=${profile}&returnTo=${encodeURIComponent(pairPath)}`;
     await page.goto(base+detailPath);

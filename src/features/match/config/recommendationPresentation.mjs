@@ -39,8 +39,14 @@ export function reorderRecommendation(items, sourceId, targetId) {
   return next;
 }
 
-export function recommendationCarouselState(index, count) {
-  const last = Math.max(0, count - 1);
-  const current = Math.max(0, Math.min(last, Math.round(index)));
-  return { index: current, left: current > 0, right: current < last };
+/** A one-way, constant-speed title pan; CSS resets directly at the cycle boundary. */
+export function recommendationTitleMotion(distance) {
+  const travel = Number.isFinite(distance) ? Math.max(0, distance) : 0;
+  return { travel, duration: Math.max(1.2, travel / 48) };
+}
+
+export function recommendationScrollTarget(left, viewport, content, key) {
+  const max = Math.max(0, content - viewport);
+  const target = key === 'Home' ? 0 : key === 'End' ? max : left + (key === 'ArrowRight' ? 80 : -80);
+  return Math.max(0, Math.min(max, target));
 }

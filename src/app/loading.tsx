@@ -1,5 +1,6 @@
 import { PageContainer } from "@/components/layout/PageContainer";
 import { StatePanel } from "@/components/ui/StatePanel";
+import { MatchLoading } from '@/features/match/components/MatchLoading';
 
 export default function Loading() {
   return (
@@ -11,6 +12,7 @@ export default function Loading() {
           title="잠시만 기다려 주세요"
           description="입력한 내용은 그대로 유지하고 있어요."
         />
+        <MatchLoading compact message="화면을 준비하고 있어요" />
       </PageContainer>
     </main>
   );

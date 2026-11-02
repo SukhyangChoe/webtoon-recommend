@@ -65,14 +65,11 @@ body:has(.wm-pair-page) .brand-bar__logo { left: 50% !important; right: auto !im
 .wm-pair-work-group header h2 { font-size: var(--wm-font-section, 19px); font-weight: 750; }
 .wm-pair-work-group header :is(h2, h3) small { color: #6e8995; font-size: 14px; font-weight: 500; padding-left: 3px; }
 .wm-pair-work-group > header > div:first-child { min-width: 0; }
-.wm-pair-carousel-controls { display: flex; flex-shrink: 0; align-items: center; justify-content: flex-end; gap: 6px; margin-left: auto; }
-.wm-pair-carousel-controls > span { color: #547581; font-size: 13px; white-space: nowrap; margin-right: 3px; }
 .wm-pair-fit-note { display: block; margin-top: 5px; color: #895b10; font-size: 12px; line-height: 1.5; }
-.wm-pair-work-track { display: flex; align-items: stretch; list-style: none; padding: 2px; margin: 0; gap: 10px; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; }
+.wm-pair-work-track { display: flex; align-items: stretch; list-style: none; padding: 2px 0; margin: 0; gap: 10px; overflow-x: auto; overflow-y: hidden; scroll-snap-type: none; scrollbar-width: none; overscroll-behavior-x: contain; }
 .wm-pair-work-track::-webkit-scrollbar { display: none; }
-/* Compact covers reveal more of the next work; end space preserves final alignment. */
-.wm-pair-work-slide { flex: 0 0 calc((100% - 10px) / 1.65); min-width: 0; display: flex; scroll-snap-align: start; scroll-snap-stop: always; }
-.wm-pair-work-track:not(.is-single)::after { content: ''; flex: 0 0 calc(100% - (100% - 10px) / 1.65 - 10px); }
+/* Fixed, compact covers: wider phones naturally show more works, without end filler. */
+.wm-pair-work-slide { flex: 0 0 160px; min-width: 0; display: flex; }
 .wm-pair-work-card { width: 100%; min-width: 0; }
 /* A shared slim portrait frame; cover crops the edges without distorting artwork. */
 .wm-pair-work-artwork { position: relative; isolation: isolate; aspect-ratio: 2 / 3; overflow: hidden; border-radius: 7px; background: #d9eaf0; }
@@ -82,14 +79,14 @@ body:has(.wm-pair-page) .brand-bar__logo { left: 50% !important; right: auto !im
 .wm-pair-work-track .wm-cover-book { width: 40px; height: 56px; }
 .wm-pair-work-track .wm-cover-book::after { width: 22px; left: 7px; top: 10px; }
 /* Decorative padding and metadata must not block the full-cover detail link. */
-.wm-pair-work-copy { position: absolute; inset: auto 0 0; z-index: 1; pointer-events: none; min-width: 0; padding: 40px 11px 8px; color: #fff; background: linear-gradient(180deg, #07171f00, #07171fba 38%, #07171ff2); }
+.wm-pair-work-copy { position: absolute; inset: auto 0 0; z-index: 1; pointer-events: none; min-width: 0; padding: 28px 9px 6px; color: #fff; background: linear-gradient(180deg, #07171f00, #07171fba 38%, #07171ff2); }
 .wm-pair-work-copy a, .wm-pair-work-copy button { pointer-events: auto; }
 .wm-pair-work-title { display: block; min-width: 0; color: inherit; text-decoration: none; }
-.wm-pair-work-track .wm-pair-work-title :is(h3, h4) { margin: 0; overflow: hidden; white-space: nowrap; color: #fff; font-size: 18px; line-height: 1.5; font-weight: 750; text-shadow: 0 1px 4px #0005; }
+.wm-pair-work-track .wm-pair-work-title :is(h3, h4) { margin: 0; overflow: hidden; white-space: nowrap; color: #fff; font-size: 16px; line-height: 1.5; font-weight: 750; text-shadow: 0 1px 4px #0005; }
 .wm-scrolling-title > span { display: inline-block; vertical-align: top; }
 @keyframes wm-title-pan {
-  0%, 12%, 100% { transform: translateX(0); }
-  50%, 62% { transform: translateX(var(--wm-title-travel)); }
+  from { transform: translateX(0); }
+  to { transform: translateX(var(--wm-title-travel)); }
 }
 @media (prefers-reduced-motion: no-preference) {
   .wm-scrolling-title[data-overflow="true"] > span { animation: wm-title-pan var(--wm-title-duration) linear infinite; animation-play-state: paused; }
@@ -103,7 +100,7 @@ body:has(.wm-pair-page) .brand-bar__logo { left: 50% !important; right: auto !im
   .wm-pair-work-track .wm-pair-work-title .wm-scrolling-title { text-overflow: ellipsis; }
   .wm-scrolling-title > span { display: inline; }
 }
-.wm-pair-work-meta { display: flex; align-items: center; justify-content: space-between; gap: 4px; width: 100%; min-height: 44px; margin-top: 3px; }
+.wm-pair-work-meta { display: flex; align-items: center; gap: 4px; width: 100%; min-height: 18px; margin-top: 2px; }
 .wm-pair-work-meta > small { min-width: 0; color: #e0e9ed; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 .wm-pair-work-like { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; gap: 4px; min-width: 44px; min-height: 44px; padding: 4px 8px; border: 1px solid #ffffffb3; border-radius: 999px; color: #193640; background: #fffffff5; box-shadow: 0 2px 8px #0002; font-size: 12px !important; font-weight: 700 !important; transition: background .15s, border-color .15s; }
 .wm-pair-work-like > span:first-child { color: #547581; font-size: 17px; line-height: 1; }

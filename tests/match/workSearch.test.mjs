@@ -13,7 +13,7 @@ function memory() { const data=new Map();return {getItem:key=>data.get(key)??nul
 function load(relative,dependencies) {
  const filename=new URL(relative,import.meta.url),localRequire=createRequire(filename),compiledModule={exports:{}};
  const code=ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText;
- vm.runInNewContext(code,{module:compiledModule,exports:compiledModule.exports,URL,require:name=>dependencies[name]??localRequire(name)},{filename:filename.pathname});return compiledModule.exports;
+ vm.runInNewContext(code,{module:compiledModule,exports:compiledModule.exports,URL,require:name=>dependencies[name]??(name==='@/features/match/server/apiResponse'?{matchJson:(_request,body,options)=>Response.json(body,options)}:localRequire(name))},{filename:filename.pathname});return compiledModule.exports;
 }
 
 test('work tests resume unfinished answers and remember a safe tab-local destination without any server writes',()=>{
@@ -85,6 +85,6 @@ test('search API keeps recommendation management as the default and exposes cata
  const request=query=>route.GET(new Request('http://localhost/api/v1/webtoons/search?'+query));
  const recommendations=await request('q=test');assert.equal(recommendations.status,200);assert.equal(recommendations.headers.get('cache-control'),'no-store');assert.deepEqual(calls.at(-1),['recommendations','test']);
  const page=await request('q=test&scope=catalog&page=2');assert.deepEqual(await page.json(),{items:[],hasMore:false,page:2});assert.deepEqual(calls.at(-1),['catalog','test',2]);
- assert.equal(page.headers.get('cache-control'),'public, s-maxage=600, stale-while-revalidate=3600');
+ assert.equal(page.headers.get('cache-control'),'public, max-age=0, s-maxage=60');
  for(const invalid of ['page=-1','page=1.5','page=0','page=10001','scope=unknown','q='+ 'a'.repeat(101)])assert.equal((await request(invalid)).status,400);
 });
