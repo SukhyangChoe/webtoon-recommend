@@ -170,18 +170,28 @@ export function MatchResultView({ publicProfileId }: { publicProfileId: string }
 function GenreRanking({ genres }: { genres: DisplayGenre[] }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const rankedGenres = genres.filter(genre => genre.stars > 0);
-  const hasMore = rankedGenres.length > 3;
+  const [hasMore, setHasMore] = useState(false);
   const { containerRef, barRef, thumbRef } = useHorizontalScrollIndicator(trackRef, rankedGenres.length);
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+    const measure = () => setHasMore(track.scrollWidth > track.clientWidth + 1);
+    const observer = new ResizeObserver(measure);
+    observer.observe(track);
+    Array.from(track.children).forEach(card => observer.observe(card));
+    measure();
+    return () => observer.disconnect();
+  }, [rankedGenres.length]);
   if (!rankedGenres.length) return null;
   return <div className="wm-genre-ranking" ref={containerRef}><div ref={trackRef} className={`wm-top-genres${hasMore ? ' has-more' : ''}`} role="region" aria-label={hasMore ? '장르 취향 순위, 좌우로 넘겨 보기' : '장르 취향 순위'} tabIndex={hasMore ? 0 : undefined} onKeyDown={event => {
     if (!hasMore || event.target !== event.currentTarget || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
     event.preventDefault();
     const track = event.currentTarget;
-    const step = (track.firstElementChild?.getBoundingClientRect().width ?? 0) + 8;
+    const step = (track.firstElementChild?.getBoundingClientRect().width ?? 0) + 10;
     const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth';
     if (event.key === 'Home' || event.key === 'End') track.scrollTo({ left: event.key === 'Home' ? 0 : track.scrollWidth, behavior });
     else track.scrollBy({ left: event.key === 'ArrowRight' ? step : -step, behavior });
-  }}>{rankedGenres.map((genre, index) => <article key={genre.genreKey} className={index === 0 ? 'is-primary' : ''}><span>{index === 0 ? '♛ ' : ''}{index + 1}위</span><strong>{genre.displayLabel}</strong><TopStarRow count={genre.stars} /></article>)}</div>{hasMore ? <div ref={barRef} className="wm-rail-scrollbar wm-genre-scrollbar" aria-hidden="true"><span ref={thumbRef} style={{ width: `${300 / rankedGenres.length}%` }} /></div> : null}</div>;
+  }}>{rankedGenres.map((genre, index) => <article key={genre.genreKey} className={index === 0 ? 'is-primary' : ''}><div className="wm-genre-card-heading"><span className="wm-genre-rank">{index + 1}위</span><strong>{genre.displayLabel}</strong></div><TopStarRow count={genre.stars} /></article>)}</div><div ref={barRef} className="wm-rail-scrollbar wm-genre-scrollbar" hidden={!hasMore} aria-hidden="true"><span ref={thumbRef} style={{ width: `${100 / rankedGenres.length}%` }} /></div></div>;
 }
 
 function TopStarRow({ count }: { count: number }) {
@@ -191,7 +201,7 @@ function TopStarRow({ count }: { count: number }) {
 
 function TasteProfile({ details, lessMatchedLabels }: { details: TasteDetail[]; lessMatchedLabels: string[] }) {
   return <section className="wm-panel wm-interpretation" aria-label="취향 포인트">
-    <div className="wm-taste-group"><h2><span aria-hidden="true">♡</span> 끌리는 요소</h2>{details.length ? <ul className="wm-taste-tiles">{details.map(item => <li key={`${item.category}-${item.value}`}><TasteFeatureIcon value={item.value} category={item.category} /><div><span>{item.category}</span><strong>{item.value}</strong></div></li>)}</ul> : <p className="wm-taste-empty">선택한 요소 없음</p>}</div>
+    <div className="wm-taste-group"><h2><span aria-hidden="true">♡</span> 끌리는 요소</h2>{details.length ? <ul className="wm-taste-tiles">{details.map(item => <li key={`${item.category}-${item.value}`} title={`${item.category} · ${item.value}`}><TasteFeatureIcon value={item.value} category={item.category} /><span className="wm-sr-only">{item.category}: </span><strong>{item.value}</strong></li>)}</ul> : <p className="wm-taste-empty">선택한 요소 없음</p>}</div>
     <div className="wm-taste-group"><h2><span aria-hidden="true">⊖</span> 망설이는 요소</h2>{lessMatchedLabels.length ? <ul className="wm-avoidance">{lessMatchedLabels.map(label => <li key={label}>{label}</li>)}</ul> : <p className="wm-taste-empty">없음</p>}</div>
   </section>;
 }

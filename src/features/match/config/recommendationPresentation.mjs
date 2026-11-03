@@ -39,10 +39,18 @@ export function reorderRecommendation(items, sourceId, targetId) {
   return next;
 }
 
-/** A one-way, constant-speed title pan; CSS resets directly at the cycle boundary. */
+export const RECOMMENDATION_TITLE_PIXELS_PER_SECOND = 48;
+export const RECOMMENDATION_TITLE_START_HOLD_SECONDS = .5;
+export const RECOMMENDATION_TITLE_END_HOLD_SECONDS = 1;
+
+/** Half-second start hold, fixed pixel speed, one-second end hold, instant reset. */
 export function recommendationTitleMotion(distance) {
   const travel = Number.isFinite(distance) ? Math.max(0, distance) : 0;
-  return { travel, duration: Math.max(1.2, travel / 48) };
+  const moveDuration = travel / RECOMMENDATION_TITLE_PIXELS_PER_SECOND;
+  const startHoldDuration = RECOMMENDATION_TITLE_START_HOLD_SECONDS;
+  const holdDuration = RECOMMENDATION_TITLE_END_HOLD_SECONDS;
+  const duration = startHoldDuration + moveDuration + holdDuration;
+  return { travel, duration, moveDuration, startHoldDuration, holdDuration, moveStartPercent: startHoldDuration / duration * 100, moveEndPercent: (startHoldDuration + moveDuration) / duration * 100 };
 }
 
 export function recommendationScrollTarget(left, viewport, content, key) {

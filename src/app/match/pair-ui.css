@@ -89,9 +89,14 @@ body:has(.wm-pair-page) .brand-bar__logo { left: 50% !important; right: auto !im
   to { transform: translateX(var(--wm-title-travel)); }
 }
 @media (prefers-reduced-motion: no-preference) {
-  .wm-scrolling-title[data-overflow="true"] > span { animation: wm-title-pan var(--wm-title-duration) linear infinite; animation-play-state: paused; }
+  .wm-scrolling-title[data-overflow="true"] > span { animation: wm-title-pan var(--wm-title-duration) linear infinite; animation-timing-function: linear(0, 0 var(--wm-title-move-start), 1 var(--wm-title-move-end), 1); animation-play-state: paused; }
   .wm-scrolling-title[data-overflow="true"][data-visible="true"] > span { animation-play-state: running; }
   .wm-pair-work-title:focus-visible .wm-scrolling-title > span { animation-play-state: paused; }
+}
+/* Older engines keep a readable static title instead of using a wrong speed. */
+@supports not (animation-timing-function: linear(0, 1 50%, 1)) {
+  .wm-scrolling-title[data-overflow="true"] > span { animation: none; }
+  .wm-pair-work-track .wm-pair-work-title .wm-scrolling-title { text-overflow: ellipsis; }
 }
 @media (hover: hover) and (pointer: fine) {
   .wm-pair-work-title:hover .wm-scrolling-title > span { animation-play-state: paused; }

@@ -39,11 +39,13 @@ function RecommendationTitle({ title, level }: { title: string; level: 3 | 4 }) 
     const measure = () => {
       if (disposed) return;
       const overflow = Math.max(0, text.offsetWidth - heading.clientWidth);
-      const { travel, duration } = recommendationTitleMotion(overflow ? overflow + 2 : 0);
+      const { travel, duration, moveStartPercent, moveEndPercent } = recommendationTitleMotion(overflow ? overflow + 2 : 0);
       // Keep the entire title as one accessible heading, without duplicated text.
       heading.dataset.overflow = String(heading.clientWidth > 0 && overflow > 1);
       text.style.setProperty('--wm-title-travel', `${-travel}px`);
       text.style.setProperty('--wm-title-duration', `${duration}s`);
+      text.style.setProperty('--wm-title-move-start', `${moveStartPercent}%`);
+      text.style.setProperty('--wm-title-move-end', `${moveEndPercent}%`);
     };
     const resize = new ResizeObserver(measure);
     resize.observe(heading);

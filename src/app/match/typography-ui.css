@@ -41,15 +41,17 @@
 .match-module.match-cyan input:not([type=checkbox], [type=radio]),
 .match-module.match-cyan textarea { font-size: var(--wm-font-body); line-height: 1.6; }
 .match-module.match-cyan :is(.wm-screen h2, .wm-pair-panel > h2, .wm-pair-recommendations > h2) { font-size: var(--wm-font-section); line-height: 1.5; }
-.match-module.match-cyan :is(.wm-screen .wm-taste-group h2, .wm-top-genres strong, .wm-taste-tiles strong, .wm-work-copy h3, .wm-ranking-person-copy > strong, .wm-visibility-switch strong, .wm-replace-guide strong) {
+.match-module.match-cyan :is(.wm-taste-tiles strong, .wm-work-copy h3, .wm-ranking-person-copy > strong, .wm-visibility-switch strong, .wm-replace-guide strong) {
   font-size: var(--wm-font-body);
   line-height: 1.5;
 }
+.match-module.match-cyan .wm-screen .wm-taste-group h2 { font-size: 13px; line-height: 1.5; }
+.match-module.match-cyan .wm-top-genres strong { font-size: 16px; line-height: 1.5; }
 .match-module.match-cyan :is(.wm-screen .wm-note, .wm-screen .wm-eyebrow, .wm-screen .wm-result-meta, .wm-panel-heading a, .wm-local-nav, .wm-avoidance li, .wm-screen .wm-taste-empty, .wm-empty, .wm-count, .wm-return-link, .wm-save-tray > span, .wm-floating-toast, .wm-load-error) {
   font-size: var(--wm-font-secondary);
   line-height: 1.6;
 }
-.match-module.match-cyan :is(.wm-taste-tiles li div > span, .wm-top-genres article > span:first-child, .wm-genre-tag, .wm-comment-field > small, .wm-quick-reasons p, .wm-quick-reasons button, .wm-reorder-actions button, .wm-feedback-row button, .wm-carousel-controls > span) {
+.match-module.match-cyan :is(.wm-taste-tiles li div > span, .wm-genre-rank, .wm-genre-tag, .wm-comment-field > small, .wm-quick-reasons p, .wm-quick-reasons button, .wm-reorder-actions button, .wm-feedback-row button, .wm-carousel-controls > span) {
   font-size: var(--wm-font-caption);
   line-height: 1.5;
 }

@@ -57,11 +57,12 @@ const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
     const text=el.firstElementChild,animation=text.getAnimations()[0];animation.pause();
     const duration=animation.effect.getTiming().duration,travel=-parseFloat(text.style.getPropertyValue('--wm-title-travel'));
     const x=()=>new DOMMatrixReadOnly(getComputedStyle(text).transform).m41;
-    animation.currentTime=duration*.5;const middle=x();animation.currentTime=duration-1;const end=x(),endRight=text.getBoundingClientRect().right-el.getBoundingClientRect().right;
+    const moveDuration=duration-1500;
+    animation.currentTime=250;const initial=x();animation.currentTime=500+moveDuration*.5;const middle=x();animation.currentTime=500+moveDuration+50;const holdStart=x();animation.currentTime=duration-1;const end=x(),endRight=text.getBoundingClientRect().right-el.getBoundingClientRect().right;
     animation.currentTime=duration+1;const reset=x();animation.play();
-    return {duration,travel,middle,end,reset,endRight};
+    return {duration,travel,middle,end,reset,endRight,holdStart,initial};
    });
-   assert.ok(Math.abs(motion.duration/1000-Math.max(1.2,motion.travel/48))<.01);assert.ok(motion.end<motion.middle);assert.ok(motion.endRight<=1&&motion.endRight>=-4);assert.ok(Math.abs(motion.reset)<1,'cycle jumps directly to the beginning without reverse panning');
+   assert.ok(Math.abs(motion.duration/1000-(motion.travel/48+1.5))<.01);assert.ok(Math.abs(motion.initial)<.01,'the beginning stays still for half a second');assert.ok(motion.end<motion.middle);assert.ok(Math.abs(motion.end-motion.holdStart)<.01,'the final characters stay still for the one-second end hold');assert.ok(motion.endRight<=1&&motion.endRight>=-4);assert.ok(Math.abs(motion.reset)<1,'cycle jumps directly to the beginning without reverse panning');
    for(const browserBack of [false,true]){
     await track.evaluate(el=>{el.scrollLeft=73;scrollTo({top:scrollY+el.getBoundingClientRect().top-130,behavior:'instant'});});await pause(150);
     const saved=await track.evaluate(el=>({left:el.scrollLeft,top:el.getBoundingClientRect().top,y:scrollY}));

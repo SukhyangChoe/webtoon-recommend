@@ -275,8 +275,8 @@ const { chromium } = require("playwright");
     recommendationCount=3;
     await page.reload();await page.locator('.wm-top-genres').waitFor();
     assert.equal(await page.getByText('전체 장르 취향', { exact: true }).count(), 0, 'the old expanded genre list is removed');
-    assert.equal(await page.locator('.wm-top-genres').getAttribute('tabindex'), null, 'three or fewer genres have no unnecessary scroll focus stop');
-    assert.equal(await page.locator('.wm-genre-scrollbar').count(), 0, 'no misleading position indicator when all genres already fit');
+    await page.waitForFunction(() => document.querySelector('.wm-top-genres')?.getAttribute('tabindex') === '0');
+    assert.ok(await page.locator('.wm-genre-scrollbar').isVisible(), 'wide cards expose keyboard scrolling and a position indicator whenever they overflow');
     const extraGenres = [
       ['action', '액션'], ['murim', '무협'], ['romance', '로맨스'],
       ['thriller_horror', '스릴러·공포'], ['drama_daily', '드라마·일상'], ['sports', '스포츠'],
@@ -295,7 +295,7 @@ const { chromium } = require("playwright");
         const hero = wrapper.parentElement.getBoundingClientRect();
         return Math.abs(bar.top - card.bottom - 18) < 1 && Math.abs(hero.bottom - bar.bottom - 18) < 1;
       }); // Wait for ResizeObserver/layout after reloading the ranked cards.
-      assert.deepEqual(await rail.locator('article > span:first-child').allTextContents(), Array.from({ length: 3 + additionalCount }, (_, i) => `${i === 0 ? '♛ ' : ''}${i + 1}위`));
+      assert.deepEqual(await rail.locator('.wm-genre-rank').allTextContents(), Array.from({ length: 3 + additionalCount }, (_, i) => `${i + 1}위`));
       for (const width of [320, 390, 435]) {
         await page.setViewportSize({ width, height: 844 });
         await rail.focus();
@@ -303,8 +303,8 @@ const { chromium } = require("playwright");
         assert.ok(await rail.evaluate(el => {
           const frame = el.getBoundingClientRect();
           const cards = [...el.children].map(card => card.getBoundingClientRect());
-          return Math.abs(el.scrollLeft) < 2 && cards.slice(0, 3).every(card => card.left >= frame.left - 1 && card.right <= frame.right + 1) && cards[3].left >= frame.right;
-        }), `first three equal-width ranks fit before swiping at ${width}px`);
+          return Math.abs(el.scrollLeft) < 2 && cards.every(card => Math.abs(card.width - 148) < .1 && card.height >= 104) && cards[0].left >= frame.left - 1 && cards[0].right <= frame.right + 1;
+        }), `genre cards retain a comfortable minimum size before swiping at ${width}px`);
         await page.keyboard.press('End');
         // Programmatic scroll positions update before the browser dispatches scroll.
         await page.waitForFunction(() => {
@@ -417,7 +417,7 @@ const { chromium } = require("playwright");
     await live.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
     const liveGenres = live.locator('.wm-top-genres');
     assert.equal(await live.getByText('전체 장르 취향', { exact: true }).count(), 0);
-    const hasMoreLiveGenres = await liveGenres.locator('article').count() > 3;
+    const hasMoreLiveGenres = await liveGenres.evaluate(el => el.scrollWidth > el.clientWidth + 1);
     if (hasMoreLiveGenres) {
       await liveGenres.focus();
       await live.keyboard.press('End');
@@ -427,7 +427,7 @@ const { chromium } = require("playwright");
     if (hasMoreLiveGenres) {
       await live.waitForFunction(() => document.querySelector('.wm-genre-ranking')?.dataset.scrolling === 'false');
       assert.equal(await live.locator('.wm-genre-scrollbar').evaluate(el => getComputedStyle(el).opacity), '0.4');
-    } else assert.equal(await live.locator('.wm-genre-scrollbar').count(), 0);
+    } else assert.ok(await live.locator('.wm-genre-scrollbar').isHidden());
     await live.screenshot({ path: path.join(shots, 'result_genres_live.png') });
     const liveRecommendations=live.locator('.wm-personal-carousel');
     await liveRecommendations.waitFor();
