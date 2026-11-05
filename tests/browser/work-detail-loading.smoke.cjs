@@ -10,7 +10,7 @@ const {chromium}=require('playwright');
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
   let infoCalls=0,fitCalls=0,fitMode='fail',baseMode='ok',releaseInfo,releaseFit;
   const info={canonicalWebtoonId:'loading-test',title:'로딩 검증 작품',mainGenreLabel:'무협',mainGenre:'murim',platform:'네이버웹툰',coverUrl:null,officialUrl:null,introduction:'핏점수를 기다리는 중에도 작품 소개를 읽을 수 있습니다.',creators:[{name:'작가',roles:['그림']}],contentLabels:[],appreciationPoints:[],artStyles:[],statusLabel:'연재중',ageRating:null,fit:null,fitStatus:'pending'};
-  const fit={fitStatus:'ready',fit:{percent:88,highlighted:true,reasons:[{key:'revenge',label:'복수',icon:'spark'}]}};
+  const fit={fitStatus:'ready',fit:{rawScore:.7744,percent:77,displayScore:88,displayScoreVersion:'sqrt_v1',highlighted:true,reasons:[{key:'revenge',label:'복수',icon:'spark'}]}};
   await context.route('**/api/v1/**',async route=>{
    const url=new URL(route.request().url()),reply=(body,status=200)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});
    if(url.pathname==='/api/v1/webtoons/loading-test'){
@@ -40,14 +40,28 @@ const {chromium}=require('playwright');
   assert.equal(infoCalls,1,'manual fit retry does not refetch work info');
   await page.locator('.wm-work-open').click();await page.getByRole('tab',{name:'작품 정보',exact:true}).click();
   fitMode='ok';releaseFit();
-  await page.waitForFunction(()=>document.querySelector('.wm-work-fit-track')?.getAttribute('aria-valuenow')==='88');
+  await page.waitForFunction(()=>document.querySelector('.wm-work-summary .wm-work-fit-track')?.getAttribute('aria-valuenow')==='88');
   assert.equal(await page.locator('.wm-work-page').getAttribute('data-stage'),'info','arriving fit does not close or reset the reading sheet');
+  const expandedFit=page.locator('.wm-work-reading-fit');
+  assert.ok(await expandedFit.isVisible(),'fit arriving in an expanded panel is visible');
+  assert.equal(await expandedFit.getAttribute('aria-valuenow'),'88');
+  for(const [width,height] of [[320,844],[390,844],[540,844],[900,844],[390,520]]){
+   await page.setViewportSize({width,height});
+   for(const tab of ['궁합 · 소개','작품 정보']){
+    await page.getByRole('tab',{name:tab,exact:true}).click();
+    await page.locator('.wm-work-dialog-body').evaluate(el=>{el.scrollTop=el.scrollHeight;});
+    const bounds=await expandedFit.evaluate(el=>{const r=el.getBoundingClientRect(),title=el.previousElementSibling.getBoundingClientRect(),tabs=el.nextElementSibling.getBoundingClientRect();return {score:el.getAttribute('aria-valuenow'),inside:r.top>=title.bottom&&r.bottom<=tabs.top,visible:r.top>=0&&r.bottom<=innerHeight};});
+    assert.ok(bounds.inside&&bounds.visible&&bounds.score==='88',JSON.stringify({width,height,tab,...bounds}));
+   }
+  }
   await page.getByRole('button',{name:'작품 정보 접기',exact:true}).click();
   assert.equal(await page.getByRole('meter').getAttribute('aria-valuenow'),'88');assert.equal(fitCalls,3);
   for(const width of [320,390,900]){
    await page.setViewportSize({width,height:844});
    const search=page.getByRole('link',{name:'작품 검색',exact:true});
-   await search.hover();assert.ok(await search.evaluate(el=>{const css=getComputedStyle(el),r=el.getBoundingClientRect();return r.width>=44&&r.height>=44&&css.backgroundColor==='rgb(237, 250, 254)'&&css.borderTopWidth==='1px';}),'teal outline and light background retain a 44px accessible hit area');
+   await search.hover();
+   const searchStyle=await search.evaluate(el=>{const css=getComputedStyle(el),r=el.getBoundingClientRect();return {width:r.width,height:r.height,background:css.backgroundColor,border:css.borderTopWidth,radius:css.borderRadius,bottom:innerHeight-r.bottom};});
+   assert.ok(searchStyle.width>=100&&searchStyle.height>=44&&['rgb(255, 240, 179)','rgb(255, 232, 154)'].includes(searchStyle.background)&&searchStyle.border==='0px'&&searchStyle.radius==='999px'&&searchStyle.bottom===16,`floating search retains a 44px accessible hit area above the safe bottom: ${JSON.stringify(searchStyle)}`);
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   }
   baseMode='hold';await page.reload();

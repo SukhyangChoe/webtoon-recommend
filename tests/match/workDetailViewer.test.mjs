@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import { createRequire } from 'node:module';
 import { recommendationToTasteVector } from '../../src/features/match/engine/tasteVectorEngine.mjs';
+import { recommendationFitPresentation } from '../../src/features/match/config/recommendationFitDisplay.mjs';
 
 const require = createRequire(import.meta.url);
 const ts = require('typescript');
@@ -21,7 +22,7 @@ function load(relative, dependencies) {
   return compiledModule.exports;
 }
 
-function harness() {
+function harness(fitOverride) {
   const rows=[], recommendations=new Map(), reads=[];
   let currentWork = {canonical_webtoon_id:'work-1',title:'작품',platform:'네이버',main_genre:'murim',recommendation:murim};
   const database = async (strings,...values) => {
@@ -40,6 +41,7 @@ function harness() {
   const results=load('../../src/features/match/server/resultStore.ts',{'./database':{getMatchDatabase:()=>database}});
   const details=load('../../src/features/match/server/workDetailStore.ts',{
     'server-only':{},'./database':{getMatchDatabase:()=>database},'./resultStore':results,
+    ...(fitOverride?{'../engine/recommendationFitEngine.mjs':{calculateRecommendationFit:()=>fitOverride}}:{}),
     '@/data/tags/tagLabels':{tagLabelMap:{revenge:'복수',love:'사랑'}},
     '@/data/contentAxis/contentAxisLabels':{CONTENT_AXIS_LABELS:{battle:'전투',romance:'로맨스'}},
   });
@@ -62,6 +64,9 @@ test('work detail uses the viewer’s latest test, current saved works and curre
   assert.equal((await h.details.getWorkDetail('work-1',viewerB)).fit.percent,0,'another viewer uses their own different taste');
   h.recommendations.set(viewerA,[romance]);
   const afterRecommendations=await h.details.getWorkDetail('work-1',viewerA);
+  assert.deepEqual(JSON.parse(JSON.stringify(await h.details.getWorkFit('work-1',viewerA))),JSON.parse(JSON.stringify({fitStatus:afterRecommendations.fitStatus,fit:afterRecommendations.fit,avoidanceWarnings:afterRecommendations.avoidanceWarnings})),'combined and split APIs expose the same display fields');
+  const {rawScore,percent,displayScore,displayScoreVersion}=afterRecommendations.fit;
+  assert.deepEqual({rawScore,percent,displayScore,displayScoreVersion},recommendationFitPresentation(rawScore));
   assert.ok(afterRecommendations.fit.percent<initial.fit.percent,'saved recommendation changes affect the very next read');
   h.changeWorkVector(romance);
   const afterWork=await h.details.getWorkDetail('work-1',viewerA);
@@ -73,7 +78,22 @@ test('work detail uses the viewer’s latest test, current saved works and curre
   assert.equal(retested.fit.percent,100);
   assert.equal(retested.fit.profilePublicId,'retested-result');
   for(const secret of ['tasteVector','anonymousId','recommendation','raw_data'])assert.equal(secret in retested,false);
-  assert.equal(h.reads.filter(({sql})=>sql.includes('from public.webtoons w')).length,6,'the current work is read every time');
+  assert.equal(h.reads.filter(({sql})=>sql.includes('from public.webtoons w')).length,7,'the current work is read every time');
+});
+
+test('strong personal warnings update per viewer and work without altering positive fit or requiring a fit number',async()=>{
+  const h=harness();h.snapshot(viewerA,'avoids','2026-11-01',{...murim,avoidanceTagScores:{progression_fatigue:3}});
+  h.snapshot(viewerB,'does-not-avoid','2026-11-01',murim);
+  h.changeWorkVector({...murim,avoidanceTagScores:{progression_fatigue:3}});
+  const a=await h.details.getWorkDetail('work-1',viewerA),b=await h.details.getWorkDetail('work-1',viewerB);
+  assert.equal(a.fit.rawScore,b.fit.rawScore);assert.equal(a.fit.displayScore,b.fit.displayScore);
+  assert.equal(a.avoidanceWarnings[0].key,'progression_fatigue');assert.equal(b.avoidanceWarnings.length,0);
+  assert.equal((await h.details.getWorkInfo('work-1')).avoidanceWarnings.length,0,'public info alone never borrows a viewer warning');
+  h.changeWorkVector({avoidanceTagScores:{progression_fatigue:1}});
+  const sparse=await h.details.getWorkFit('work-1',viewerA);
+  assert.equal(sparse.fit,null);assert.equal(sparse.avoidanceWarnings.length,1,'even low positive burden warns independently of the score');
+  h.changeWorkVector({...murim,avoidanceTagScores:{progression_fatigue:0}});
+  assert.equal((await h.details.getWorkFit('work-1',viewerA)).avoidanceWarnings.length,0,'updated DB analysis removes an obsolete warning');
 });
 
 test('missing viewer/test or insufficient work data never borrows someone else’s score or fabricates a zero',async()=>{
@@ -88,6 +108,15 @@ test('missing viewer/test or insufficient work data never borrows someone else�
     assert.equal(detail.fit,null);assert.equal(detail.fitStatus,'insufficient_data');
   }
   assert.equal(await h.details.getWorkDetail('missing',viewerA),null);
+});
+
+test('invalid engine results stay unavailable instead of being clamped or shown as zero',async()=>{
+  for(const score of [NaN,Infinity,-.01,1.01,null,undefined]){
+    const h=harness({score,comparableAxes:[{axisKey:'tagScores'},{axisKey:'contentAxisScores'}],highlighted:false});
+    h.snapshot(viewerA,'result','2026-10-01',murim);
+    const detail=await h.details.getWorkDetail('work-1',viewerA);
+    assert.equal(detail.fit,null);assert.equal(detail.fitStatus,'insufficient_data');
+  }
 });
 
 test('API ignores legacy profile overrides, validates the viewer and disables caching',async()=>{

@@ -16,14 +16,27 @@ test('recommendations and total card height move together rather than leaving an
   assert.equal(large.genreHeight - small.genreHeight, 36);
   assert.equal(large.coverY - small.coverY, 36);
   assert.equal(large.cardHeight - small.cardHeight, 36);
-  assert.equal(small.coverWidth, 68);
-  assert.equal(small.coverHeight, 98);
+  assert.equal(small.coverWidth, 78);
+  assert.equal(small.coverHeight, 112);
   assert.ok(small.recommendationTitleY > small.coverY + small.coverHeight);
   assert.equal(small.footerY, small.recommendationTitleY + 14 + 19);
   assert.equal(small.cardHeight, small.footerY + 34);
   const noPicks = personalShareLayout([], false);
   assert.equal(noPicks.footerY, noPicks.genreY + noPicks.genreHeight + 18);
   assert.equal(noPicks.cardHeight, noPicks.footerY + 34);
+});
+test('three enlarged covers keep equal spacing and stay inside their columns', () => {
+  const layout=personalShareLayout([{stars:8},{stars:3},{stars:2}],true);
+  const tileWidth=(314-20)/3;
+  let previousRight=null;
+  for(let index=0;index<3;index++){
+    const tileLeft=18+index*(tileWidth+10),center=tileLeft+tileWidth/2;
+    const left=center-layout.coverWidth/2,right=center+layout.coverWidth/2;
+    assert.ok(left>=tileLeft&&right<=tileLeft+tileWidth);
+    if(previousRight!==null)assert.equal(left-previousRight,30);
+    previousRight=right;
+  }
+  assert.equal(layout.recommendationTitleY-layout.coverY-layout.coverHeight,17);
 });
 test('invalid and extreme star counts cannot create invalid SVG dimensions', () => {
   for (const value of [NaN, Infinity, -Infinity, null, undefined, -3]) assert.equal(shareStarCount(value), 0);

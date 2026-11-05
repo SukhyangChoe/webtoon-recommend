@@ -1,0 +1,17 @@
+# The verified recommendation runtime is intentionally NOT git-tracked, but must
+# be uploaded by the CLI. Secrets, backups and local QA must never be uploaded.
+.git
+.vercel
+node_modules
+.next*
+.qa-tmp
+.private-backups
+.env*
+.agents
+.codex
+coverage
+tests
+*.tsbuildinfo
+*.log
+.DS_Store
+.private-daily-recommendations/install-*

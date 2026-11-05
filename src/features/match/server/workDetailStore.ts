@@ -3,6 +3,8 @@ import questionSeed from '../data/questionSeed.v0.4.json';
 import { getMatchDatabase } from './database';
 import { getLatestTasteSnapshotForAnonymousId } from './resultStore';
 import { calculateRecommendationFit } from '../engine/recommendationFitEngine.mjs';
+import { recommendationFitPresentation } from '../config/recommendationFitDisplay.mjs';
+import { matchedAvoidanceWarnings } from '../engine/avoidanceEngine.mjs';
 import { recommendationGenreLabel, safeWorkCoverUrl } from '../config/recommendationPresentation.mjs';
 import { rankedWorkLabels, safeOfficialWorkUrl, sharedFitReasons, WORK_POINT_ICONS, workArtStyleCards, workStatusLabel } from '../config/workDetailPresentation.mjs';
 import { tagLabelMap } from '@/data/tags/tagLabels';
@@ -10,7 +12,7 @@ import { CONTENT_AXIS_LABELS } from '@/data/contentAxis/contentAxisLabels';
 import type { WorkReadContext } from './workReadDeadline';
 
 type ScoreMap = Record<string, number>;
-type Recommendation = { tagScores?: ScoreMap; contentAxisScores?: ScoreMap; artStyleScores?: ScoreMap; recommendationReason?: string };
+type Recommendation = { tagScores?: ScoreMap; contentAxisScores?: ScoreMap; artStyleScores?: ScoreMap; avoidanceTagScores?: ScoreMap; recommendationReason?: string };
 type DetailRow = {
   canonical_webtoon_id: string; title: string; platform: string; main_genre: string;
   official_url: string | null; cover_url: string | null; synopsis: string | null;
@@ -51,7 +53,7 @@ function workInfo(row: DetailRow) {
     contentLabels: rankedWorkLabels(recommendation?.contentAxisScores, CONTENT_AXIS_LABELS, {}, 3),
     appreciationPoints: rankedWorkLabels(recommendation?.tagScores, tagLabelMap, WORK_POINT_ICONS, 2),
     artStyles: workArtStyleCards(recommendation?.artStyleScores, 2),
-    fitStatus: 'pending' as const, fit: null,
+    fitStatus: 'pending' as const, fit: null, avoidanceWarnings: [] as Array<{ key: string; label: string }>,
   };
 }
 
@@ -59,10 +61,14 @@ async function workFit(row: DetailRow, anonymousId?: string | null, read?: WorkR
   const snapshot = anonymousId ? await getLatestTasteSnapshotForAnonymousId(anonymousId, read) : null;
   const calculate = () => snapshot ? calculateRecommendationFit(snapshot.tasteVector, row.recommendation, questionSeed) : null;
   const fit = read ? read.measure('fit_compute', calculate) : calculate();
-  const comparable = fit && fit.comparableAxes.length >= 2;
+  const presentation = fit ? recommendationFitPresentation(fit.score) : null;
+  if (fit && presentation === null) console.warn('[work_fit] invalid engine score', { score: fit.score });
+  const comparable = fit && fit.comparableAxes.length >= 2 && presentation !== null;
   return {
     fitStatus: !snapshot ? 'test_required' as const : comparable ? 'ready' as const : 'insufficient_data' as const,
-    fit: comparable ? { percent: Math.round(fit.score * 100), highlighted: fit.highlighted,
+    // A warning does not depend on having enough positive axes for a fit number.
+    avoidanceWarnings: matchedAvoidanceWarnings(snapshot, row.recommendation, questionSeed) as Array<{ key: string; label: string }>,
+    fit: comparable ? { ...presentation!, highlighted: fit.highlighted,
       profilePublicId: snapshot!.publicProfileId, nickname: snapshot!.profileDisplayName || null,
       reasons: sharedFitReasons(snapshot!.tasteVector, row.recommendation, tagLabelMap, CONTENT_AXIS_LABELS) } : null,
   };

@@ -19,6 +19,7 @@
 /.next/
 /.next-security-check/
 /.private-backups/
+/.private-daily-recommendations/
 /out/
 
 # production

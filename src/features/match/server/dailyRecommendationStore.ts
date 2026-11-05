@@ -1,0 +1,79 @@
+import 'server-only';
+import questionSeed from '../data/questionSeed.v0.4.json';
+import { getMatchDatabase } from './database';
+import { runtime02Available, selectDailyRuntime02 } from './dailyRecommendation/runtime02.mjs';
+import { DAILY_SELECTION_VERSION, dailyWindow } from './dailyRecommendation/policy.mjs';
+import { recommendationGenreLabel, safeWorkCoverUrl } from '../config/recommendationPresentation.mjs';
+import type { MatchAnswers } from '../storage/draftTypes';
+import { matchedAvoidanceWarnings } from '../engine/avoidanceEngine.mjs';
+
+type EvidenceRow = { snapshot_id: string; profile_id: string; completed_at: string; question_set_version: string; answers: MatchAnswers;
+  snapshot_data: Record<string, unknown>;
+  recommendations: Array<{ canonicalWebtoonId: string; title: string; platform: string; createdAt: string; recommendation?: Record<string, unknown>; affectsTaste: boolean }> };
+type Selection = { items: Array<{ canonicalWebtoonId: string; title: string; platform: string }> };
+type PublicRow = { canonical_webtoon_id: string; title: string; main_genre: string; platform: string; cover_url: string | null; avoidance_tag_scores?: Record<string, number> };
+
+/** Real selection only. No fixed preview, DB writes or borrowed sample history. */
+export async function getRuntimeDailyTastePicks(publicProfileId: string) {
+  if (!await runtime02Available()) throw Error('DAILY_ENGINE_UNAVAILABLE');
+  const database = getMatchDatabase();
+  const [row] = await database<EvidenceRow[]>`
+    select s.snapshot_id::text, s.profile_id::text, s.completed_at::text, s.question_set_version,
+      s.snapshot_data, s.snapshot_data->'answers' as answers,
+      coalesce((select jsonb_agg(jsonb_build_object(
+        'canonicalWebtoonId', r.canonical_webtoon_id, 'title', w.title, 'platform', w.platform, 'createdAt', r.created_at::text,
+        'recommendation', w.raw_data->'recommendation',
+        'affectsTaste', w.catalog_status='active' and public.webtoon_is_public_safe(w.raw_data))
+        order by r.canonical_webtoon_id)
+        from public.match_profile_recommendations r
+        join public.webtoons w using(canonical_webtoon_id)
+        where r.profile_id=s.profile_id), '[]'::jsonb) as recommendations
+    from public.match_taste_snapshots s
+    where s.profile_id=(select profile_id from public.match_taste_snapshots where public_profile_id=${publicProfileId})
+    order by s.completed_at desc, s.snapshot_id desc limit 1
+  `;
+  if (!row) throw Error('DAILY_RESULT_NOT_FOUND');
+  // Do not call getTasteSnapshot(): it already blends registered work vectors.
+  const catalog = await database<PublicRow[]>`
+    select w.canonical_webtoon_id, w.title, w.main_genre, w.platform,
+      w.raw_data#>'{recommendation,avoidanceTagScores}' as avoidance_tag_scores,
+      coalesce(d.cover_url,w.raw_data->>'coverUrl',w.raw_data#>>'{metadata,coverUrl}',w.raw_data#>>'{cover,src}') as cover_url
+    from public.webtoons w left join public.webtoon_details d using(canonical_webtoon_id)
+    where w.catalog_status='active' and w.recommendation_eligible=true and public.webtoon_is_public_safe(w.raw_data)
+      and w.raw_data->>'sourceDb'='precision' and w.raw_data->>'qualityEvidenceGateDecision'='verified_precision'
+      and w.raw_data#>>'{metadata,urlStatus}'='valid' and w.official_url like 'https://%'
+      and coalesce(w.raw_data#>>'{metadata,status}','') not in ('unavailable','discontinued')
+    order by w.canonical_webtoon_id
+  `;
+  const input = { snapshotId: row.snapshot_id, profileId: row.profile_id, completedAt: row.completed_at,
+    questionSetVersion: row.question_set_version, answers: row.answers, snapshotData: row.snapshot_data, recommendations: row.recommendations,
+    liveCatalog: catalog.map(item => ({ canonicalWebtoonId: item.canonical_webtoon_id, title: item.title, platform: item.platform })) };
+  let window = dailyWindow();
+  let selected = await selectDailyRuntime02(input, questionSeed) as Selection;
+  // A cold computation straddling midnight must not return yesterday's batch.
+  if (window.day !== dailyWindow().day) { window = dailyWindow(); selected = await selectDailyRuntime02(input, questionSeed) as Selection; }
+  const ids = selected.items.map(item => item.canonicalWebtoonId);
+  const rows = ids.length ? await database<PublicRow[]>`
+    select w.canonical_webtoon_id, w.title, w.main_genre, w.platform,
+      w.raw_data#>'{recommendation,avoidanceTagScores}' as avoidance_tag_scores,
+      coalesce(d.cover_url,w.raw_data->>'coverUrl',w.raw_data#>>'{metadata,coverUrl}',w.raw_data#>>'{cover,src}') as cover_url
+    from public.webtoons w left join public.webtoon_details d using(canonical_webtoon_id)
+    where w.canonical_webtoon_id=any(${ids}::text[]) and w.catalog_status='active'
+      and w.recommendation_eligible=true and public.webtoon_is_public_safe(w.raw_data)
+      and w.raw_data->>'sourceDb'='precision' and w.raw_data->>'qualityEvidenceGateDecision'='verified_precision'
+      and w.raw_data#>>'{metadata,urlStatus}'='valid' and w.official_url like 'https://%'
+      and coalesce(w.raw_data#>>'{metadata,status}','') not in ('unavailable','discontinued')
+  ` : [];
+  const byId = new Map(rows.map(item => [item.canonical_webtoon_id, item]));
+  return { publicProfileId, mode: 'personalized' as const, selectionVersion: DAILY_SELECTION_VERSION,
+    day: window.day, timeZone: window.timeZone, expiresAt: window.expiresAt,
+    items: selected.items.flatMap(item => {
+      const live = byId.get(item.canonicalWebtoonId);
+      // Never resolve a canonical identity conflict by name guessing or force fill.
+      if (!live || live.title !== item.title || live.platform !== item.platform) return [];
+      const warnings = matchedAvoidanceWarnings({ answers: row.answers }, { avoidanceTagScores: live.avoidance_tag_scores }, questionSeed);
+      return [{ canonicalWebtoonId: live.canonical_webtoon_id, title: live.title, platform: live.platform,
+        mainGenreLabel: recommendationGenreLabel(live.main_genre), coverUrl: safeWorkCoverUrl(live.cover_url),
+        ...(warnings.length ? { avoidanceWarnings: warnings } : {}) }];
+    }) };
+}

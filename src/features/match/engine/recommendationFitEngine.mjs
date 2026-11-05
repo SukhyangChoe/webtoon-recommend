@@ -3,8 +3,8 @@ import {
   recommendationToTasteVector,
 } from "./tasteVectorEngine.mjs";
 
-export const RECOMMENDATION_FIT_HIGHLIGHT_THRESHOLD = 0.6;
-export const RECOMMENDATION_FIT_MIN_COMPARABLE_AXES = 2;
+import { recommendationFitHighlighted } from '../config/recommendationFitHighlight.mjs';
+export { RECOMMENDATION_FIT_HIGHLIGHT_DISPLAY_THRESHOLD, RECOMMENDATION_FIT_MIN_COMPARABLE_AXES } from '../config/recommendationFitHighlight.mjs';
 
 const AXIS_WEIGHTS = Object.freeze({
   tagScores: 0.35,
@@ -91,8 +91,6 @@ export function calculateRecommendationFit(userTasteVector, recommendation, seed
       axisKey,
       similarity,
     })),
-    highlighted:
-      comparableAxes.length >= RECOMMENDATION_FIT_MIN_COMPARABLE_AXES
-      && score >= RECOMMENDATION_FIT_HIGHLIGHT_THRESHOLD,
+    highlighted: recommendationFitHighlighted(score, comparableAxes.length),
   };
 }

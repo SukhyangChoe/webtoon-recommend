@@ -27,5 +27,5 @@ export function MatchScreenHeader() {
     href = profileId ? `/match/result/${encodeURIComponent(profileId)}` : code ? resultId ? `/match/c/${encodeURIComponent(code)}/match/${encodeURIComponent(resultId)}` : `/match/c/${encodeURIComponent(code)}/ranking` : "/match";
     if (href === '/match') label = '시작';
   }
-  return <nav className={`match-screen-header${path === "/match" ? " is-home" : " has-navigation"}${isIntro ? ' is-test-intro' : ''}`} aria-label="화면 이동">{path !== "/match" ? <Link className="site-back-control" href={href} aria-label={label}><BackIcon /></Link> : null}</nav>;
+  return <nav className={`match-screen-header${path === "/match" ? " is-home" : " has-navigation"}${isIntro ? ' is-test-intro' : ''}${path === '/match/search' ? ' is-work-search' : ''}`} aria-label="화면 이동">{path !== "/match" ? <Link className="site-back-control" href={href} aria-label={label}><BackIcon /></Link> : null}</nav>;
 }

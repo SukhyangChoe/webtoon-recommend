@@ -6,8 +6,8 @@ import { showFloatingSearch, searchBackPath, workSearchHref } from '../../src/fe
 function memory() { const map=new Map();return {getItem:key=>map.get(key)??null,setItem:(key,value)=>map.set(key,value),removeItem:key=>map.delete(key)}; }
 
 test('floating search covers home and non-test match screens while excluding tests',()=>{
- for(const path of ['/match/test/intro','/match/test/duel/1','/match/test/avoidance','/match/result/building'])assert.equal(showFloatingSearch(path),false,path);
- for(const path of ['/match','/match/result/me','/match/result/me/recommendations','/match/c/invite','/match/c/invite/ranking','/match/c/invite/match/pair','/match/work/work-1','/match/share/personal','/match/challenge/new','/match/search'])assert.equal(showFloatingSearch(path),true,path);
+ for(const path of ['/match/test/intro','/match/test/duel/1','/match/test/avoidance','/match/result/building','/match/search'])assert.equal(showFloatingSearch(path),false,path);
+ for(const path of ['/match','/match/result/me','/match/result/me/recommendations','/match/c/invite','/match/c/invite/ranking','/match/c/invite/match/pair','/match/work/work-1','/match/share/personal','/match/challenge/new'])assert.equal(showFloatingSearch(path),true,path);
  for(const path of ['/match/result/me/recommendations?returnTo=%2Fmatch%2Fc%2Finvite%2Fmatch%2Fpair','/match/c/invite/match/pair?from=ranking','/match/work/work-1?returnTo=%2Fmatch%2Fsearch','/match/share/personal?profilePublicId=me']){
   assert.equal(searchBackPath(path),path);assert.equal(new URL(workSearchHref('',path),'http://localhost').searchParams.get('from'),path);
  }

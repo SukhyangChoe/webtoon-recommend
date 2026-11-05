@@ -1,5 +1,14 @@
 .wm-action-bar { position: fixed; bottom: 0; left: 50%; z-index: 25; box-sizing: border-box; width: 100%; max-width: 540px; transform: translateX(-50%); display: flex; align-items: center; gap: 7px; padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid #e0edf2; background: #fffffff7; }
 .match-module.match-cyan .wm-action-bar .match-button { min-width: 0; flex: 1; gap: 5px; padding: 10px 8px; font-size: 12px; white-space: nowrap; min-height: 50px; }
 .wm-action-bar .wm-icon { width: 18px; height: 18px; }
+.wm-result-actions .wm-result-action-preview:disabled { opacity:1; cursor:default; }
+/* Whenever an invite is present, it alone receives the primary accent. */
+.match-module.match-cyan .wm-action-bar:has(.wm-invite-button) .match-button:not(.wm-invite-button) { background:#fff; border:1px solid #cbdde5; color:#00697f; box-shadow:none; }
+.match-module.match-cyan .wm-action-bar .match-button.wm-invite-button { background: var(--match-ui-accent); border-color: var(--match-ui-accent); color: var(--match-ui-actionInk); }
+.match-module.match-cyan .wm-action-bar .match-button.wm-invite-button:focus-visible { outline: 3px solid var(--match-ui-accentInk); outline-offset: 3px; }
+@media (hover: hover) and (pointer: fine) {
+  .match-module.match-cyan .wm-action-bar .match-button.wm-invite-button:hover:not(:disabled) { background: var(--match-ui-accent); border-color: var(--match-ui-accentInk); }
+}
 .wm-action-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wm-action-toast { position: absolute; bottom: calc(100% + 12px); left: 16px; right: 16px; padding: 12px 16px; border-radius: 12px; background: #203945f5; color: #fff; box-shadow: 0 4px 16px #16354420; font-size: 14px; line-height: 1.6; text-align: center; overflow-wrap: anywhere; }
 @media (max-width: 360px) { .wm-action-bar { padding-inline: 12px; gap: 5px; } }

@@ -22,7 +22,7 @@ const { chromium } = require('playwright');
     const pair=await response.json();
     await app.goto(`${base}/match/work/wt_romance_ropan_016?profile=${pair.challengerRecommendations[0].fitTargetPublicProfileId}`);
     await app.getByRole('heading',{level:1}).waitFor();
-    await app.locator('.wm-work-hero img').evaluate(img=>img.decode());
+    await app.locator('.wm-work-cover-foreground img').evaluate(img=>img.decode());
     await app.addStyleTag({content:'nextjs-portal { display:none !important; }'});
     await demo.goto(pathToFileURL(process.env.WORK_DETAIL_DEMO??'/Users/choesukhyang/Downloads/webtoon_detail_demo_v0_2_7.html').href);
     await demo.waitForFunction(()=>window.__DEMO_QA__);
@@ -30,6 +30,10 @@ const { chromium } = require('playwright');
       {page:demo,grip:'#sheetHandle',sheet:'#sheet',stage:()=>demo.evaluate(()=>window.__DEMO_QA__.snapshot().stage)},
       {page:app,grip:'.wm-work-grab',sheet:'.wm-work-sheet',stage:()=>app.locator('.wm-work-page').getAttribute('data-stage')},
     ];
+    // The implementation intentionally adds tap-to-toggle to the old drag-only demo.
+    await app.locator('.wm-work-grab').click();await app.waitForTimeout(320);
+    assert.equal(await app.locator('.wm-work-page').getAttribute('data-stage'),'reasons');
+    await app.keyboard.press('Escape');await app.waitForTimeout(320);
     const traces=[];
     for(const target of targets){
       const {page}=target, trace=[];
@@ -38,7 +42,7 @@ const { chromium } = require('playwright');
         await page.mouse.move(x,y);await page.mouse.down();await page.mouse.move(x+dx,y+dy,{steps:10});
         if(release){await page.mouse.up();await page.waitForTimeout(320);trace.push(await target.stage());}
       };
-      await drag(0,0);await drag(70,-10);await drag(0,-63);await drag(0,-65);
+      await drag(70,-10);await drag(0,-63);await drag(0,-65);
       assert.equal(await target.stage(),'reasons');
       const openHeight=await page.locator(target.sheet).evaluate(el=>el.getBoundingClientRect().height);
       await drag(0,30,false);
@@ -52,7 +56,7 @@ const { chromium } = require('playwright');
       await drag(0,65);
       traces.push(trace);
     }
-    assert.deepEqual(traces[0],['collapsed','collapsed','collapsed','reasons','reasons','reasons','details','collapsed']);
+    assert.deepEqual(traces[0],['collapsed','collapsed','reasons','reasons','reasons','details','collapsed']);
     assert.deepEqual(traces[1],traces[0],'original demo and implementation follow the same gesture sequence');
     // With animation enabled, the height must actually interpolate, not jump.
     const start=await app.locator('.wm-work-sheet').evaluate(el=>el.getBoundingClientRect().height);
@@ -94,7 +98,7 @@ const { chromium } = require('playwright');
     await app.screenshot({path:path.join(output,'work_detail_expanded.png')});
     await app.locator('#wm-work-info-tab').click();await app.waitForTimeout(850);
     await app.screenshot({path:path.join(output,'work_detail_info.png')});
-    await app.locator('.wm-work-cover-close').click({position:{x:20,y:20}});await app.waitForTimeout(750);
+    await app.locator('.wm-work-cover-close').click({position:{x:20,y:70}});await app.waitForTimeout(750);
     assert.equal(await app.locator('.wm-work-page').getAttribute('data-stage'),'collapsed');
     if(recorder){clearInterval(frameTimer);await session.send('Page.stopScreencast');await session.detach();recorder.stdin.end();await recordingDone;assert.ok(fs.statSync(path.join(output,'work_detail_demo_motion.webm')).size>10000);}
     assert.deepEqual(errors,[]);

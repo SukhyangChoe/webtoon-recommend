@@ -3,7 +3,7 @@ import { safeWorkReturnPath } from './workDetailPresentation.mjs';
 export const WORK_SEARCH_STATE_KEY = 'webtoon-match:work-search:is-adult-only-v3';
 
 export function showFloatingSearch(path) {
-  return (path === '/match' || path.startsWith('/match/')) && !path.startsWith('/match/test/') && path !== '/match/result/building';
+  return (path === '/match' || path.startsWith('/match/')) && !path.startsWith('/match/test/') && path !== '/match/result/building' && path !== '/match/search';
 }
 
 export function searchBackPath(value) {

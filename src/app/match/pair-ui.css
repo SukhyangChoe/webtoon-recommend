@@ -8,9 +8,7 @@ body:has(.wm-pair-page) .brand-bar__logo { left: 50% !important; right: auto !im
 .wm-pair-page button { font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .wm-pair-page button:disabled { cursor: default; opacity: .5; }
 .wm-pair-page :focus-visible { outline: 3px solid #007e98; outline-offset: 3px; }
-.wm-pair-heading { position: relative; display: flex; align-items: center; justify-content: center; min-height: 44px; margin-bottom: 12px; }
-.wm-pair-heading h1 { font-size: 18px; line-height: 1.5; font-weight: 750; }
-.wm-pair-heading > a { position: absolute; left: -4px; display: inline-flex; align-items: center; gap: 3px; min-height: 44px; padding: 0 5px; text-decoration: none; color: #456874; font-size: 14px; }
+.wm-pair-back { position:absolute; z-index:51; top:calc((var(--brand-bar-height,56px) - 44px)/2); left:max(12px,calc((100vw - 540px)/2 + 12px)); }
 .wm-pair-cover { position: relative; border: 1px solid #c6dfe9; border-radius: 18px; overflow: hidden; background: #fff; box-shadow: 0 4px 16px #19364008; }
 .wm-pair-comic { position: relative; isolation: isolate; display: grid; grid-template-columns: 1fr 1fr; height: 248px; overflow: hidden; background: radial-gradient(circle at 25% 10%, #fff 0%, #dcf7fc 45%, #bfedf6 100%); }
 .wm-pair-comic::before { position: absolute; z-index: -1; content: ''; inset: -20% -10% -10% 50%; transform: rotate(10deg); border-left: 2px solid #8db6c5; background: radial-gradient(circle, #d5e8ed 1px, transparent 1px) 0 0 / 7px 7px, #fff9ea; }
@@ -41,6 +39,15 @@ body:has(.wm-pair-page) .brand-bar__logo { left: 50% !important; right: auto !im
 .wm-pair-score::after { content: ''; position: absolute; inset: 5px; z-index: -1; border-radius: inherit; background: #f7fdff; }
 .wm-pair-score strong { color: #17394a; font-size: 31px; letter-spacing: -.06em; line-height: 1.1; }
 .wm-pair-score strong small { font-size: 17px; margin-left: 1px; }
+.wm-pair-score.wm-pair-score--compact { width:76px; height:76px; }
+.wm-pair-score--compact::after { inset:4px; }
+.wm-pair-score.wm-pair-score--compact strong { font-size:27px; }
+.wm-pair-score.wm-pair-score--compact strong small { font-size:15px; }
+@media(max-width:360px) {
+  .wm-pair-score.wm-pair-score--compact { width:68px; height:68px; }
+  .wm-pair-score.wm-pair-score--compact strong { font-size:24px; }
+  .wm-pair-score.wm-pair-score--compact strong small { font-size:14px; }
+}
 .wm-pair-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 18px 0 14px; padding: 4px; background: #e6f0f4; border: 1px solid #dce9ef; border-radius: 24px; }
 .wm-pair-tabs button { min-width: 0; min-height: 44px; padding: 10px 8px; border: 0; border-radius: 20px; color: #456874; background: transparent; font-size: 16px; font-weight: 700; }
 .wm-pair-tabs button[aria-selected="true"] { color: #fff; background: #193e50; box-shadow: 0 2px 4px #19364012; }
@@ -48,22 +55,17 @@ body:has(.wm-pair-page) .brand-bar__logo { left: 50% !important; right: auto !im
 .wm-pair-page [hidden] { display: none !important; }
 .wm-pair-panel { min-width: 0; border: 1px solid #ddebf1; border-radius: 16px; padding: 20px 16px; background: #fff; }
 .wm-pair-panel > h2, .wm-pair-recommendations > h2 { font-size: 19px; line-height: 1.5; font-weight: 750; margin: 0 0 16px; }
-.wm-pair-common > div { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0 0; }
-.wm-pair-common > div + div { border-top: 1px solid #edf2f5; margin-top: 14px; padding-top: 14px; }
-.wm-pair-row-icon { display: grid; flex-shrink: 0; place-items: center; width: 36px; height: 36px; border-radius: 12px; color: #0086a1; background: #e9faff; font-size: 22px; }
-.wm-pair-common > div > div { flex: 1; min-width: 0; }
-.wm-pair-common h3 { font-size: 16px; line-height: 1.5; margin-bottom: 8px; font-weight: 700; }
-.wm-pair-labels { display: flex; flex-wrap: wrap; gap: 5px; }
-.wm-pair-labels > span { display: inline-block; padding: 6px 9px; border-radius: 7px; background: #edf7fb; color: #456874; font-size: 14px; line-height: 1.5; }
 .wm-pair-page .wm-pair-muted { color: #547581; font-size: 15px; line-height: 1.7; }
-.wm-pair-recommendations { min-width: 0; padding-top: 4px; }
-.wm-pair-work-group { margin-top: 16px; }
+.wm-pair-recommendations { min-width: 0; }
+.wm-pair-work-group { margin-top: 12px; }
 .wm-pair-recommendations > .wm-pair-work-group:first-child { margin-top: 0; }
 .wm-pair-work-empty { display: grid; place-items: center; min-height: 88px; padding: 24px 16px; border: 1px solid var(--match-ui-border, #dcebef); border-radius: 14px; background: #fff; text-align: center; }
-.wm-pair-work-group > header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
-.wm-pair-work-group header :is(h2, h3) { color: #285061; font-size: 16px; font-weight: 700; line-height: 1.5; overflow-wrap: anywhere; }
+.wm-pair-work-group > header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.wm-pair-work-group header :is(h2, h3) { display:flex; align-items:center; gap:7px; color: #193640; font-size: 16px; font-weight: 700; line-height: 1.5; overflow-wrap: anywhere; }
+.wm-pair-work-group header :is(h2, h3) > span { min-width:0; }
+.wm-pair-work-group header :is(h2, h3) > .wm-icon { width:22px; height:22px; color:#007e98; flex-shrink:0; }
 .wm-pair-work-group header h2 { font-size: var(--wm-font-section, 19px); font-weight: 750; }
-.wm-pair-work-group header :is(h2, h3) small { color: #6e8995; font-size: 14px; font-weight: 500; padding-left: 3px; }
+.wm-pair-work-group header :is(h2, h3) small { color: #6e8995; font-size: 14px; font-weight: 500; flex-shrink:0; }
 .wm-pair-work-group > header > div:first-child { min-width: 0; }
 .wm-pair-fit-note { display: block; margin-top: 5px; color: #895b10; font-size: 12px; line-height: 1.5; }
 .wm-pair-work-track { display: flex; align-items: stretch; list-style: none; padding: 2px 0; margin: 0; gap: 10px; overflow-x: auto; overflow-y: hidden; scroll-snap-type: none; scrollbar-width: none; overscroll-behavior-x: contain; }
@@ -128,8 +130,8 @@ body:has(.wm-pair-page) .brand-bar__logo { left: 50% !important; right: auto !im
 .wm-pair-work-track q::before { content: '“'; color: #8ca8b6; }
 .wm-pair-work-track q::after { content: '”'; color: #8ca8b6; }
 .wm-pair-work-card.is-taste-fit .wm-pair-work-artwork::after { content: ''; position: absolute; z-index: 2; inset: 0; border: 3px solid #e8ff38; border-radius: inherit; box-shadow: inset 0 0 8px #e8ff3855; pointer-events: none; }
-.wm-pair-work-fit { display: flex; align-items: center; gap: 5px; width: fit-content; max-width:100%; margin-top: 8px; padding: 2px 5px; border-radius:4px; color: #4b530a; background:linear-gradient(transparent 28%,#edff6b 28%,#edff6b 92%,transparent 92%); font-size: 14px; line-height: 1.5; font-weight: 800; }
-.wm-pair-work-fit > span { color: #657006; font-size: 18px; }
+.wm-pair-work-fit { position: absolute; z-index: 3; top: 8px; left: 8px; display: flex; align-items: center; gap: 4px; width: fit-content; max-width: calc(100% - 16px); margin: 0; padding: 4px 6px; border-radius: 5px; color: #3c4506; background: #edff6b; box-shadow: 0 2px 6px #07171f24; font-size: 12px; line-height: 1.5; font-weight: 800; pointer-events: none; }
+.wm-pair-work-fit > span { color: #657006; font-size: 14px; line-height: 1; }
 .wm-pair-like-error { padding: 12px; border-radius: 10px; color: #95552a; background: #fff3e5; font-size: 15px; line-height: 1.7; }
 .wm-pair-profiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .wm-pair-profiles > div { min-width: 0; padding: 10px; border-radius: 12px; background: #f1f8fb; }
@@ -142,8 +144,6 @@ body:has(.wm-pair-page) .brand-bar__logo { left: 50% !important; right: auto !im
 .wm-pair-profiles li > small { color: #547581; font-size: 12px; }
 .wm-pair-profiles li > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .wm-pair-profiles li > b { color: #94630d; white-space: nowrap; font-size: 12px; }
-.wm-pair-reading p { color: #456874; font-size: 16px; line-height: 1.8; }
-.wm-pair-reading h3 { margin: 24px 0 12px; padding-left: 10px; border-left: 3px solid #00bfdc; color: #00697f; font-size: 18px; font-weight: 750; line-height: 1.45; letter-spacing: -.02em; word-break: keep-all; overflow-wrap: anywhere; }
 .wm-pair-rank { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 16px; padding: 16px; border-radius: 14px; background: #e9f4f9; }
 .wm-pair-rank > span { color: #547581; font-size: 14px; min-width: 0; overflow-wrap: anywhere; }
 .wm-pair-rank strong { color: #00697f; font-size: 20px; white-space: nowrap; }

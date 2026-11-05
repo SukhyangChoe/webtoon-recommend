@@ -30,11 +30,12 @@ const {chromium}=require('playwright');
    }
    assert.equal(req.method(),'GET','no other mutations');
    if(url.pathname===`/api/v1/results/${profile}`)return reply(result);
+   if(url.pathname===`/api/v1/results/${profile}/recommendation-comments/ui-work`)return reply({recommendationComment:null});
    if(url.pathname.endsWith('/recommendations'))return reply({items:registered});
    if(url.pathname==='/api/v1/challenges')return reply({active:false});
    if(url.pathname==='/api/v1/webtoons/search'){assert.notEqual(url.searchParams.get('scope'),'catalog');return reply({items:[work]});}
    if(['/api/v1/webtoons/ui-work','/api/v1/webtoons/ui-work/fit'].includes(url.pathname)){
-    workReads++;return reply({...work,mainGenreLabel:'무협',creators:[],contentLabels:[],artStyles:[],appreciationPoints:[],introductionKind:'editorial',fitStatus:'ready',fit:{percent:registered.length?94:72,reasons:[],highlighted:registered.length>0}});
+    workReads++;return reply({...work,mainGenreLabel:'무협',creators:[],contentLabels:[],artStyles:[],appreciationPoints:[],introductionKind:'editorial',fitStatus:'ready',fit:{rawScore:registered.length?.8836:.5184,percent:registered.length?88:52,displayScore:registered.length?94:72,displayScoreVersion:'sqrt_v1',reasons:[],highlighted:registered.length>0}});
    }
    if(url.pathname==='/api/v1/challenges/invite/results/pair'){
     pairReads++;return reply({ownerNickname:'초대자',challengerNickname:'도전자',viewerPublicProfileId:profile,ownerGenreKey:'ropan',challengerGenreKey:'murim',score:registered.length?92:80,band:{label:'취향 잘 맞음',subcopy:''},sharedGenres:['무협'],differentGenres:[],ownerRecommendedGenres:[],challengerRecommendedGenres:[],ownerRecommendations:[],challengerRecommendations:registered,sharedTasteLabels:[],recommendationTasteApplied:registered.length>0,trustSentence:'같이 달리면 완주',rank:1,entryCount:1});
@@ -66,12 +67,12 @@ const {chromium}=require('playwright');
   await page.keyboard.press('Escape');await page.locator('.wm-recommendation-prompt').waitFor({state:'detached'});
   await page.reload();await page.locator('.wm-result-screen').waitFor();assert.equal(await page.locator('.wm-recommendation-prompt').count(),0,'dismissed prompt does not reopen on refresh');
   await page.setViewportSize({width:390,height:844});
-  const paths=[`/match/result/${profile}`,`/match/result/${profile}/recommendations`,pairPath,'/match/c/invite/ranking','/match/c/invite','/match/challenge/new',workPath,`/match/share/personal?profilePublicId=${profile}`,'/match/search'];
+  const paths=[`/match/result/${profile}`,`/match/result/${profile}/recommendations`,pairPath,'/match/c/invite/ranking','/match/c/invite','/match/challenge/new',workPath,`/match/share/personal?profilePublicId=${profile}`];
   for(const path of paths){
    await page.goto(base+path);await page.locator('.wm-floating-search').waitFor();
-   assert.ok(await page.locator('.wm-floating-search').evaluate(el=>{const r=el.getBoundingClientRect();return r.width>=44&&r.height>=44&&r.top>=0&&r.bottom<=70&&r.right<=innerWidth;}),path);
+   assert.ok(await page.locator('.wm-floating-search').evaluate(el=>{const r=el.getBoundingClientRect();return r.width>=100&&r.height>=44&&r.top>innerHeight/2&&r.bottom<=innerHeight-12&&r.right<=innerWidth;}),path);
   }
-  for(const path of ['/match/test/intro','/match/test/genre-shelf/1','/match/test/duel/1','/match/test/avoidance']){await page.goto(base+path);assert.equal(await page.locator('.wm-floating-search').count(),0,path);}
+  for(const path of ['/match/test/intro','/match/test/genre-shelf/1','/match/test/duel/1','/match/test/avoidance','/match/search']){await page.goto(base+path);assert.equal(await page.locator('.wm-floating-search').count(),0,path);}
   await page.goto(base+pairPath);await page.locator('.wm-floating-search').click();await page.waitForURL('**/match/search?*');assert.equal(new URL(page.url()).searchParams.get('from'),pairPath);
   await page.getByRole('link',{name:'이전 화면',exact:true}).click();await page.waitForURL(base+pairPath);
   await fresh('pair');assert.equal(entries,1);
@@ -79,7 +80,7 @@ const {chromium}=require('playwright');
   assert.equal(new URL(page.url()).searchParams.get('returnTo'),pairPath);
   await page.getByRole('searchbox',{name:'추천할 웹툰 검색'}).fill('작품');await page.getByRole('button',{name:'검색',exact:true}).click();await page.getByRole('button',{name:'추가',exact:true}).click();
   failSave=true;await page.getByRole('button',{name:'저장하고 궁합 보기',exact:true}).click();await page.locator('.wm-floating-toast').waitFor();assert.ok(page.url().includes('/recommendations?'));
-  failSave=false;const beforePair=pairReads;await page.getByRole('button',{name:'저장하고 궁합 보기',exact:true}).click();await page.waitForURL(base+pairPath);await page.getByRole('link',{name:'등록할 작품',exact:true}).waitFor();assert.ok(pairReads>beforePair);assert.equal(await page.locator('.wm-recommendation-prompt').count(),0);
+  failSave=false;const beforePair=pairReads;await page.getByRole('button',{name:'저장하고 궁합 보기',exact:true}).click();await page.waitForURL(base+pairPath);await page.getByRole('link',{name:'등록할 작품 작품 상세 보기',exact:true}).waitFor();assert.ok(pairReads>beforePair);assert.equal(await page.locator('.wm-recommendation-prompt').count(),0);
   await page.goto(base+`/match/result/${profile}/recommendations?returnTo=${encodeURIComponent(pairPath)}`);await page.getByRole('link',{name:'궁합으로 돌아가기',exact:true}).click();await page.waitForURL(base+pairPath);assert.equal(saves,2,'cancel does not save');
   registered=[];await fresh('work');const beforeWork=workReads;await page.getByRole('button',{name:'추천작 등록하기',exact:true}).click();await page.waitForURL('**/recommendations?*');
   assert.equal(new URL(page.url()).searchParams.get('returnTo'),workPath);

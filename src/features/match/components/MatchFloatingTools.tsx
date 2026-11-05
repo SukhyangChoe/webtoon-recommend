@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { MatchIcon } from './MatchIcon';
 import { showFloatingSearch, workSearchHref } from '../config/workSearchPresentation.mjs';
 import { dismissRecommendationPrompt, readRecommendationPrompt, recommendationManagerHref } from '../config/recommendationOnboarding.mjs';
@@ -15,6 +15,47 @@ export function MatchFloatingTools() {
   const [prompt, setPrompt] = useState<Prompt | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const registerButton = useRef<HTMLButtonElement>(null);
+  const search = useRef<HTMLAnchorElement>(null);
+
+  useLayoutEffect(() => {
+    const parent = search.current?.closest<HTMLElement>('.match-module');
+    if (!parent) return;
+    const container: HTMLElement = parent;
+    let frame = 0;
+    const footers = new Set<Element>();
+    const resize = new ResizeObserver(measure);
+    // Work-detail footers are positioned inside a viewport-height canvas. Its
+    // height can settle after a resize without changing the footer's own size.
+    resize.observe(container);
+    function measure() {
+      if (frame) cancelAnimationFrame(frame);
+      frame = 0;
+      const current = new Set(container.querySelectorAll('.wm-action-bar, .wm-save-tray, .wm-work-action'));
+      for (const footer of footers) if (!current.has(footer)) { resize.unobserve(footer); footers.delete(footer); }
+      let height = 0;
+      for (const footer of current) {
+        if (!footers.has(footer)) { resize.observe(footer); footers.add(footer); }
+        const rect = footer.getBoundingClientRect();
+        if (rect.height > 0 && rect.top >= 0 && rect.bottom >= window.innerHeight - 2) height = Math.max(height, window.innerHeight - rect.top);
+      }
+      // Footers include their safe-area inset. Do not add it a second time.
+      container.style.setProperty('--wm-search-bottom', height ? `${height + 12}px` : 'calc(16px + env(safe-area-inset-bottom))');
+      container.style.setProperty('--wm-search-clearance', height ? `${height + 72}px` : 'calc(76px + env(safe-area-inset-bottom))');
+    }
+    function schedule() { if (!frame) frame = requestAnimationFrame(measure); }
+    // Late-loading action bars must be measured before paint, not a frame later.
+    const mutations = new MutationObserver(measure);
+    mutations.observe(container, { childList: true, subtree: true });
+    window.addEventListener('resize', schedule);
+    window.visualViewport?.addEventListener('resize', schedule);
+    measure();
+    return () => {
+      cancelAnimationFrame(frame); resize.disconnect(); mutations.disconnect();
+      window.removeEventListener('resize', schedule);
+      window.visualViewport?.removeEventListener('resize', schedule);
+      container.style.removeProperty('--wm-search-bottom'); container.style.removeProperty('--wm-search-clearance');
+    };
+  }, [path]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -46,7 +87,7 @@ export function MatchFloatingTools() {
   }
 
   return <>
-    {showFloatingSearch(path) ? <Link className="wm-floating-search" href={path === '/match/search' ? currentPath : workSearchHref('', currentPath)} aria-label="작품 검색" title="작품 검색" aria-current={path === '/match/search' ? 'page' : undefined} prefetch={false}><MatchIcon name="search" /></Link> : null}
+    {showFloatingSearch(path) ? <Link ref={search} className="wm-floating-search" href={workSearchHref('', currentPath)} aria-label="작품 검색" prefetch={false}><MatchIcon name="search" /><span>작품 검색</span></Link> : null}
     {prompt ? <dialog ref={dialog} className="wm-recommendation-prompt" aria-labelledby="wm-recommendation-prompt-title" aria-describedby="wm-recommendation-prompt-copy" onKeyDown={event => {
       if (event.key !== 'Tab') return;
       const controls = event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)');

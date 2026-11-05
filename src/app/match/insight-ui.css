@@ -1,0 +1,29 @@
+/* Shared personal/pair insights. Hero titles, numeric scores, and comic dialogue fonts stay untouched. */
+.match-module.match-cyan .wm-insight-card { padding:18px 16px; border:1px solid #dcebef; border-radius:18px; background:#fff; box-shadow:none; font-family:inherit; }
+.match-module.match-cyan .wm-taste-summary { padding:4px 16px; border:1px solid #dcebef; border-radius:16px; background:#fff; box-shadow:none; }
+.wm-taste-summary-row { display:grid; grid-template-columns:minmax(0,1fr); gap:8px; align-items:start; padding-block:12px; }
+.wm-taste-summary-row + .wm-taste-summary-row { border-top:1px solid #edf4f6; }
+.match-module.match-cyan .wm-taste-summary .wm-taste-summary-label { display:flex; align-items:center; gap:5px; min-height:20px; margin:0; color:#547985; font-size:13px; font-weight:600; line-height:1.5; white-space:nowrap; letter-spacing:-.02em; }
+.wm-taste-summary-label > span { flex-shrink:0; color:#ee86ac; font-size:18px; line-height:1; }
+.wm-taste-summary-row.is-muted .wm-taste-summary-label,.wm-taste-summary-row.is-muted .wm-taste-summary-label > span { color:#7694a1; }
+.wm-taste-summary .wm-taste-chips { display:flex; flex-wrap:wrap; gap:6px; min-width:0; margin:0; padding:0; list-style:none; }
+.wm-taste-summary .wm-taste-chips li { display:flex; align-items:center; gap:6px; min-width:0; max-width:100%; min-height:32px; padding:4px 9px; border:0; border-radius:9px; background:#eaf8fb; }
+.match-module.match-cyan .wm-taste-summary .wm-taste-chips strong { min-width:0; color:#245765; font-size:16px; font-weight:650; line-height:1.5; overflow-wrap:anywhere; word-break:keep-all; }
+.wm-taste-summary .wm-taste-icon { flex-shrink:0; width:16px; height:16px; color:#4b9aad; }
+.wm-taste-summary .wm-avoidance { display:flex; flex-wrap:wrap; gap:6px; min-width:0; margin:0; padding:0; list-style:none; }
+.match-module.match-cyan .wm-taste-summary .wm-avoidance li { max-width:100%; min-height:32px; padding:4px 8px; border:1px solid #e2e5e8; border-radius:9px; background:#eef0f2; color:#4b5057; font-size:14px; line-height:1.5; overflow-wrap:anywhere; word-break:keep-all; }
+.match-module.match-cyan .wm-taste-summary :is(.wm-taste-empty,.wm-pair-muted) { min-width:0; margin:0; padding:5px 0; color:#748a93; font-size:14px; line-height:1.6; word-break:keep-all; overflow-wrap:anywhere; }
+.wm-story-card :is(h2,h3,p) { word-break:keep-all; overflow-wrap:anywhere; }
+.wm-story-card > header { margin-bottom:12px; }
+.match-module.match-cyan .wm-story-card .wm-story-eyebrow { margin:0 0 6px; color:#00697f; font-size:13px; font-weight:700; line-height:1.6; }
+.match-module.match-cyan .wm-story-card .wm-story-title { margin:0; color:#193640; font-size:19px; font-weight:750; line-height:1.5; letter-spacing:-.025em; }
+.match-module.match-cyan .wm-story-card .wm-story-copy { margin:0; color:#456874; font-family:inherit; font-size:15px; font-weight:400; line-height:1.75; }
+.wm-story-card .wm-story-scene { margin-top:16px; padding:14px; border-radius:12px; background:#eef9fb; }
+.match-module.match-cyan .wm-story-card .wm-story-subtitle { margin:0 0 8px; padding:0 0 0 9px; border:0; border-left:3px solid #00bfdc; color:#00697f; font-size:13px; font-weight:700; line-height:1.6; letter-spacing:0; }
+.wm-story-card .wm-pair-reading-dialogue { margin:0 0 12px; padding:0; border:0; background:transparent; }
+.match-module.match-cyan .wm-story-card .wm-pair-reading-dialogue .wm-story-copy { color:#245765; font-weight:650; }
+.match-module.match-cyan .wm-story-card .wm-pair-reading-dialogue .wm-story-copy + .wm-story-copy { margin-top:4px; }
+.match-module.match-cyan .wm-story-card .wm-story-punchline { margin-top:12px; padding-top:12px; border-top:1px solid #d6edf1; color:#193640; font-weight:650; }
+@media(max-width:360px) {
+  .wm-taste-summary-row { padding-block:10px; }
+}

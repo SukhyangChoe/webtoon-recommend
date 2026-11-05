@@ -111,11 +111,9 @@ body:has(.wm-relationship-page) .brand-bar__logo { left: 50% !important; right: 
 .wm-pair-summary { padding: 4px 20px 20px; }
 .wm-pair-summary > header { display: flex; align-items: center; gap: 11px; padding: 0 0 16px; }
 .wm-pair-summary .wm-persona-avatar { width: 58px; height: 58px; background: #fff6d9; }
-.wm-pair-summary > header > div { flex: 1; min-width: 0; }
+.wm-pair-summary-copy { flex: 1; min-width: 0; }
 .wm-pair-summary h2 { margin: 0; font-size: 16px; line-height: 1.4; font-weight: 750; overflow-wrap: anywhere; }
 .wm-pair-summary header p { margin: 4px 0 0; color: #647e87; font-size: 12px; line-height: 1.5; }
-.wm-pair-summary header > strong { color: #00697f; font-size: 34px; white-space: nowrap; line-height: 1; letter-spacing: -.045em; }
-.wm-pair-summary header > strong small { font-size: 23px; }
 .wm-pair-summary-genres { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; padding: 15px 0 18px; border-top: 1px solid #e3edf2; }
 .wm-pair-summary-genres > span { font-size: 12px; font-weight: 600; margin-right: 4px; }
 .wm-pair-summary-genres b { font-size: 11px; color: #547581; background: #eef6fa; padding: 7px 10px; border-radius: 20px; }
@@ -139,7 +137,6 @@ body:has(.wm-relationship-page) .brand-bar__logo { left: 50% !important; right: 
   .wm-participants-panel > summary > small { font-size: 9px; }
   .wm-pair-summary { padding-inline: 16px; }
   .wm-pair-summary h2 { font-size: 14px; }
-  .wm-pair-summary header > strong { font-size: 29px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .wm-dialog.wm-bottom-sheet { animation: none; }

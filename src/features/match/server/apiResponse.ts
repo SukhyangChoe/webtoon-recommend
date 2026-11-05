@@ -2,7 +2,7 @@ import 'server-only';
 import { randomUUID } from 'node:crypto';
 import { NextResponse } from 'next/server';
 
-const publicSegments=new Set(['api','v1','results','recommendations','recommendation-comments','like','nickname','webtoons','search','fit','challenges','entries','ranking','taste-snapshots','match-events','test-restart']);
+const publicSegments=new Set(['api','v1','results','recommendations','recommendation-comments','daily-picks','like','nickname','webtoons','search','fit','challenges','entries','ranking','taste-snapshots','match-events','test-restart']);
 /** Record timings and statuses, never bodies, queries, identity or raw errors. */
 export function matchJson(request: Request, body: unknown, init?: ResponseInit) {
   const start=Number(request.headers.get('x-wm-request-start'));

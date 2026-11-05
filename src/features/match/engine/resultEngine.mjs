@@ -2,6 +2,7 @@ import { MATCH_SCORING_CONFIG } from "../config/scoring.mjs";
 import { MATCH_VERSIONS } from "../config/versions.mjs";
 import { getPrimarySelectionWeights, getSettingWeights } from "./selectionPolicy.mjs";
 import { buildProfileTasteVector } from "./tasteVectorEngine.mjs";
+import { buildReaderExplanation } from './readerExplanationEngine.mjs';
 
 const GENRE_CHOICE_SCORE = Object.freeze({ high: 3, medium: 1.5, low: 0 });
 
@@ -111,7 +112,7 @@ export function buildTasteSnapshot({ seed, answers, anonymousId, profileId, snap
   return { ...snapshot, tasteVector: buildProfileTasteVector(snapshot, seed) };
 }
 
-export function toPublicTasteResult(snapshot) {
+export function toPublicTasteResult(snapshot, explanationContext = {}) {
   const fallbackCategories = snapshot.positiveTasteEvidenceStates?.setting === "specific"
     ? ["설정", "전개", "관계"]
     : ["전개", "관계"];
@@ -130,5 +131,6 @@ export function toPublicTasteResult(snapshot) {
     wellMatchedLabels: snapshot.wellMatchedLabels,
     lessMatchedLabels: snapshot.lessMatchedLabels,
     topGenres: snapshot.displayGenres.slice(0, 3),
+    readerExplanation: snapshot.readerExplanation ?? buildReaderExplanation(snapshot, explanationContext),
   };
 }

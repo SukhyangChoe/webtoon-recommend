@@ -204,7 +204,7 @@ const { chromium } = require("playwright");
     assert.equal(await personalBar.evaluate(el=>getComputedStyle(el).opacity),'0.4');
     await personalTrack.focus();
     await page.keyboard.press('End');
-    await page.waitForFunction(() => document.querySelector(".wm-carousel-controls > span")?.textContent === "추천작 3 / 3");
+    assert.equal(await page.locator('.wm-carousel-controls > span').count(), 0, 'removed page counters stay absent while keyboard scrolling');
     await page.waitForFunction(()=>document.querySelector('.wm-personal-carousel')?.dataset.scrolling==='true');
     await page.waitForFunction(()=>{
       const track=document.querySelector('.wm-personal-carousel ol');
@@ -245,7 +245,7 @@ const { chromium } = require("playwright");
     for (const width of [320, 390, 435]) {
       await page.setViewportSize({ width, height: 844 });
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `result fits at ${width}`);
-      const boxes = await footer.locator("a").evaluateAll((items) => items.map((el) => ({ y: el.getBoundingClientRect().y, height: el.getBoundingClientRect().height, width: el.getBoundingClientRect().width })));
+      const boxes = await footer.locator(".match-button").evaluateAll((items) => items.map((el) => ({ y: el.getBoundingClientRect().y, height: el.getBoundingClientRect().height, width: el.getBoundingClientRect().width })));
       assert.equal(boxes[0].y, boxes[1].y, "actions stay in one row");
       assert.ok(boxes.every((box) => box.height >= 44 && box.width > 90));
       assert.ok((await footer.boundingBox()).y > 740, "actions stay at viewport bottom");
@@ -303,7 +303,7 @@ const { chromium } = require("playwright");
         assert.ok(await rail.evaluate(el => {
           const frame = el.getBoundingClientRect();
           const cards = [...el.children].map(card => card.getBoundingClientRect());
-          return Math.abs(el.scrollLeft) < 2 && cards.every(card => Math.abs(card.width - 148) < .1 && card.height >= 104) && cards[0].left >= frame.left - 1 && cards[0].right <= frame.right + 1;
+          return Math.abs(el.scrollLeft) < 2 && cards.every(card => Math.abs(card.width - 148) < .1 && card.height >= 88) && cards[0].left >= frame.left - 1 && cards[0].right <= frame.right + 1;
         }), `genre cards retain a comfortable minimum size before swiping at ${width}px`);
         await page.keyboard.press('End');
         // Programmatic scroll positions update before the browser dispatches scroll.

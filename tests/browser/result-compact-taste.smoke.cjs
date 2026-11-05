@@ -48,19 +48,20 @@ const { chromium } = require('playwright');
         headings: [...el.querySelectorAll('h2')].map(h => ({ w: h.clientWidth, scroll: h.scrollWidth })),
         headingFont: getComputedStyle(el.querySelector('h2')).fontSize,
         noVerticalRules: [...el.querySelectorAll('ul')].every(list => getComputedStyle(list).borderLeftWidth === '0px'),
+        rows:[...el.querySelectorAll('.wm-taste-summary-row')].map(row=>({height:row.getBoundingClientRect().height,padding:getComputedStyle(row).padding,columns:getComputedStyle(row).gridTemplateColumns,gap:getComputedStyle(row).gap})),
       }));
       assert.ok(layout.fits && layout.textFits, `no clipping at ${width}px`);
       assert.ok(layout.headings.every(h => h.scroll <= h.w + 1), 'section labels fit');
       assert.equal(layout.font, '16px', 'compact spacing, not smaller taste text');
       assert.equal(layout.headingFont, '13px', 'quiet labels leave the emphasis on taste values');
       assert.ok(layout.noVerticalRules, 'no table-like vertical separators');
-      assert.ok(layout.height <= (width <= 360 ? 205 : 180), `compact two-row panel at ${width}: ${layout.height}`);
+      assert.ok(layout.height <= (width <= 360 ? 205 : 180), `compact two-row panel at ${width}: ${JSON.stringify(layout)}`);
       assert.ok(await page.locator('.wm-top-genres article').evaluateAll(cards => cards.every(card => {
         const box = card.getBoundingClientRect();
         const rank = card.querySelector('.wm-genre-rank').getBoundingClientRect(), name = card.querySelector('strong').getBoundingClientRect();
         const star = card.querySelector('.match-top-stars').getBoundingClientRect();
-        return Math.abs(box.width - 148) < .1 && box.height >= 104 && name.left >= rank.right && Math.abs((rank.top + rank.bottom) / 2 - (name.top + name.bottom) / 2) < 1 && star.top >= Math.max(rank.bottom, name.bottom) + 10 && !card.querySelector('svg, img') && getComputedStyle(card).backgroundImage === 'none';
-      })), `unchanged card size, inline rank/name, stars below, no artwork at ${width}px`);
+        return Math.abs(box.width - 148) < .1 && box.height >= 88 && name.left >= rank.right && Math.abs((rank.top + rank.bottom) / 2 - (name.top + name.bottom) / 2) < 1 && star.top >= Math.max(rank.bottom, name.bottom) + 8 && !card.querySelector('svg, img') && getComputedStyle(card).backgroundImage === 'none';
+      })), `unchanged card width, reduced minimum height, inline rank/name and stars below at ${width}px`);
     }
     allGenres = true;
     await page.reload(); await page.locator('.wm-top-genres article').nth(8).waitFor({ state: 'attached' });
@@ -92,6 +93,7 @@ const { chromium } = require('playwright');
       heights.push(await page.locator('.wm-top-genres article').first().evaluate(el => el.getBoundingClientRect().height));
     }
     assert.ok(heights[0] <= heights[1] && heights[1] < heights[2], 'cards preserve their comfortable minimum and expand when stars need more height');
+    assert.ok(Math.abs(heights[0]-88)<1&&heights[1]<118,'both small and 18-star cards are shorter than the previous layout');
     long = true;
     for (const width of [320, 390]) {
       await page.setViewportSize({ width, height: 844 }); await page.reload(); await page.locator('.wm-interpretation').waitFor();
@@ -114,6 +116,6 @@ const { chromium } = require('playwright');
     await live.locator('.wm-genre-ranking').screenshot({ path: path.join(output, 'genre_cards_balanced_live.png') });
     await live.locator('.wm-interpretation').screenshot({ path: path.join(output, 'taste_points_refined_live.png') });
     await real.close();
-    console.log(JSON.stringify({ ok: true, checks: ['no decorative artwork in genre cards', 'restored heart and circled-minus heading glyphs', 'neutral grey avoidance chips with dark grey text', '148px width and 104px minimum height', 'rank and genre in one line with stars below', '320/375/390/435/540/900 widths', 'unchanged 16px taste text', 'compact rows', 'long and empty values', 'dynamic star height', 'overflow-aware scrollbar for 1/2/3/9 cards', 'genre keyboard scrolling', 'real result screenshot; no user-data writes'], output }));
+    console.log(JSON.stringify({ ok: true, checks: ['no decorative artwork in genre cards', 'restored heart and circled-minus heading glyphs', 'neutral grey avoidance chips with dark grey text', '148px width and reduced 88px minimum height', 'rank and genre in one line with stars below', '320/375/390/435/540/900 widths', 'unchanged 16px taste text', 'compact rows', 'long and empty values', 'dynamic star height', 'overflow-aware scrollbar for 1/2/3/9 cards', 'genre keyboard scrolling', 'real result screenshot; no user-data writes'], output }));
   } finally { await browser.close(); }
 })().catch(error => { console.error({ name: error.name, message: error.message }); process.exitCode = 1; });

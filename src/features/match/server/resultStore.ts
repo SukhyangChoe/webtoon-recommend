@@ -62,7 +62,7 @@ function storedSnapshot(row: SnapshotRow): StoredSnapshot {
   } as StoredSnapshot;
 }
 
-async function withCurrentRecommendationTaste(snapshot: StoredSnapshot, read?: WorkReadContext) {
+async function withCurrentRecommendationTaste(snapshot: StoredSnapshot, read?: WorkReadContext, includeExplanation = false) {
   const database = getMatchDatabase();
   const rows = read ? await read.query<RecommendationVectorRow[]>('recommendations', `
     select jsonb_build_object('recommendation',webtoons.raw_data->'recommendation') as raw_data from public.match_profile_recommendations recommendations
@@ -78,11 +78,12 @@ async function withCurrentRecommendationTaste(snapshot: StoredSnapshot, read?: W
       and public.webtoon_is_public_safe(webtoons.raw_data)
     order by recommendations.sort_order asc
   `;
-  const blend = () => applyRecommendationTaste(
-    snapshot,
-    rows.map((row) => row.raw_data?.recommendation).filter(Boolean),
-    questionSeed,
-  ) as StoredSnapshot;
+  const blend = () => {
+    const recommendations = rows.map((row) => row.raw_data?.recommendation).filter(Boolean);
+    const blended = applyRecommendationTaste(snapshot, recommendations, questionSeed) as StoredSnapshot;
+    // Reuse this read. No new queries, persistence or changes to the scoring engine.
+    return includeExplanation ? { ...blended, readerExplanation: toPublicTasteResult(blended, { recommendations, seed: questionSeed }).readerExplanation } : blended;
+  };
   return read ? read.measure('taste_blend', blend) : blend();
 }
 
@@ -172,7 +173,7 @@ export async function createTasteSnapshot(anonymousId: string, nickname: string,
 export async function getTasteSnapshot(publicProfileId: string) {
   const database = getMatchDatabase();
   const rows = await database.unsafe<SnapshotRow[]>(`${SNAPSHOT_SELECT} where snapshots.public_profile_id = $1 limit 1`, [publicProfileId]);
-  return rows[0] ? withCurrentRecommendationTaste(storedSnapshot(rows[0])) : null;
+  return rows[0] ? withCurrentRecommendationTaste(storedSnapshot(rows[0]), undefined, true) : null;
 }
 
 /** Work details always follow this viewer's newest test and current recommendations. */
@@ -241,6 +242,27 @@ export async function getTasteSnapshotsByIds(snapshotIds: string[], { latestForP
 export async function getPublicTasteResult(publicProfileId: string) {
   const snapshot = await getTasteSnapshot(publicProfileId);
   return snapshot ? { ...toPublicTasteResult(snapshot), nickname: snapshot.profileDisplayName ?? null } : null;
+}
+
+/** Resolve result ownership and its one navigation destination in the same snapshot read.
+ * Unlike the full challenge endpoint, this needs no participant counts or owner-taste reload.
+ */
+export async function getPublicTasteResultForViewer(publicProfileId: string, anonymousId: string | null) {
+  const database = getMatchDatabase();
+  const rows = await database.unsafe<Array<SnapshotRow & { active_challenge_code: string | null }>>(`
+    select snapshot.*, case when snapshot.anonymous_id = $2::text then (
+      select challenge_code from public.match_challenges
+      where owner_profile_id = snapshot.profile_id::uuid and status = 'active'
+      limit 1
+    ) end as active_challenge_code
+    from (${SNAPSHOT_SELECT} where snapshots.public_profile_id = $1 limit 1) snapshot
+  `, [publicProfileId, anonymousId]);
+  const row = rows[0];
+  if (!row) return null;
+  const snapshot = await withCurrentRecommendationTaste(storedSnapshot(row), undefined, true);
+  const canManage = anonymousId !== null && row.anonymous_id.toLowerCase() === anonymousId.toLowerCase();
+  return { ...toPublicTasteResult(snapshot), nickname: snapshot.profileDisplayName ?? null, canManage,
+    activeChallengeCode: canManage ? row.active_challenge_code : null };
 }
 
 export async function isTasteResultOwner(publicProfileId: string, anonymousId: string) {

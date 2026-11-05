@@ -9,12 +9,12 @@ export function personalShareLayout(genres, hasRecommendations) {
   const genreHeight = 73 + starRows * 12;
   const recommendationDividerY = genreY + genreHeight + 18;
   const coverY = recommendationDividerY + 34;
-  const coverHeight = 98;
+  const coverHeight = 112;
   const recommendationTitleY = coverY + coverHeight + 17;
   const footerY = hasRecommendations ? recommendationTitleY + 14 + 19 : genreY + genreHeight + 18;
   return {
     genreY, genreHeight, starRows, recommendationDividerY, coverY,
-    coverWidth: 68, coverHeight, recommendationTitleY,
+    coverWidth: 78, coverHeight, recommendationTitleY,
     footerY,
     cardHeight: footerY + 34,
   };

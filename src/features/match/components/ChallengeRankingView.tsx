@@ -15,6 +15,7 @@ import { MatchDialog } from "./MatchDialog";
 import { MatchIcon } from "./MatchIcon";
 import { MatchActionBar } from "./MatchActionBar";
 import { PersonaAvatar } from "./PersonaAvatar";
+import { PairScoreGauge } from './PairScoreGauge';
 import { RelationshipMap, type RelationshipPerson } from "./RelationshipMap";
 
 type RankingData = {
@@ -225,12 +226,12 @@ export function ChallengeRankingView({ challengeCode }: { challengeCode: string 
     </div></details> : null}
 
     <MatchActionBar className="wm-ranking-actions" label="관계도 바로가기">
-      <Link className="match-button" href={personalResultId ? `/match/result/${personalResultId}` : "/match/test/intro"}>{personalResultId ? "내 결과" : "테스트하기"}</Link>
+      <Link className="match-button match-button--secondary" href={personalResultId ? `/match/result/${personalResultId}` : "/match/test/intro"}>{personalResultId ? "내 결과" : "테스트하기"}</Link>
       {ranking.canManage ? <Link className="match-button match-button--secondary" href={`/match/share/ranking?challengeCode=${challengeCode}`} aria-label="현재 랭킹을 Threads에 공유"><MatchIcon name="share" />공유</Link> : null}
-      <button className="match-button match-button--secondary" type="button" onClick={() => void copyInvitationLink()}><MatchIcon name="link" />링크 복사</button>
+      <button className="match-button match-button--secondary wm-invite-button" type="button" onClick={() => void copyInvitationLink()}><MatchIcon name="invite" />초대하기</button>
     </MatchActionBar>
 
-    {selected ? <MatchDialog sheet titleId="wm-pair-summary-title" onClose={() => setSelected(null)}><div className="wm-pair-summary"><header><PersonaAvatar genreKey={selected.genreKey} /><div><h2 id="wm-pair-summary-title">{selected.nickname}님과의 궁합</h2><p>{pairArchetypeFor(selected.score).name}</p></div><strong>{selected.score}<small>%</small></strong></header><div className="wm-pair-summary-genres"><span>함께 맞는 장르</span>{selected.sharedGenres.length ? selected.sharedGenres.slice(0, 2).map((label) => <b key={label}>{label}</b>) : <p>서로 다른 장르의 매력</p>}</div>
+    {selected ? <MatchDialog sheet titleId="wm-pair-summary-title" onClose={() => setSelected(null)}><div className="wm-pair-summary"><header><PersonaAvatar genreKey={selected.genreKey} /><div className="wm-pair-summary-copy"><h2 id="wm-pair-summary-title">{selected.nickname}님과의 궁합</h2><p>{pairArchetypeFor(selected.score).name}</p></div><PairScoreGauge score={selected.score} compact /></header><div className="wm-pair-summary-genres"><span>함께 맞는 장르</span>{selected.sharedGenres.length ? selected.sharedGenres.slice(0, 2).map((label) => <b key={label}>{label}</b>) : <p>서로 다른 장르의 매력</p>}</div>
       {ranking.canManage || selected.isViewer ? <Link className="match-button" href={`/match/c/${challengeCode}/match/${selected.resultId}?from=ranking`}>{selected.nickname}님과의 상세 궁합 보기 <MatchIcon name="chevron" /></Link> : <p className="wm-private-pair-note">상세 궁합은 당사자와 주인장만 볼 수 있어요.</p>}
     </div></MatchDialog> : null}
     {hideCandidate ? <MatchDialog titleId="wm-hide-title" busy={Boolean(mutating)} onClose={() => setHideCandidate(null)}><div className="wm-hide-confirm"><h2 id="wm-hide-title">{hideCandidate.nickname}님을 숨길까요?</h2><p>관계도와 랭킹에서 숨겨져요.<br />링크 관리에서 다시 복원할 수 있어요.</p><div><button type="button" className="match-button match-button--secondary" disabled={Boolean(mutating)} onClick={() => setHideCandidate(null)}>취소</button><button type="button" className="match-button" disabled={Boolean(mutating)} onClick={() => void setEntryHidden(hideCandidate, true)}>{mutating ? "숨기는 중…" : "숨기기"}</button></div></div></MatchDialog> : null}

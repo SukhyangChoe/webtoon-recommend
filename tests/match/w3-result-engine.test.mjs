@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { allocateGenreStars, buildTasteSnapshot, calculateGenreResult, toPublicTasteResult } from "../../src/features/match/engine/resultEngine.mjs";
 import { applyRecommendationTaste, recommendationTasteWeight } from "../../src/features/match/engine/recommendationTasteEngine.mjs";
 import { MATCH_TASTE_VECTOR_VERSION, matchingRecommendationGenreKeys, projectRecommendationGenreScores, recommendationToTasteVector } from "../../src/features/match/engine/tasteVectorEngine.mjs";
-import { calculateRecommendationFit, RECOMMENDATION_FIT_HIGHLIGHT_THRESHOLD } from "../../src/features/match/engine/recommendationFitEngine.mjs";
+import { calculateRecommendationFit, RECOMMENDATION_FIT_HIGHLIGHT_DISPLAY_THRESHOLD } from "../../src/features/match/engine/recommendationFitEngine.mjs";
 
 const seed = JSON.parse(readFileSync(new URL("../../src/features/match/data/questionSeed.v0.4.json", import.meta.url), "utf8"));
 const synthetic = JSON.parse(readFileSync(new URL("../../src/features/match/data/syntheticProfiles.v0.2.json", import.meta.url), "utf8"));
@@ -251,7 +251,7 @@ test("recommendation fit compares multidimensional user and work vectors", () =>
   assert.equal(exact.highlighted, true);
   assert.equal(different.score, 0);
   assert.equal(different.highlighted, false);
-  assert.equal(RECOMMENDATION_FIT_HIGHLIGHT_THRESHOLD, 0.6);
+  assert.equal(RECOMMENDATION_FIT_HIGHLIGHT_DISPLAY_THRESHOLD, 75);
 });
 
 test("recommendation fit omits missing axes and requires at least two comparable axes", () => {

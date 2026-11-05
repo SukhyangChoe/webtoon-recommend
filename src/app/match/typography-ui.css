@@ -45,7 +45,6 @@
   font-size: var(--wm-font-body);
   line-height: 1.5;
 }
-.match-module.match-cyan .wm-screen .wm-taste-group h2 { font-size: 13px; line-height: 1.5; }
 .match-module.match-cyan .wm-top-genres strong { font-size: 16px; line-height: 1.5; }
 .match-module.match-cyan :is(.wm-screen .wm-note, .wm-screen .wm-eyebrow, .wm-screen .wm-result-meta, .wm-panel-heading a, .wm-local-nav, .wm-avoidance li, .wm-screen .wm-taste-empty, .wm-empty, .wm-count, .wm-return-link, .wm-save-tray > span, .wm-floating-toast, .wm-load-error) {
   font-size: var(--wm-font-secondary);

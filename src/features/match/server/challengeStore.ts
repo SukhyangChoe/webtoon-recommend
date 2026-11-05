@@ -6,6 +6,7 @@ import { denseRankEntries, selectRankingWindow } from "../engine/rankingPolicy.m
 import { relationshipGenreKeys, selectRelationshipPage } from "../engine/relationshipPolicy.mjs";
 import { calculateRecommendationFit } from "../engine/recommendationFitEngine.mjs";
 import { pairTrustSentence } from "../share/pairTrustCopy.mjs";
+import { buildPairReading } from '../engine/pairReadingEngine.mjs';
 import { pairViewerRole, relationshipDestination } from '../config/relationshipDestination.mjs';
 import { getMatchDatabase, isPostgresError } from "./database";
 import { getTasteSnapshot, getTasteSnapshotById, getTasteSnapshotsByIds, updateProfileNickname, type StoredSnapshot } from "./resultStore";
@@ -828,6 +829,7 @@ export async function getPublicPairResult(challengeCode: string, resultId: strin
     ),
     sharedTasteLabels: result.sharedTasteLabels,
     trustSentence: pairTrustSentence({ score: result.overallScore, recommenderNickname: challenge.ownerNickname, genre: result.sharedGenres[0] }),
+    pairReading: buildPairReading({ ownerSnapshot, challengerSnapshot, score: result.overallScore }),
     rank: entry.rank,
     entryCount: ranking.length,
   };

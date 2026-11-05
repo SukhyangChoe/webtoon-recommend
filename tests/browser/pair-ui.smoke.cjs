@@ -102,7 +102,8 @@ const { chromium } = require("playwright");
     assert.equal(await page.getByRole("button", { name: "언니, 이번 생엔 내가 왕비야 추천 코멘트 좋아요 취소", exact: true }).getAttribute("aria-pressed"), "true", "failed like update rolls back");
     assert.equal(likes, 2);
     assert.equal(await page.locator(".wm-pair-work-card.is-taste-fit").count(), 1, "liking or scrolling never changes server-selected highlights");
-    assert.equal(await page.locator('.wm-pair-work-artwork .wm-pair-work-fit').count(), 0, "fit labels no longer cover the artwork");
+    assert.equal(await page.locator('.wm-pair-work-artwork > .wm-pair-work-fit').count(), 1, "fit label is inside the highlighted cover");
+    assert.equal(await page.locator('.wm-pair-work-card > .wm-pair-work-fit').count(), 0, "fit label creates no extra row before the comment");
     assert.ok(await page.locator('.wm-pair-work-like').first().evaluate(el => {
       const style = getComputedStyle(el);
       return !el.textContent.includes('좋아요') && el.getAttribute('aria-label').includes('추천 코멘트 좋아요') && parseFloat(style.borderTopWidth) >= 1 && style.backgroundColor !== 'rgba(0, 0, 0, 0)' && el.getBoundingClientRect().height >= 44;
@@ -135,14 +136,15 @@ const { chromium } = require("playwright");
     await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
     const coverRegions=await artwork.evaluate(el=>{
       const art=el.getBoundingClientRect(),copy=el.querySelector('.wm-pair-work-copy').getBoundingClientRect(),title=el.querySelector('.wm-pair-work-title').getBoundingClientRect(),meta=el.querySelector('.wm-pair-work-meta').getBoundingClientRect();
-      return [['cover',art.top+20],['gradient padding',copy.top+10],['title',(title.top+title.bottom)/2],['genre',(meta.top+meta.bottom)/2],['bottom padding',art.bottom-3]].map(([region,y])=>{
+      const badge=el.querySelector('.wm-pair-work-fit').getBoundingClientRect();
+      return [['fit badge',(badge.top+badge.bottom)/2],['cover',art.top+50],['gradient padding',copy.top+10],['title',(title.top+title.bottom)/2],['genre',(meta.top+meta.bottom)/2],['bottom padding',art.bottom-3]].map(([region,y])=>{
         const x=art.left+art.width/2,target=document.elementFromPoint(x,y),link=target?.closest('a');
         return {region,x,y,cursor:target?getComputedStyle(target).cursor:null,href:link?.getAttribute('href')};
       });
     });
     for(const region of coverRegions){assert.equal(region.cursor,'pointer',`${region.region}: consistent hand cursor`);assert.match(region.href,/\/match\/work\/work-0/,`${region.region}: points to work details`);}
-    const metadata=coverRegions.find(region=>region.region==='genre');
-    await page.mouse.click(metadata.x,metadata.y);
+    const badgeHit=coverRegions.find(region=>region.region==='fit badge');
+    await page.mouse.click(badgeHit.x,badgeHit.y);
     await page.waitForURL('**/match/work/work-0?**');
     allowLikes = true;
     await page.goto(readonlyUrl, { waitUntil: 'domcontentloaded' });
@@ -152,7 +154,9 @@ const { chromium } = require("playwright");
     await page.getByRole("heading", { name: "각자의 취향 TOP 3" }).waitFor();
     assert.equal(await page.locator(".wm-pair-profiles ol li").count(), 5);
     assert.equal(await page.getByRole("heading", { name: "서로에게 물어볼 장르" }).count(), 0);
-    assert.equal(await page.getByRole("heading", { name: "이 사람 추천, 믿어도 될까?" }).count(), 1);
+    assert.equal(await page.getByRole("heading", { name: "서로 다른 장르", exact: true }).count(), 0);
+    assert.equal(await page.getByRole("heading", { name: "이 사람 추천, 믿어도 될까?" }).count(), 0);
+    assert.equal(await page.getByRole("heading", { name: "둘이 같이 보면", exact: true }).count(), 1);
     await page.getByRole("tab", { name: "비교 상세" }).focus();
     await page.keyboard.press("ArrowLeft");
     assert.equal(await page.getByRole("tab", { name: "궁합 요약" }).getAttribute("aria-selected"), "true");
@@ -201,10 +205,10 @@ const { chromium } = require("playwright");
           return band.top>=name.bottom+7&&Math.abs(band.left-name.left)<1&&band.right<=score.left-11;
         }),`compatibility band sits below the result name, not above the score at ${width}`);
         if (tabName === '비교 상세') {
-          assert.ok(await page.locator('.wm-pair-reading h3').evaluate(el=>{
-            const heading=getComputedStyle(el),body=getComputedStyle(el.nextElementSibling);
-            return Number(heading.fontWeight)>=700&&parseFloat(heading.fontSize)>=parseFloat(body.fontSize)+2&&heading.color!==body.color&&heading.borderLeftWidth==='3px'&&parseFloat(heading.marginBottom)>=12;
-          }), `recommendation trust subtitle is visually distinct from body copy at ${width}`);
+          assert.ok(await page.locator('.wm-pair-reading').evaluate(el=>{
+            const title=getComputedStyle(el.querySelector('.wm-story-title')),heading=getComputedStyle(el.querySelector('.wm-story-subtitle')),body=getComputedStyle(el.querySelector('.wm-story-scene > .wm-story-copy'));
+            return title.fontSize==='19px'&&heading.fontSize==='13px'&&Number(heading.fontWeight)>=700&&body.fontSize==='15px'&&heading.color!==body.color&&heading.borderLeftWidth==='3px'&&getComputedStyle(el.querySelector('.wm-story-scene')).backgroundColor==='rgb(238, 249, 251)';
+          }), `shared story hierarchy and scene surface match personal results at ${width}`);
         }
         assert.equal(await page.locator(".wm-pair-ask").count(), 0);
         assert.ok(await page.locator(".wm-pair-bubble-words").evaluate((el) => {
@@ -226,8 +230,16 @@ const { chromium } = require("playwright");
             const comic=el.getBoundingClientRect(),bubble=el.querySelector('.wm-pair-bubble').getBoundingClientRect(),tail=el.querySelector('.wm-pair-bubble-tail').getBoundingClientRect();
             return Math.abs(bubble.top-comic.top-54)<1&&[...el.querySelectorAll('.wm-persona-avatar')].every(avatar=>Math.max(bubble.bottom,tail.bottom)<avatar.getBoundingClientRect().top+48);
           }),'raised compact bubble and shorter tails stay above the character face area');
-          assert.equal(await page.locator('.wm-pair-work-fit').first().textContent(),'✦취향에 잘 맞아요');
-          assert.ok(await page.locator('.wm-pair-work-fit').first().evaluate(el=>parseFloat(getComputedStyle(el).fontSize)>=14&&getComputedStyle(el).backgroundImage.includes('linear-gradient')),'fit caption is larger with a fluorescent marker highlight');
+          assert.equal(await page.locator('.wm-pair-work-fit').first().textContent(),'✦취향 저격');
+          assert.ok(await page.locator('.wm-pair-work-fit').first().evaluate(el=>{
+            const style=getComputedStyle(el),badge=el.getBoundingClientRect(),cover=el.parentElement.getBoundingClientRect();
+            return style.position==='absolute'&&style.pointerEvents==='none'&&style.backgroundColor==='rgb(237, 255, 107)'&&Math.abs(badge.top-cover.top-8)<1&&Math.abs(badge.left-cover.left-8)<1&&badge.right<=cover.right-7&&badge.bottom<el.parentElement.querySelector('.wm-pair-work-copy').getBoundingClientRect().top&&el.scrollWidth<=el.clientWidth;
+          }),'fit badge sits in the upper left, stays readable and does not block cover clicks');
+          assert.ok(await page.locator('.wm-pair-work-track').first().evaluate(track=>{
+            const cards=[...track.querySelectorAll('article')].slice(0,2);
+            const tops=cards.map(card=>card.querySelector('.wm-recommendation-comment').getBoundingClientRect().top);
+            return Math.abs(tops[0]-tops[1])<1;
+          }),'highlighted and ordinary cards have the same comment start position');
           assert.ok(await page.locator('.wm-pair-work-card.is-taste-fit .wm-pair-work-artwork').evaluateAll(items=>items.every(el=>getComputedStyle(el,'::after').borderTopColor==='rgb(232, 255, 56)'&&getComputedStyle(el,'::after').borderTopWidth==='3px')),'highlighted covers use the fluorescent yellow outline');
           const cards = await page.locator(".wm-pair-work-card").evaluateAll((items) => items.slice(0, 2).map((el) => ({ x: el.getBoundingClientRect().x, y: el.getBoundingClientRect().y, right: el.getBoundingClientRect().right, width: el.getBoundingClientRect().width })));
           const track = await page.locator(".wm-pair-work-track").first().boundingBox();
@@ -247,7 +259,7 @@ const { chromium } = require("playwright");
             const title = el.querySelector(".wm-pair-work-title").getBoundingClientRect();
             const meta = el.querySelector(".wm-pair-work-meta").getBoundingClientRect();
             const comment = el.querySelector("blockquote").getBoundingClientRect();
-            return Math.abs(cover.width / cover.height - 2 / 3) < .01 && Math.abs(cover.height - artwork.height) < 1 && Math.abs(cover.width - artwork.width) < 1 && copy.top >= artwork.top && Math.abs(copy.bottom - artwork.bottom) < 1 && title.top >= copy.top && Math.abs(title.left - copy.left - 11) < 1 && Math.abs(title.width - copy.width + 22) < 1 && meta.top >= title.bottom && comment.top >= artwork.bottom + 9;
+            return Math.abs(cover.width / cover.height - 2 / 3) < .01 && Math.abs(cover.height - artwork.height) < 1 && Math.abs(cover.width - artwork.width) < 1 && copy.top >= artwork.top && Math.abs(copy.bottom - artwork.bottom) < 1 && title.top >= copy.top && Math.abs(title.left - copy.left - 9) < 1 && Math.abs(title.width - copy.width + 18) < 1 && meta.top >= title.bottom && comment.top >= artwork.bottom + 9;
           })), "full-bleed portrait cover, readable title/metadata overlay and separate quote");
           assert.ok(await page.locator('.wm-pair-work-artwork').evaluateAll(items => {
             const height = items[0].getBoundingClientRect().height;
@@ -271,7 +283,7 @@ const { chromium } = require("playwright");
           })), 'recommendation reasons are inset from both cover edges and stay within their own card');
         }
       }
-      const actions = await page.locator(".wm-action-bar a").evaluateAll((items) => items.map((el) => ({ y: el.getBoundingClientRect().y, height: el.getBoundingClientRect().height })));
+      const actions = await page.locator(".wm-action-bar .match-button").evaluateAll((items) => items.map((el) => ({ y: el.getBoundingClientRect().y, height: el.getBoundingClientRect().height })));
       assert.equal(new Set(actions.map((action) => action.y)).size, 1);
       assert.ok(actions.every((action) => action.height >= 44));
     }

@@ -16,6 +16,8 @@ import { MatchIcon } from './MatchIcon';
 import { useWorkDetailSheet } from './useWorkDetailSheet';
 import { WorkTasteTestButton } from './WorkTasteTestButton';
 import { loadWorkResource } from '../api/loadWorkResource.mjs';
+import { recommendationFitDisplayScore } from '../config/recommendationFitDisplay.mjs';
+import { TasteAvoidanceWarning } from './TasteAvoidanceWarning';
 
 export function WorkDetailView({ id, returnTo }: { id: string; returnTo?: string }) {
   const router = useRouter();
@@ -32,7 +34,7 @@ export function WorkDetailView({ id, returnTo }: { id: string; returnTo?: string
   const [infoRevision, setInfoRevision] = useState(0);
   const workReady = Boolean(work && work.canonicalWebtoonId === id && !loading);
   const hasInfo = Boolean(work && (work.creators.length || work.platform || work.statusLabel || work.ageRating || work.artStyles.length || work.contentLabels.length));
-  const hasReading = Boolean(work && (work.introduction || work.fit?.reasons.length || work.appreciationPoints.length || work.contentLabels.length));
+  const hasReading = Boolean(work && (work.introduction || work.fit?.reasons.length || work.avoidanceWarnings?.length || work.appreciationPoints.length || work.contentLabels.length));
   const { stage, compact, root, sheet, summary, header, body, info, footer, handle, openPanel, closePanel } = useWorkDetailSheet(!loading && Boolean(work), hasReading ? 'reasons' : 'info');
   const expanded = stage !== 'collapsed';
   const reasonTab = useRef<HTMLButtonElement>(null);
@@ -85,16 +87,25 @@ export function WorkDetailView({ id, returnTo }: { id: string; returnTo?: string
 
   const credits = work.creators.map(creator => `${creator.roles.join('·')}${creator.roles.length ? ' ' : ''}${creator.name}`).join(' · ');
   const fitLabel = '핏점수';
+  // Re-derive from raw data, never from legacy percent or a previously corrected score.
+  const displayFitScore = recommendationFitDisplayScore(work.fit?.rawScore);
   const cta = work.officialUrl ? <a className="wm-work-watch" href={work.officialUrl} target="_blank" rel="noopener noreferrer">지금 바로 감상하기 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M7 17 17 7M7 7h10v10" /></svg></a> : null;
 
   return <main ref={root} className="wm-work-page" data-stage={stage}>
     {backControl}
-    <div className="wm-work-hero"><WorkCover item={work} eager /></div>
+    <div className="wm-work-hero">
+      <div className="wm-work-cover-backdrop" aria-hidden="true"><WorkCover item={work} eager decorative /></div>
+      <div className="wm-work-cover-foreground"><WorkCover item={work} eager /></div>
+    </div>
     <button className="wm-work-cover-close" type="button" aria-label="표지를 눌러 작품 정보 접기" hidden={!expanded} />
     <section ref={sheet} className="wm-work-sheet" role={expanded ? 'dialog' : undefined} aria-modal={expanded ? false : undefined} aria-labelledby={expanded ? 'wm-work-detail-title' : undefined}>
       <button ref={handle} type="button" className="wm-work-grab" disabled={!hasReading && !hasInfo} aria-controls="wm-work-reading" aria-expanded={expanded} aria-label={expanded ? '누르거나 아래로 드래그하여 작품 정보 접기' : '누르거나 위로 드래그하여 작품 소개 열기'}><span /></button>
       <div className="wm-work-header-clip" aria-hidden={!expanded} inert={!expanded}><div ref={header}>
         <header className="wm-work-sheet-header"><div><span className="wm-work-eyebrow">{work.mainGenreLabel}</span><h2 id="wm-work-detail-title" tabIndex={-1}>{compact ? '작품 상세' : work.title}</h2></div><button type="button" onClick={closePanel} aria-label="작품 정보 접기"><MatchIcon name="close" /></button></header>
+        {displayFitScore !== null ? <div className="wm-work-reading-fit" role="meter" aria-label="핏점수" aria-valuenow={displayFitScore} aria-valuetext={`${displayFitScore}점 / 100점`} aria-valuemin={0} aria-valuemax={100}>
+          <div className="wm-work-reading-fit-copy"><div><span className="wm-work-reading-fit-title"><WorkFeatureIcon name="spark" />핏 점수</span><span className="wm-work-reading-fit-caption">내 취향 × 이 작품</span></div><strong>{displayFitScore}<small>점</small></strong></div>
+          <div className="wm-work-fit-track" aria-hidden="true"><span style={{ width: `${displayFitScore}%` }} /></div>
+        </div> : null}
         <div className="wm-work-tabs" role="tablist" aria-label="작품 상세 정보" onKeyDown={event => { if (['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) { event.preventDefault(); const next = !hasReading ? 'info' : !hasInfo ? 'reasons' : event.key === 'Home' ? 'reasons' : event.key === 'End' ? 'info' : stage === 'reasons' ? 'info' : 'reasons'; openPanel(next); (next === 'reasons' ? reasonTab : infoTab).current?.focus(); } }}>
           {hasReading ? <button ref={reasonTab} id="wm-work-reasons-tab" type="button" role="tab" aria-controls="wm-work-reading" aria-selected={stage === 'reasons'} tabIndex={stage === 'reasons' ? 0 : -1} onClick={() => openPanel('reasons')}>궁합 · 소개</button> : null}{hasInfo ? <button ref={infoTab} id="wm-work-info-tab" type="button" role="tab" aria-controls="wm-work-reading" aria-selected={stage === 'info'} tabIndex={stage === 'info' ? 0 : -1} onClick={() => openPanel('info')}>작품 정보</button> : null}
         </div>
@@ -102,13 +113,15 @@ export function WorkDetailView({ id, returnTo }: { id: string; returnTo?: string
       <div ref={body} className="wm-work-dialog-body" tabIndex={expanded ? 0 : -1} aria-label="작품 상세 세로 스크롤">
     <div ref={summary} className="wm-work-summary" aria-hidden={expanded} inert={expanded}>
       <div className="wm-work-summary-heading"><div className="wm-work-summary-title"><span className="wm-work-eyebrow">{work.mainGenreLabel}</span><h1>{work.title}</h1>{credits ? <p className="wm-work-credits">{credits}</p> : null}</div>
-        {work.fit ? <div className="wm-work-fit"><div><span><WorkFeatureIcon name="spark" />핏점수</span><strong>{work.fit.percent}<small>%</small></strong></div><div className="wm-work-fit-track" role="meter" aria-label={fitLabel} aria-valuenow={work.fit.percent} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${work.fit.percent}%` }} /></div></div> : fitLoading ? <div className="wm-work-fit wm-work-fit-pending" ><MatchLoading compact message="핏점수 확인 중…" /></div> : null}
+        {displayFitScore !== null ? <div className="wm-work-fit"><div><span><WorkFeatureIcon name="spark" />핏점수</span><strong>{displayFitScore}<small>점</small></strong></div><div className="wm-work-fit-track" role="meter" aria-label={fitLabel} aria-valuenow={displayFitScore} aria-valuetext={`${displayFitScore}점 / 100점`} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${displayFitScore}%` }} /></div></div> : fitLoading ? <div className="wm-work-fit wm-work-fit-pending" ><MatchLoading compact message="핏점수 확인 중…" /></div> : null}
       </div>
+      <TasteAvoidanceWarning warnings={work.avoidanceWarnings ?? []} compact />
       {fitLoading && fitSlow ? <p className="wm-work-fit-note" role="status">핏점수 확인에 시간이 걸리고 있어요. 작품 정보는 먼저 볼 수 있어요.</p> : null}
-      {fitError ? <div className="wm-work-fit-error" role="alert"><p>{fitError}</p><button type="button" onClick={() => { setFitLoading(true); setFitSlow(false); setFitError(''); setFitRetry(value => value + 1); }}>핏점수 다시 불러오기</button></div> : !fitLoading && !work.fit ? work.fitStatus === 'test_required' ? <WorkTasteTestButton workId={id} returnTo={back} /> : <p className="wm-work-fit-note">비교할 취향 정보가 부족해 핏점수를 표시하지 않아요.</p> : null}
-      {hasReading ? <button className="wm-work-open" type="button" onClick={() => openPanel('reasons')}><strong>{work.fit?.reasons.length ? '이런 점이 잘 맞아요' : '작품 소개 · 감상 포인트'}</strong><MatchIcon name="chevron" /></button> : null}
+      {fitError ? <div className="wm-work-fit-error" role="alert"><p>{fitError}</p><button type="button" onClick={() => { setFitLoading(true); setFitSlow(false); setFitError(''); setFitRetry(value => value + 1); }}>핏점수 다시 불러오기</button></div> : !fitLoading && displayFitScore === null ? work.fitStatus === 'test_required' ? <WorkTasteTestButton workId={id} returnTo={back} /> : <p className="wm-work-fit-note">비교할 취향 정보가 부족해 핏점수를 표시하지 않아요.</p> : null}
+      {hasReading ? <button className="wm-work-open" type="button" onClick={() => openPanel('reasons')} aria-controls="wm-work-reading" aria-expanded={expanded}><strong>{work.fit?.reasons.length ? '잘 맞는 이유 보기' : '작품 소개 보기'}</strong><MatchIcon name="chevron" /></button> : null}
     </div>
     <div className="wm-work-reading" id="wm-work-reading" role="tabpanel" aria-labelledby={stage === 'info' || !hasReading ? 'wm-work-info-tab' : 'wm-work-reasons-tab'} aria-hidden={!expanded} inert={!expanded}>
+        <TasteAvoidanceWarning warnings={work.avoidanceWarnings ?? []} />
         {compact ? <h2 className="wm-work-flow-title">{work.title}</h2> : null}
         {hasReading ? <div className="wm-work-sheet-page" id="wm-work-reasons" hidden={stage === 'info'}>
           {work.fit?.reasons.length ? <section className="wm-work-reasons"><h3>이런 점이 잘 맞아요</h3>{work.fit.reasons.map(item => <div className="wm-work-reason" key={item.key}><span><WorkFeatureIcon name={item.icon} /></span><strong>{item.label}</strong></div>)}</section> : null}

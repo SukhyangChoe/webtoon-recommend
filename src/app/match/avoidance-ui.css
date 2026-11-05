@@ -1,0 +1,17 @@
+/* Strong personal warning, distinct from cyan benefits. Text + icon convey the
+   meaning without relying on color, animation, or another action button. */
+.match-module .wm-avoidance-warning { display:flex; gap:10px; align-items:flex-start; padding:14px; border:1px solid #eab0b9; border-left:4px solid #b32640; border-radius:12px; background:#fff0f2; color:#831c30; text-align:left; }
+.match-module .wm-avoidance-warning>.wm-icon { width:21px; height:21px; flex:0 0 21px; margin-top:1px; color:#b32640; stroke-width:2; }
+.match-module .wm-avoidance-warning>div { min-width:0; }
+.match-module .wm-avoidance-warning strong { display:block; font-size:14px; font-weight:750; line-height:1.5; word-break:keep-all; overflow-wrap:anywhere; }
+.match-module .wm-avoidance-warning p { margin:5px 0 0; font-size:14px; font-weight:650; line-height:1.6; overflow-wrap:anywhere; }
+.match-module .wm-avoidance-warning span { display:block; margin-top:6px; color:#8b3546; font-size:12px; line-height:1.65; word-break:keep-all; overflow-wrap:anywhere; }
+.match-module .wm-avoidance-warning.is-compact { padding:10px 12px; gap:8px; }
+.match-module .wm-avoidance-warning.is-compact strong { font-size:13px; }
+.match-module .wm-avoidance-warning.is-compact p { margin-top:3px; font-size:12px; line-height:1.5; }
+.wm-work-summary>.wm-avoidance-warning { margin-top:12px; }
+.wm-work-reading>.wm-avoidance-warning { margin:16px 20px 0; }
+.wm-daily-list li>.wm-avoidance-warning { margin-top:8px; }
+.match-module .wm-daily-preview-warning { display:flex; align-items:flex-start; gap:5px; color:#9b213b; font-size:12px; font-weight:750; line-height:1.5; word-break:keep-all; }
+.wm-daily-preview-warning .wm-icon { width:15px; height:15px; flex:0 0 15px; margin-top:1px; }
+@media(max-width:350px) { .wm-work-reading>.wm-avoidance-warning { margin-inline:16px; } }

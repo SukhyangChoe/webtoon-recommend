@@ -1,0 +1,52 @@
+{
+  "version": "question-seed-v04-current-genres-v2",
+  "status": "ACTIVE",
+  "personalizedReleaseAllowed": true,
+  "engine": "runtime02-20261104-r9-v183-v8",
+  "approvedProductRules": {
+    "timeZone": "Asia/Seoul",
+    "refreshAt": "local_midnight",
+    "refreshImmediatelyOn": [
+      "original_answers_change",
+      "registered_recommendations_change"
+    ],
+    "maxWorks": 3,
+    "reExposureCooldownDays": 0,
+    "forceDifferentWorksOnNewDay": false,
+    "existingWorkFitAndSqrtDisplay": "unchanged",
+    "avoidanceMatches": "Prefer unmatched eligible alternatives within original 02 constraints; strong personal warning on fallback. No display-score penalty."
+  },
+  "sourceBoundaries": {
+    "useOriginalAnswers": true,
+    "useClickAsPositive": false,
+    "useExposureAsPositive": false,
+    "useSuppliedSampleUserHistories": false,
+    "rawInternalScoresInPublicApi": false
+  },
+  "mappings": [
+    {
+      "input": "setting / appeal / characterRelationship",
+      "target": "02 currentIntent requirements",
+      "exactness": "Seed direct mappings are exact; composite/partial/type hints remain related. Quiz primary is HIGH, never mandatory."
+    },
+    {
+      "input": "current registered recommendations",
+      "target": "ordinary positive reference modes; exclude registered works; no invented strong-positive or consumed history"
+    },
+    {
+      "input": "9 genres / genre choices / episode duels",
+      "target": "one soft currentIntent requirement with existing nine-genre projection",
+      "source": "Latest original snapshot plus current publicly available registered work vectors; same applyRecommendationTaste as result page; blend exactly once. Rounded stars are never fed into selection.",
+      "support": "Candidate genre-mass-weighted average of viewer genre affinity / viewer peak. One HIGH requirement; no hard genre gate, quotas, fake example tags, or diversification bonus.",
+      "implementation": "Scoped explicit-requirements adapter; pinned 02 files unchanged"
+    },
+    {
+      "input": "hesitating elements",
+      "target": "approved avoidance-first tier and strong warning; no new numeric fit penalty"
+    }
+  ],
+  "runtimeBoundary": {
+    "catalog": "Pinned verified 02 v8 identity and eligibility intersect current live public-safe catalog before selection; no silent catalog replacement.",
+    "deployment": "Install verified private runtime separately; missing/failed runtime returns a controlled error, never fixed works."
+  }
+}

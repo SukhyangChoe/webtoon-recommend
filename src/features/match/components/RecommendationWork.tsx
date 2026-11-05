@@ -19,13 +19,13 @@ export type RecommendationWorkItem = {
   tasteFitHighlighted?: boolean;
 };
 
-export function WorkCover({ item, eager = false, sizes }: { item: Pick<RecommendationWorkItem, "title" | "coverUrl">; eager?: boolean; sizes?: string }) {
+export function WorkCover({ item, eager = false, sizes, decorative = false }: { item: Pick<RecommendationWorkItem, "title" | "coverUrl">; eager?: boolean; sizes?: string; decorative?: boolean }) {
   const { src, srcSet } = workCoverSources(item.coverUrl);
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   return src && failedSrc !== src
     // eslint-disable-next-line @next/next/no-img-element -- Pre-sized immutable WebP variants are served directly by Storage CDN.
-    ? <img className="wm-work-cover" src={src} srcSet={srcSet} sizes={srcSet ? (sizes ?? (eager ? '(max-width: 540px) 100vw, 540px' : '(max-width: 350px) 144px, 176px')) : undefined} alt={`${item.title} 작품 커버`} width={83} height={129} loading={eager ? 'eager' : 'lazy'} decoding="async" onError={() => setFailedSrc(src)} />
-    : <div className="wm-work-cover wm-work-cover--empty" role="img" aria-label="작품 커버 미등록"><span className="wm-cover-book" aria-hidden="true" /><span>커버 준비 중</span></div>;
+    ? <img className="wm-work-cover" src={src} srcSet={srcSet} sizes={srcSet ? (sizes ?? (eager ? '(max-width: 540px) 100vw, 540px' : '(max-width: 350px) 144px, 176px')) : undefined} alt={decorative ? '' : `${item.title} 작품 커버`} aria-hidden={decorative || undefined} width={83} height={129} loading={eager ? 'eager' : 'lazy'} decoding="async" onError={() => setFailedSrc(src)} />
+    : <div className="wm-work-cover wm-work-cover--empty" role={decorative ? undefined : 'img'} aria-label={decorative ? undefined : '작품 커버 미등록'} aria-hidden={decorative || undefined}><span className="wm-cover-book" aria-hidden="true" /><span>커버 준비 중</span></div>;
 }
 
 function RecommendationTitle({ title, level }: { title: string; level: 3 | 4 }) {
@@ -72,12 +72,12 @@ export function RecommendationCard({ item, returnTo, onOpen, headingLevel = 4, l
   return <article className={`wm-recommendation-card wm-pair-work-card${item.tasteFitHighlighted ? ' is-taste-fit' : ''}`}>
     <div className="wm-pair-work-artwork">
       <WorkDetailLink id={item.canonicalWebtoonId} returnTo={returnTo} onOpen={onOpen} label={`${item.title} 작품 상세 보기`} className="wm-work-card-link"><WorkCover item={item} sizes="160px" /></WorkDetailLink>
+      {item.tasteFitHighlighted ? <span className="wm-pair-work-fit"><span aria-hidden="true">✦</span>취향 저격</span> : null}
       <div className="wm-pair-work-copy">
         <WorkDetailLink id={item.canonicalWebtoonId} returnTo={returnTo} onOpen={onOpen} className="wm-pair-work-title"><RecommendationTitle title={item.title} level={headingLevel} /></WorkDetailLink>
         <div className="wm-pair-work-meta"><small>{item.mainGenreLabel ?? recommendationGenreLabel(item.mainGenre)}</small></div>
       </div>
     </div>
-    {item.tasteFitHighlighted ? <span className="wm-pair-work-fit"><span aria-hidden="true">✦</span>취향에 잘 맞아요</span> : null}
     {item.recommendationComment?.trim() ? <div className="wm-recommendation-comment" data-comment-id={item.commentId ?? undefined}><blockquote><q>{item.recommendationComment}</q></blockquote><div className="wm-comment-actions">
       {likeAction ? <button type="button" className={`wm-pair-work-like${likeAction.liked ? ' is-liked' : ''}`} disabled={likeAction.saving} aria-pressed={likeAction.liked} aria-label={`${item.title} 추천 코멘트 ${likeAction.liked ? '좋아요 취소' : '좋아요'}`} onClick={event => { event.preventDefault(); event.stopPropagation(); likeAction.onToggle(); }}><span aria-hidden="true">{likeAction.liked ? '♥' : '♡'}</span><b>{item.likeCount ?? 0}</b></button> : <span className="wm-pair-work-like-count" aria-label={`추천 코멘트 좋아요 ${item.likeCount ?? 0}개`}><span aria-hidden="true">♡</span> {item.likeCount ?? 0}</span>}
     </div></div> : null}

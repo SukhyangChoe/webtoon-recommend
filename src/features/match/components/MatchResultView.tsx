@@ -6,23 +6,27 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { trackMatchEvent } from "../analytics/client";
-import { requestActiveChallenge, type ActiveChallengeInfo } from "../api/activeChallenge";
 import { loadWorkResource } from '../api/loadWorkResource.mjs';
 import { ensureAnonymousId } from "../storage/anonymousIdentity.mjs";
 import { readPublicResult, writePublicResult } from "../storage/resultStorage.mjs";
 import { readMatchDraft, writeMatchDraft } from "../storage/draft.mjs";
 import { personalArchetypeFor } from "../share/shareArchetypes.mjs";
 import { MatchActionBar } from "./MatchActionBar";
+import { MatchCopyLinkButton } from "./MatchCopyLinkButton";
 import { MatchIcon } from "./MatchIcon";
+import { TastePointRow } from './TastePointRow';
 import { validateMatchNickname } from "../server/nickname.mjs";
 import { PersonalRecommendationCarousel } from "./RecommendationWork";
 import { useHorizontalScrollIndicator } from "./useHorizontalScrollIndicator";
 import { TasteFeatureIcon } from "./TasteFeatureIcon";
 import { resultTitlePhrases } from "../config/tasteFeatureIcons.mjs";
+import { ReaderExplanation, type ReaderExplanationModel } from './ReaderExplanation';
+import { DailyTastePicks } from './DailyTastePicks';
 
 type DisplayGenre = { genreKey: string; displayLabel: string; stars: number };
 type TasteDetail = { category: string; value: string };
-type PublicResult = { publicProfileId: string; nickname?: string | null; canManage?: boolean; recommendationInfluence?: { workCount: number; recommendationPercent: number; testPercent: number }; displayGenres: DisplayGenre[]; topGenres: DisplayGenre[]; wellMatchedDetails?: TasteDetail[]; wellMatchedLabels: string[]; lessMatchedLabels: string[] };
+type PublicResult = { publicProfileId: string; nickname?: string | null; canManage?: boolean; activeChallengeCode?: string | null; readerExplanation?: ReaderExplanationModel; recommendationInfluence?: { workCount: number; recommendationPercent: number; testPercent: number }; displayGenres: DisplayGenre[]; topGenres: DisplayGenre[]; wellMatchedDetails?: TasteDetail[]; wellMatchedLabels: string[]; lessMatchedLabels: string[] };
+type ResultViewModel = PublicResult & { ownerActionPending?: boolean };
 type RecommendedWebtoon = {
   canonicalWebtoonId: string;
   title: string;
@@ -35,12 +39,10 @@ type RecommendedWebtoon = {
   coverUrl?: string | null;
 };
 export function MatchResultView({ publicProfileId }: { publicProfileId: string }) {
-  const [result, setResult] = useState<PublicResult | null>(null);
+  const [result, setResult] = useState<ResultViewModel | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [retry, setRetry] = useState(0);
-  const [activeChallenge, setActiveChallenge] = useState<ActiveChallengeInfo | null>(null);
-  const [challengeLoading, setChallengeLoading] = useState(true);
   const [recommendations, setRecommendations] = useState<RecommendedWebtoon[]>([]);
   const [nicknameOpen, setNicknameOpen] = useState(false);
   const [nicknameInput, setNicknameInput] = useState("");
@@ -51,13 +53,19 @@ export function MatchResultView({ publicProfileId }: { publicProfileId: string }
   useEffect(() => {
     let active = true;
     const controller = new AbortController();
-    setLoadError('');
     const load = async () => {
+      setLoadError('');
       const cached = readPublicResult(window.localStorage, publicProfileId) as PublicResult | null;
-      if (cached) { setResult({ ...cached, canManage: false }); setLoading(false); }
+      // Older cached results lack the footer destination. Refresh those once rather than
+      // painting a two-button bar and resizing it as ownership/navigation arrives.
+      if (cached && Object.hasOwn(cached, 'activeChallengeCode')) {
+        setResult({ ...cached, canManage: false, ownerActionPending: cached.canManage === true });
+        setLoading(false);
+      }
       try {
         const identity = ensureAnonymousId({ cookieText: document.cookie, storage: window.localStorage });
-        const fresh = await loadWorkResource(`/api/v1/results/${publicProfileId}?anonymousId=${encodeURIComponent(identity.anonymousId)}`, {signal:controller.signal,timeoutMs:8000,notFoundMessage:'이 결과를 찾지 못했어요.'}) as PublicResult;
+        const body = await loadWorkResource(`/api/v1/results/${publicProfileId}?anonymousId=${encodeURIComponent(identity.anonymousId)}`, {signal:controller.signal,timeoutMs:8000,notFoundMessage:'이 결과를 찾지 못했어요.'}) as PublicResult;
+        const fresh = { ...body, activeChallengeCode: body.activeChallengeCode ?? null };
         writePublicResult(window.localStorage, fresh);
         if (active) {
           setResult(fresh);
@@ -93,15 +101,6 @@ export function MatchResultView({ publicProfileId }: { publicProfileId: string }
       starConcentration: result.topGenres[0]?.stars ?? 0,
     });
   }, [result]);
-
-  useEffect(() => {
-    let active = true;
-    const identity = ensureAnonymousId({ cookieText: document.cookie, storage: window.localStorage });
-    void requestActiveChallenge(identity.anonymousId)
-      .then((challenge) => { if (active) setActiveChallenge(challenge); })
-      .finally(() => { if (active) setChallengeLoading(false); });
-    return () => { active = false; };
-  }, [publicProfileId]);
 
   function openNicknameEditor() {
     setNicknameInput(result?.nickname ?? readMatchDraft(window.localStorage)?.nickname ?? "");
@@ -143,25 +142,29 @@ export function MatchResultView({ publicProfileId }: { publicProfileId: string }
   if (!result) return <main className="match-page wm-screen wm-result-screen wm-result-loading"><section className="match-card match-hero"><h1>{loadError || '이 결과를 찾지 못했어요'}</h1><button className="match-button" onClick={() => {setLoading(true);setRetry(value=>value+1);}}>다시 불러오기</button><Link href="/match">홈으로</Link></section></main>;
   const leadGenre = result.topGenres[0];
   const persona = personalArchetypeFor(leadGenre?.genreKey);
+  const relationshipLabel = result.activeChallengeCode ? '내 취향 관계도' : '관계도 만들기';
   return <main className="match-page match-result-page wm-screen wm-result-screen">
     {loadError ? <p role="status" className="wm-load-error">저장된 결과를 표시하고 있어요. <button onClick={()=>setRetry(value=>value+1)}>최신 결과 다시 불러오기</button></p> : null}
     <section className="wm-result-hero">
+      <p className="wm-result-identity wm-eyebrow" aria-label="취향 결과 프로필"><span className="wm-nickname-chip">{result.canManage ? <button className="wm-nickname-edit" type="button" aria-label={`${result.nickname ?? '내'} 닉네임 변경`} aria-haspopup="dialog" aria-expanded={nicknameOpen} onClick={openNicknameEditor}><span>{result.nickname ?? '닉네임'}</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m4 16 11-11 4 4L8 20l-5 1 1-5ZM13 7l4 4" /></svg></button> : <span className="wm-result-nickname" title={result.nickname ?? undefined}><span>{result.nickname || '닉네임'}</span></span>}</span><span className="wm-result-identity-caption">님의 웹툰 취향</span></p>
       <div className="wm-result-intro">
         <div className="wm-hero-copy">
-          <p className="wm-result-identity wm-eyebrow">{result.canManage ? <><button className="wm-nickname-edit" type="button" aria-label={`${result.nickname ?? '내'} 닉네임 변경`} aria-haspopup="dialog" aria-expanded={nicknameOpen} onClick={openNicknameEditor}><span>{result.nickname ?? '닉네임'}</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m4 16 11-11 4 4L8 20l-5 1 1-5ZM13 7l4 4" /></svg></button><span>님의 웹툰 취향</span></> : result.nickname ? <><span className="wm-result-nickname">{result.nickname}</span><span>님의 웹툰 취향</span></> : '나의 웹툰 취향'}</p>
-          <h1>{resultTitlePhrases(persona.name).map((phrase: string, index: number) => <span key={phrase}>{index > 0 ? ' ' : ''}<span className="wm-result-title-phrase">{phrase}</span></span>)}</h1>
+          <h1><span className="wm-result-title-mark">{resultTitlePhrases(persona.name).map((phrase: string, index: number) => <span key={phrase}>{index > 0 ? ' ' : ''}<span className="wm-result-title-phrase">{phrase}</span></span>)}</span></h1>
         </div>
-        <div className="wm-persona-frame"><Image className="wm-persona-image" src={persona.imageSrc} alt={persona.imageAlt} width={360} height={540} priority /></div>
+        <div className="wm-persona-frame"><Image className="wm-persona-image" src={persona.imageSrc} alt={persona.imageAlt} width={360} height={480} priority /></div>
       </div>
       <GenreRanking genres={result.displayGenres ?? result.topGenres} />
     </section>
     <div className="wm-result-body">
       <TasteProfile details={result.wellMatchedDetails ?? result.wellMatchedLabels.map((value) => ({ category: "취향", value }))} lessMatchedLabels={result.lessMatchedLabels} />
-      <section className="wm-panel"><div className="wm-panel-heading wm-recommendations-heading"><h2><MatchIcon name="book" />{result.canManage ? "내 추천작" : `${result.nickname ?? "이 사용자"}님의 추천작`}</h2>{result.canManage ? <Link href={`/match/result/${publicProfileId}/recommendations`} aria-label="내 추천작 관리"><span>관리</span><MatchIcon name="settings" /></Link> : null}</div><PersonalRecommendationCarousel items={recommendations} publicProfileId={publicProfileId} /></section>
+      <ReaderExplanation explanation={result.readerExplanation} />
+      {result.canManage || result.ownerActionPending ? <DailyTastePicks key={publicProfileId} publicProfileId={publicProfileId} verified={Boolean(result.canManage)} /> : null}
+      <section className="wm-panel"><div className="wm-panel-heading wm-recommendations-heading"><h2><MatchIcon name="book" />{result.canManage ? "내 추천작" : `${result.nickname ?? "이 사용자"}님의 추천작`}</h2>{result.canManage ? <Link href={`/match/result/${publicProfileId}/recommendations`} aria-label="내 추천작 관리"><MatchIcon name="settings" /><span>관리</span></Link> : null}</div><PersonalRecommendationCarousel items={recommendations} publicProfileId={publicProfileId} /></section>
     </div>
     <MatchActionBar label="취향 결과 바로가기" className="wm-result-actions">
-      {result.canManage ? challengeLoading ? <button className="match-button" type="button" disabled>확인 중…</button> : activeChallenge ? <Link className="match-button" href={`/match/c/${activeChallenge.challengeCode}/ranking`}><span className="wm-action-label">내 취향 관계도</span><MatchIcon name="chevron" /></Link> : <Link className="match-button" href="/match/challenge/new"><span className="wm-action-label">관계도 만들기</span><MatchIcon name="chevron" /></Link> : null}
+      {result.canManage ? <Link className="match-button match-button--secondary" href={result.activeChallengeCode ? `/match/c/${encodeURIComponent(result.activeChallengeCode)}/ranking` : '/match/challenge/new'}><span className="wm-action-label">{relationshipLabel}</span><MatchIcon name="chevron" /></Link> : result.ownerActionPending ? <button className="match-button match-button--secondary wm-result-action-preview" type="button" disabled aria-label={`${relationshipLabel}, 확인 중`}><span className="wm-action-label">{relationshipLabel}</span><MatchIcon name="chevron" /></button> : null}
       <Link className="match-button match-button--secondary" href={`/match/share/personal?profilePublicId=${publicProfileId}`} aria-label="내 취향 결과를 Threads에 공유"><MatchIcon name="share" />공유</Link>
+      <MatchCopyLinkButton path={`/match/result/${encodeURIComponent(publicProfileId)}`} successMessage="공유 링크를 복사했어요." />
     </MatchActionBar>
     {result.canManage && nicknameOpen ? <div className="match-confirm-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target && !nicknameSaving) setNicknameOpen(false); }}><form className="match-confirm-dialog match-nickname-dialog" role="dialog" aria-modal="true" aria-labelledby="match-nickname-title" onSubmit={saveNickname}><p className="match-eyebrow">내 프로필</p><h2 id="match-nickname-title">닉네임 변경</h2><label><span>새 닉네임</span><input autoFocus type="text" minLength={2} maxLength={20} value={nicknameInput} onChange={(event) => { setNicknameInput(event.target.value); setNicknameMessage(""); }} /></label><small className={`match-field-guide${nicknameMessage ? " is-error" : ""}`}>{nicknameMessage || validateMatchNickname(nicknameInput).message}</small><div className="match-confirm-actions"><button className="match-button match-button--secondary" type="button" disabled={nicknameSaving} onClick={() => setNicknameOpen(false)}>취소</button><button className="match-button" type="submit" disabled={nicknameSaving || !validateMatchNickname(nicknameInput).valid}>{nicknameSaving ? "변경 중…" : "저장"}</button></div></form></div> : null}
   </main>;
@@ -200,8 +203,8 @@ function TopStarRow({ count }: { count: number }) {
 }
 
 function TasteProfile({ details, lessMatchedLabels }: { details: TasteDetail[]; lessMatchedLabels: string[] }) {
-  return <section className="wm-panel wm-interpretation" aria-label="취향 포인트">
-    <div className="wm-taste-group"><h2><span aria-hidden="true">♡</span> 끌리는 요소</h2>{details.length ? <ul className="wm-taste-tiles">{details.map(item => <li key={`${item.category}-${item.value}`} title={`${item.category} · ${item.value}`}><TasteFeatureIcon value={item.value} category={item.category} /><span className="wm-sr-only">{item.category}: </span><strong>{item.value}</strong></li>)}</ul> : <p className="wm-taste-empty">선택한 요소 없음</p>}</div>
-    <div className="wm-taste-group"><h2><span aria-hidden="true">⊖</span> 망설이는 요소</h2>{lessMatchedLabels.length ? <ul className="wm-avoidance">{lessMatchedLabels.map(label => <li key={label}>{label}</li>)}</ul> : <p className="wm-taste-empty">없음</p>}</div>
+  return <section className="wm-panel wm-interpretation wm-taste-summary" aria-label="취향 포인트">
+    <TastePointRow title="끌리는 요소" icon="♡">{details.length ? <ul className="wm-taste-tiles wm-taste-chips">{details.map(item => <li key={`${item.category}-${item.value}`} title={`${item.category} · ${item.value}`}><TasteFeatureIcon value={item.value} category={item.category} /><span className="wm-sr-only">{item.category}: </span><strong>{item.value}</strong></li>)}</ul> : <p className="wm-taste-empty">선택한 요소 없음</p>}</TastePointRow>
+    <TastePointRow title="망설이는 요소" icon="⊖" muted>{lessMatchedLabels.length ? <ul className="wm-avoidance">{lessMatchedLabels.map(label => <li key={label}>{label}</li>)}</ul> : <p className="wm-taste-empty">없음</p>}</TastePointRow>
   </section>;
 }

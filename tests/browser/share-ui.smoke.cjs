@@ -259,7 +259,7 @@ const {chromium}=require('playwright');
       },source);
       const layout=personalShareLayout(personal.topGenres,true);
       assert.deepEqual(geometry.heights,[layout.genreHeight,layout.genreHeight,layout.genreHeight]);
-      assert.ok(geometry.covers.every(cover=>cover.width===68&&cover.height===98&&cover.y===layout.coverY),'larger covers follow the content-sized genre row without extra space');
+      assert.ok(geometry.covers.every(cover=>cover.width===78&&cover.height===112&&cover.y===layout.coverY),'larger covers follow the content-sized genre row without extra space');
     }
     personal.topGenres=savedGenres;
     const {PERSONA_GENRE_KEYS}=await import('../../src/features/match/config/personaImages.mjs');
@@ -290,7 +290,7 @@ const {chromium}=require('playwright');
       await real.screenshot({path:path.join(output,`share_${type}_live.png`),fullPage:true});
       const download=real.waitForEvent('download');await real.getByRole('button',{name:'이미지 저장',exact:true}).click();await(await download).saveAs(path.join(output,`share_${type}_export_live.png`));
     }
-    console.log(JSON.stringify({ok:true,output,checks:['three mature share types','personal footer removed and 15px nickname heading','saved-order recommendations: zero/one/two/three, long titles and missing covers','68x98 recommendation covers and genre height for 1/2/3/4 star rows','portrait alpha fade verified against solid/background raster; face unchanged','all nine personal portraits contained inside safe margins','actual star glyph counts','original portraits','single renderer for preview/export','1080px PNG downloads with content-aware height','Threads intent and copy link','320/390/435px readability and overflow','zero/empty states','private ranking blocked','load error and retry','no production DB writes']},null,2));
+    console.log(JSON.stringify({ok:true,output,checks:['three mature share types','personal footer removed and 15px nickname heading','saved-order recommendations: zero/one/two/three, long titles and missing covers','78x112 recommendation covers and genre height for 1/2/3/4 star rows','portrait alpha fade verified against solid/background raster; face unchanged','all nine personal portraits contained inside safe margins','actual star glyph counts','original portraits','single renderer for preview/export','1080px PNG downloads with content-aware height','Threads intent and copy link','320/390/435px readability and overflow','zero/empty states','private ranking blocked','load error and retry','no production DB writes']},null,2));
     await live.close();
   }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

@@ -28,7 +28,7 @@ const {chromium}=require('playwright');
    if(url.pathname.startsWith('/api/v1/webtoons/search-work-')){
     detailReads++;if(url.pathname.endsWith('/fit'))assert.ok(req.headers()['x-match-anonymous-id']);assert.equal(url.searchParams.has('profile'),false);
     const work=item(Number(/search-work-(\d+)/.exec(url.pathname)[1]));
-    return reply({...work,mainGenreLabel:'무협',officialUrl:null,creators:[],statusLabel:null,ageRating:null,contentLabels:[],appreciationPoints:[{key:'revenge',label:'복수',icon:'spark'}],artStyles:[],introductionKind:'editorial',fitStatus:tested?'ready':'test_required',fit:tested?{percent:88,highlighted:true,reasons:[{key:'revenge',label:'복수',icon:'spark'}]}:null});
+    return reply({...work,mainGenreLabel:'무협',officialUrl:null,creators:[],statusLabel:null,ageRating:null,contentLabels:[],appreciationPoints:[{key:'revenge',label:'복수',icon:'spark'}],artStyles:[],introductionKind:'editorial',fitStatus:tested?'ready':'test_required',fit:tested?{rawScore:.7744,percent:77,displayScore:88,displayScoreVersion:'sqrt_v1',highlighted:true,reasons:[{key:'revenge',label:'복수',icon:'spark'}]}:null});
    }
    if(url.pathname==='/api/v1/taste-snapshots'){
     snapshots++;assert.equal(req.method(),'POST');const payload=req.postDataJSON();
@@ -117,7 +117,7 @@ const {chromium}=require('playwright');
   await live.evaluate(()=>document.fonts.ready);await live.addStyleTag({content:'nextjs-portal{display:none!important}'});
   await live.screenshot({path:path.join(output,'work_search_live_catalog.png'),fullPage:false});
   await live.locator('.wm-catalog-card').first().click();await live.getByRole('button',{name:'취향 테스트로 핏점수 확인하기'}).waitFor();
-  const img=live.locator('.wm-work-hero img');if(await img.count())await img.evaluate(node=>node.decode());
+  const img=live.locator('.wm-work-cover-foreground img');if(await img.count())await img.evaluate(node=>node.decode());
   await live.addStyleTag({content:'nextjs-portal{display:none!important}'});await live.screenshot({path:path.join(output,'work_search_live_test_prompt.png')});
   await real.close();
   console.log(JSON.stringify({ok:true,checks:['home/result entry','public catalog scope','pagination and retries','same-tab detail','query/results/scroll restoration','no fit calculation on list','guest prompt','all test screens -> saved result -> original work with fit','no recommendation deletion','empty/error/race states','320/390/540/900 widths','real read-only screenshots'],artifacts:output}));
