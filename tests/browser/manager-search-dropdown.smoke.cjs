@@ -88,7 +88,8 @@ const works=Array.from({length:24},(_,index)=>({canonicalWebtoonId:'dropdown-wor
   await page.setViewportSize({width:390,height:844});await input.scrollIntoViewIfNeeded();
   await page.addStyleTag({content:'nextjs-portal{display:none!important}'});await page.screenshot({path:path.join(output,'search-dropdown-fixture.png')});
   await input.press('Escape');assert.equal(await popup.count(),0);assert.equal(await input.inputValue(),'많이');
-  await input.press('ArrowDown');await popup.waitFor();assert.ok(await popup.evaluate(el=>el.contains(document.activeElement)),'keyboard can enter rich search results');
+  await input.press('ArrowDown');await popup.waitFor();await page.waitForFunction(()=>document.querySelector('.wm-search-dropdown')?.contains(document.activeElement));
+  assert.ok(await popup.evaluate(el=>el.contains(document.activeElement)),'keyboard can enter rich search results');
   await page.keyboard.press('Escape');assert.equal(await popup.count(),0);
   await input.click();await popup.waitFor();await page.locator('.wm-manager-hero h1').click();assert.equal(await popup.count(),0,'outside click dismisses without navigation');
   assert.equal(await comment.inputValue(),'검색해도 유지되는 코멘트');
