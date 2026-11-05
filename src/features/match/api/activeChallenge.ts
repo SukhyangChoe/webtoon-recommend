@@ -15,3 +15,11 @@ export async function requestActiveChallenge(anonymousId: string) {
     return body.active ? body as ActiveChallengeInfo & { active: true } : null;
   } catch { return null; }
 }
+
+/** Footer needs one owned code, not a ranking/owner-taste refresh. */
+export async function requestInvitationCode(anonymousId: string) {
+  try {
+    const body = await loadWorkResource(`/api/v1/challenges?${new URLSearchParams({ anonymousId, view: 'invitation' })}`, { timeoutMs:8000 });
+    return body.active && typeof body.challengeCode === 'string' ? body.challengeCode : null;
+  } catch { return null; }
+}

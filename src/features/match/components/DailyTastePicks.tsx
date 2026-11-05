@@ -10,7 +10,7 @@ import { MatchLoading } from './MatchLoading';
 import { TasteAvoidanceWarning, type AvoidanceWarning } from './TasteAvoidanceWarning';
 
 type DailyPick = { canonicalWebtoonId: string; title: string; mainGenreLabel: string; platform: string; coverUrl: string | null; avoidanceWarnings?: AvoidanceWarning[] };
-type DailyPicks = { publicProfileId: string; mode: 'personalized'; selectionVersion: string; expiresAt?: string; items: DailyPick[] };
+type DailyPicks = { publicProfileId: string; mode: 'personalized' | 'preparing'; selectionVersion: string; expiresAt?: string; retryAfterMs?: number; items: DailyPick[] };
 const OPEN_HASH = '#daily-picks';
 const CHANGE_EVENT = 'wm-daily-picks-change';
 function subscribe(listener: () => void) {
@@ -27,17 +27,20 @@ export function DailyTastePicks({ publicProfileId, verified }: { publicProfileId
   const dialog = useRef<HTMLDialogElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const pushedEntry = useRef(false);
+  const loading = useRef(false);
+  const pendingSince = useRef<number | null>(null);
   const restoreScroll = useRef<number | null>(null);
   const restorePage = useRef<number | null>(null);
   const titleId = useId();
   const copyId = useId();
   const storageKey = `webtoon-match:daily-picks-return:v1:${publicProfileId}`;
-  const items = data?.items ?? [];
+  const items = data?.mode === 'personalized' ? data.items : [];
 
   useEffect(() => {
     if (!verified) return;
     const controller = new AbortController();
     let active = true;
+    loading.current = true;
     async function load() {
       setError('');
       try {
@@ -45,27 +48,56 @@ export function DailyTastePicks({ publicProfileId, verified }: { publicProfileId
         const body = await loadWorkResource(`/api/v1/results/${encodeURIComponent(publicProfileId)}/daily-picks`, {
           headers: { 'x-match-anonymous-id': identity.anonymousId }, signal: controller.signal, timeoutMs: 65000,
         }) as DailyPicks;
-        if (body.publicProfileId !== publicProfileId || body.mode !== 'personalized' || !Array.isArray(body.items)) throw new Error('INVALID_DAILY_PICKS');
-        if (active) setData(body);
+        if (body.publicProfileId !== publicProfileId || !['personalized', 'preparing'].includes(body.mode) || !Array.isArray(body.items)) throw new Error('INVALID_DAILY_PICKS');
+        if (active) {
+          if (body.mode === 'personalized') pendingSince.current = null;
+          else pendingSince.current ??= Date.now();
+          setData(body);
+        }
       } catch {
-        if (active && !controller.signal.aborted) setError('작품을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.');
+        if (active && !controller.signal.aborted) {
+          setData(null);
+          setError('작품을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.');
+        }
+      } finally {
+        if (active) loading.current = false;
       }
     }
     void load();
-    return () => { active = false; controller.abort(); };
+    return () => { active = false; loading.current = false; controller.abort(); };
   }, [publicProfileId, verified, retry]);
+
+  useEffect(() => {
+    if (!verified || error || data?.mode !== 'preparing') return;
+    if (pendingSince.current !== null && Date.now() - pendingSince.current >= 120000) {
+      setError('추천 준비가 지연되고 있어요. 잠시 후 다시 시도해 주세요.');
+      return;
+    }
+    const timer = window.setTimeout(() => setRetry(value => value + 1), Math.min(5000, Math.max(1000, data.retryAfterMs ?? 2000)));
+    return () => window.clearTimeout(timer);
+  }, [data, error, verified]);
 
   useEffect(() => {
     if (data?.mode !== 'personalized' || !verified) return;
     // Re-check current input after managing recommendations in another screen/tab.
     // Midnight refresh does not introduce a daily randomization bonus.
-    const refresh = () => { if (document.visibilityState === 'visible') setRetry(value => value + 1); };
+    // Focus and visibility often fire together. One persisted-cache read suffices;
+    // never cancel an already-running first calculation to start another request.
+    let debounce: number | undefined;
+    const refresh = () => {
+      if (document.visibilityState !== 'visible' || loading.current) return;
+      window.clearTimeout(debounce);
+      debounce = window.setTimeout(() => {
+        if (!loading.current) setRetry(value => value + 1);
+      }, 300);
+    };
     const expiry = Date.parse(data.expiresAt ?? '');
     const timer = Number.isFinite(expiry) ? window.setTimeout(refresh, Math.max(1000, expiry - Date.now())) : null;
     window.addEventListener('focus', refresh);
     document.addEventListener('visibilitychange', refresh);
     return () => {
       if (timer !== null) window.clearTimeout(timer);
+      window.clearTimeout(debounce);
       window.removeEventListener('focus', refresh);
       document.removeEventListener('visibilitychange', refresh);
     };
@@ -149,7 +181,7 @@ export function DailyTastePicks({ publicProfileId, verified }: { publicProfileId
       <div className="wm-daily-sheet-grab" aria-hidden="true" />
       <header className="wm-daily-sheet-heading"><div><p className="wm-daily-eyebrow">내 취향을 바탕으로</p><h2 id={titleId}>오늘의 취향작</h2></div><button className="wm-daily-close" type="button" onClick={close} aria-label="오늘의 취향작 닫기" autoFocus><MatchIcon name="close" /></button></header>
       <p id={copyId} className="wm-daily-sheet-intro">{items.length ? `최신 취향을 참고해 고른 ${items.length}편이에요.` : '내 취향에 맞는 작품을 확인하고 있어요.'}</p>
-      {error ? <div className="wm-daily-state" role="alert"><p>{error}</p><button type="button" onClick={() => setRetry(value => value + 1)}>다시 불러오기</button></div> : !data ? <div className="wm-daily-state"><MatchLoading message={verified ? '세 편을 불러오는 중이에요…' : '내 결과를 확인하고 있어요…'} /></div> : !items.length ? <p className="wm-daily-state">현재 보여드릴 수 있는 작품을 준비 중이에요.</p> : <ol className="wm-daily-list">{items.map(item => <li key={item.canonicalWebtoonId}><WorkDetailLink id={item.canonicalWebtoonId} returnTo={`/match/result/${encodeURIComponent(publicProfileId)}${OPEN_HASH}`} onOpen={rememberScroll} className="wm-daily-work" label={`${item.title} 작품 상세 보기`}><WorkCover item={item} sizes="72px" /><span className="wm-daily-work-copy"><small>{item.mainGenreLabel}</small><h3>{item.title}</h3><span>{item.platform}</span></span><MatchIcon name="chevron" /></WorkDetailLink><TasteAvoidanceWarning warnings={item.avoidanceWarnings ?? []} compact /></li>)}</ol>}
+      {error ? <div className="wm-daily-state" role="alert"><p>{error}</p><button type="button" onClick={() => { pendingSince.current = null; setRetry(value => value + 1); }}>다시 불러오기</button></div> : !data || data.mode === 'preparing' ? <div className="wm-daily-state"><MatchLoading message={verified ? data?.mode === 'preparing' ? '새 취향에 맞춰 세 편을 고르고 있어요…' : '세 편을 불러오는 중이에요…' : '내 결과를 확인하고 있어요…'} /></div> : !items.length ? <p className="wm-daily-state">현재 보여드릴 수 있는 작품을 준비 중이에요.</p> : <ol className="wm-daily-list">{items.map(item => <li key={item.canonicalWebtoonId}><WorkDetailLink id={item.canonicalWebtoonId} returnTo={`/match/result/${encodeURIComponent(publicProfileId)}${OPEN_HASH}`} onOpen={rememberScroll} className="wm-daily-work" label={`${item.title} 작품 상세 보기`}><WorkCover item={item} sizes="72px" /><span className="wm-daily-work-copy"><small>{item.mainGenreLabel}</small><h3>{item.title}</h3><span>{item.platform}</span></span><MatchIcon name="chevron" /></WorkDetailLink><TasteAvoidanceWarning warnings={item.avoidanceWarnings ?? []} compact /></li>)}</ol>}
       <p className="wm-daily-sheet-note">매일 자정, 한국시간 기준으로 새로 골라요. 취향 답변이나 내 추천작을 바꾸면 바로 반영돼요.</p>
       <button className="wm-daily-return" type="button" onClick={close}>내 결과로 돌아가기</button>
     </dialog>

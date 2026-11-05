@@ -1,4 +1,5 @@
-// Read-only live integration: no quiz submissions or recommendation mutations.
+// No quiz submissions or recommendation mutations. The owner-only daily GET may
+// now populate its derived recommendation cache; it does not change source taste.
 import assert from 'node:assert/strict';
 import postgres from 'postgres';
 const sql = postgres(process.env.WEBTOON_MATCH_RUNTIME_DATABASE_URL || process.env.WEBTOON_MATCH_DATABASE_URL,
@@ -21,19 +22,23 @@ try {
     const result = await resultResponse.json();
     const top = result.topGenres?.[0];
     if (!JSON.stringify(top).includes('무협') && !JSON.stringify(top).includes('murim')) continue;
+    const firstStart = performance.now();
     const response = await fetch(url + '/daily-picks', { headers });
     const picks = await response.json();
+    const firstMs = Math.round(performance.now() - firstStart);
     assert.equal(response.status, 200, JSON.stringify(picks));
     assert.equal(picks.mode, 'personalized');
     assert.equal(picks.items.length, 3);
     assert.ok(picks.items.some(item => item.mainGenreLabel === '무협'), 'murim preference reaches selection');
+    const repeatStart = performance.now();
     const repeated = await (await fetch(url + '/daily-picks', { headers })).json();
+    const repeatMs = Math.round(performance.now() - repeatStart);
     assert.deepEqual(picks, repeated);
     assert.doesNotMatch(JSON.stringify(picks), /fixed-preview|snapshotData|"answers"|candidateOverallFit/);
     const visitor = await fetch(url + '/daily-picks');
     assert.equal(visitor.status, 403);
     console.log(JSON.stringify({ ok: true, topGenre: top, items: picks.items.map(item => ({ title: item.title, genre: item.mainGenreLabel })),
-      deterministic: true, ownerOnly: true, writes: 0 }));
+      deterministic: true, ownerOnly: true, firstMs, repeatMs, sourceDataWrites: 0, dailyCacheWritesPossible: true }));
     process.exitCode = 0;
     tested = true;
     break;

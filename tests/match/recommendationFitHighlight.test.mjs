@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { recommendationFitHighlighted as highlighted, RECOMMENDATION_FIT_HIGHLIGHT_DISPLAY_THRESHOLD } from '../../src/features/match/config/recommendationFitHighlight.mjs';
 import { recommendationFitDisplayScore as display } from '../../src/features/match/config/recommendationFitDisplay.mjs';
 
-test('highlight follows displayed 75 points, not raw 75 or the old raw 60', () => {
-  assert.equal(RECOMMENDATION_FIT_HIGHLIGHT_DISPLAY_THRESHOLD,75);
-  for(const [raw,expectedDisplay,expected] of [[0,0,false],[.55,74,false],[.555024,74,false],[.555025,75,true],[.555026,75,true],[.56,75,true],[.56864,75,true],[.6,77,true],[.75,87,true],[1,100,true]]) {
+test('highlight follows displayed 70 points, not a raw 70 or the former displayed 75', () => {
+  assert.equal(RECOMMENDATION_FIT_HIGHLIGHT_DISPLAY_THRESHOLD,70);
+  for(const [raw,expectedDisplay,expected] of [[0,0,false],[.47,69,false],[.483024,69,false],[.483025,70,true],[.49,70,true],[.55,74,true],[.56,75,true],[.6,77,true],[.75,87,true],[1,100,true]]) {
     assert.equal(display(raw),expectedDisplay);assert.equal(highlighted(raw,2),expected);
   }
 });

@@ -59,7 +59,6 @@ export function PairResultView({ challengeCode, resultId, showRankingReturn = fa
   useEffect(() => {
     let active = true;
     const controller=new AbortController();
-    setError('');
     const identity = ensureAnonymousId({ cookieText: document.cookie, storage: window.localStorage });
     void loadWorkResource(`/api/v1/challenges/${challengeCode}/results/${resultId}`, {
       headers: { "x-match-anonymous-id": identity.anonymousId },
@@ -125,7 +124,7 @@ export function PairResultView({ challengeCode, resultId, showRankingReturn = fa
     }
   }
 
-  if (error) return <main className="match-page wm-pair-page"><section className="wm-pair-panel"><h1>{error}</h1><button className="match-button" onClick={()=>setRetry(value=>value+1)}>다시 불러오기</button><Link href={`/match/c/${challengeCode}`}>초대 화면으로</Link></section></main>;
+  if (error) return <main className="match-page wm-pair-page"><section className="wm-pair-panel"><h1>{error}</h1><button className="match-button" onClick={()=>{setError('');setResult(null);setRetry(value=>value+1);}}>다시 불러오기</button><Link href={`/match/c/${challengeCode}`}>초대 화면으로</Link></section></main>;
   if (!result) return <main className="match-page wm-pair-page"><section className="wm-pair-panel" role="status"><MatchLoading message="둘의 궁합을 불러오는 중이에요…" /></section></main>;
   const archetype = pairArchetypeFor(result.score);
   const [badgeLead, ...badgeRest] = archetype.badge.split(" ");
@@ -150,15 +149,15 @@ export function PairResultView({ challengeCode, resultId, showRankingReturn = fa
     </div>
     <div id="pair-summary-panel" role="tabpanel" aria-labelledby="pair-summary-tab" hidden={tab !== "summary"} tabIndex={0}>
       <section className="wm-pair-panel wm-pair-common wm-taste-summary" aria-label="함께 맞는 장르와 취향"><TastePointRow title="같이 달릴 장르" icon="♡" headingLevel="h2"><PairLabels items={result.sharedGenres} empty="서로 다른 장르를 좋아해요" /></TastePointRow><TastePointRow title="함께 맞는 취향" icon="✦" headingLevel="h2"><PairLabels items={result.sharedTasteLabels} empty="세부 취향은 각자의 매력" featureIcons /></TastePointRow></section>
-      <WebtoonRecommendationSection result={result} likeSavingKey={likeSavingKey} likeMessage={likeMessage} onToggleLike={toggleRecommendationLike} />
     </div>
     <div id="pair-comparison-panel" role="tabpanel" aria-labelledby="pair-comparison-tab" hidden={tab !== "comparison"} tabIndex={0}>
       <section className="wm-pair-panel wm-insight-card wm-pair-comparison-card"><h2>각자의 취향 TOP 3</h2><div className="wm-pair-profiles">{[{ nickname: result.ownerNickname, destination: result.ownerRelationship, genreKey: result.ownerGenreKey, genres: result.ownerTopGenres }, { nickname: result.challengerNickname, destination: result.challengerRelationship, genreKey: result.challengerGenreKey, genres: result.challengerTopGenres }].map((person, index) => <div key={index}><header><PersonaAvatar genreKey={person.genreKey} /><PairProfileLink nickname={person.nickname} destination={person.destination} /></header>{person.genres?.length ? <ol>{person.genres.map((genre, rank) => <li key={genre.genreKey}><small>{rank + 1}</small><span>{genre.displayLabel}</span><b aria-label={`별 ${genre.stars}개`}>★ {genre.stars}</b></li>)}</ol> : <p className="wm-pair-muted">취향 정보 없음</p>}</div>)}</div></section>
       <section className="wm-pair-panel wm-pair-reading wm-insight-card wm-story-card" aria-labelledby="pair-reading-heading"><header><p className="wm-story-eyebrow">우리의 취향 사용설명서</p><h2 id="pair-reading-heading" className="wm-story-title">{archetype.name}</h2></header><p className="wm-story-copy">{result.pairReading?.intro ?? '취향이 만나는 장면부터, 서로 다른 재미까지 같이 이야기해보세요.'}</p><div className="wm-story-scene"><h3 className="wm-story-subtitle">둘이 같이 보면</h3>{result.pairReading ? <><blockquote className="wm-pair-reading-dialogue">{result.pairReading.dialogue.map((line,index)=><p className="wm-story-copy" key={index}>“{line}”</p>)}</blockquote><p className="wm-story-copy">{result.pairReading.scene}</p><p className="wm-pair-reading-punchline wm-story-copy wm-story-punchline">{result.pairReading.punchline}</p></> : <p className="wm-story-copy">“어디가 좋았어?” 한마디로 감상회를 열어보세요. 같은 장면을 봤는데 발표 주제가 두 개 나올지도요.</p>}</div></section>
     </div>
+    <WebtoonRecommendationSection result={result} likeSavingKey={likeSavingKey} likeMessage={likeMessage} onToggleLike={toggleRecommendationLike} />
     <div className="wm-pair-rank"><span>{result.ownerNickname}님의 관계도</span><strong>{result.rank}위 <small>/ {result.entryCount}명</small></strong></div>
     <details className="wm-pair-about"><summary>궁합 결과 안내</summary><p>웹툰궁합은 {result.recommendationTasteApplied ? "테스트 응답과 등록한 추천작" : "테스트 응답"}으로 본 취향 비교 결과이며, 사람 사이의 관계나 성격을 평가하지 않아요.</p></details>
-    <MatchActionBar label="상세 궁합 바로가기">{personalResultId !== null ? <Link className="match-button match-button--secondary" href={personalResultId ? `/match/result/${personalResultId}?from=pair` : `/match/c/${challengeCode}`}>{personalResultId ? "내 결과" : "테스트하기"}</Link> : <button className="match-button match-button--secondary" type="button" disabled>확인 중…</button>}<Link className="match-button match-button--secondary" href={`/match/share/pair?challengeCode=${challengeCode}&resultId=${resultId}`} aria-label="궁합 결과를 Threads에 공유"><MatchIcon name="share" />공유</Link><MatchCopyLinkButton path={`/match/c/${encodeURIComponent(challengeCode)}`} /></MatchActionBar>
+    <MatchActionBar label="상세 궁합 바로가기">{personalResultId !== null ? <Link className="match-button match-button--secondary" href={personalResultId ? `/match/result/${personalResultId}?from=pair` : `/match/c/${challengeCode}`}>{personalResultId ? "내 결과" : "테스트하기"}</Link> : <button className="match-button match-button--secondary" type="button" disabled>확인 중…</button>}<Link className="match-button match-button--secondary" href={`/match/share/pair?challengeCode=${challengeCode}&resultId=${resultId}`} aria-label="궁합 결과를 Threads에 공유"><MatchIcon name="share" />공유</Link><MatchCopyLinkButton /></MatchActionBar>
   </main>;
 }
 

@@ -46,7 +46,7 @@ const {chromium}=require('playwright');
     for(const width of[320,375,390,435,540,900]){
       await page.setViewportSize({width,height:844});await page.goto(base+'/match/result/insight-style');await page.locator('.wm-story-card').waitFor();await page.evaluate(()=>document.fonts.ready);
       const summary=await summaryStyle(),story=await storyStyle();await fits('.wm-taste-summary');await fits('.wm-story-card');
-      assert.equal(summary.label.size,'13px');assert.equal(summary.chip.size,'16px');assert.equal(summary.row.display,'grid');assert.equal(summary.row.columns,1);await labelsAboveValues();
+      assert.equal(summary.label.size,'15px');assert.equal(summary.chip.size,'14px');assert.equal(summary.row.display,'grid');assert.equal(summary.row.columns,1);await labelsAboveValues();
       assert.equal(story.title.size,'19px');assert.equal(story.eyebrow.size,'13px');assert.equal(story.subtitle.size,'13px');assert.equal(story.body.size,'15px');
       assert.equal(story.subtitle.borderLeft,'3px');assert.equal(story.subtitle.borderColor,'rgb(0, 191, 220)');assert.equal(story.subtitle.paddingLeft,'9px');
       assert.equal(story.card.padding,'18px 16px');assert.equal(story.scene.padding,'14px');

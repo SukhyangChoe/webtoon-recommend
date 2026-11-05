@@ -78,7 +78,7 @@ const {chromium}=require('playwright');
     while(await page.getByRole('button',{name:/추천작에서 삭제$/}).count())await page.getByRole('button',{name:/추천작에서 삭제$/}).first().click();
     expected=[];mode='success';
     await page.getByRole('button',{name:'추천작 저장',exact:true}).click();await page.waitForURL(base+resultPath);
-    await page.locator('.wm-result-screen .wm-empty').waitFor();
+    await page.locator('.wm-result-screen .wm-recommendation-empty').waitFor();
     assert.equal(await page.locator('.wm-result-screen .wm-recommendation-card').count(),0);
     assert.equal(saves,3);assert.deepEqual(errors,[]);
     const after=await(await page.request.get(base+apiPath)).json();

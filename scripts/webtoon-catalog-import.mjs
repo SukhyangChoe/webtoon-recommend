@@ -9,7 +9,10 @@ function validateMap(value, name, maximum, required) {
   if (value === undefined && !required) return;
   if (!record(value) || (required && !Object.keys(value).length)) throw new Error(`INVALID_SCORE_MAP:${name}`);
   for (const [key, score] of Object.entries(value)) {
-    if (!key || !Number.isInteger(score) || score < 0 || score > maximum) throw new Error(`INVALID_SCORE:${name}.${key}`);
+    // Preserve user-approved fractional precision (including 0.75), without
+    // rounding, coercion or relaxing the existing axis-specific score ranges.
+    if (!key || typeof score !== 'number' || !Number.isFinite(score)
+      || score < 0 || score > maximum) throw new Error(`INVALID_SCORE:${name}.${key}`);
   }
 }
 

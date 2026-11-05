@@ -23,7 +23,7 @@ export function MatchDialog({ titleId, onClose, children, sheet = false, busy = 
     const priorInert = inertElements.map((element) => element.inert);
     inertElements.forEach((element) => { element.inert = true; });
     document.body.style.overflow = "hidden";
-    const focusable = () => Array.from(dialog.querySelectorAll<HTMLElement>('a[href], button:not(:disabled), input:not(:disabled), [tabindex="0"]')).filter((element) => element.getClientRects().length > 0);
+    const focusable = () => Array.from(dialog.querySelectorAll<HTMLElement>('a[href], button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), [tabindex="0"]')).filter((element) => element.getClientRects().length > 0);
     (focusable()[0] ?? dialog).focus();
     function onKey(event: KeyboardEvent) {
       if (event.key === "Escape" && !busyRef.current) { event.preventDefault(); closeRef.current(); }

@@ -1,4 +1,5 @@
-/* Isolated failures/interaction tests, followed by actual owner data captures. All writes blocked. */
+/* Isolated interactions; optional live captures block source-data HTTP writes.
+ * An owner daily GET may populate the derived daily cache when live mode is used. */
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
 const {chromium}=require('playwright');
@@ -20,6 +21,7 @@ const postgres=require('postgres');
     calls++;assert.ok(req.headers()['x-match-anonymous-id']);
     if(mode==='hold')await new Promise(resolve=>{release=resolve;});
     if(mode==='fail')return route.fulfill({status:503,json:{error:'TEMPORARY_FAILURE'}});
+    if(mode==='preparing')return route.fulfill({status:202,json:{...picks,mode:'preparing',retryAfterMs:1000,items:[]}});
     return route.fulfill({json:{...picks,items:mode==='empty'?[]:picks.items}});
    }
    if(p==='/api/v1/webtoons/daily-work')return route.fulfill({json:{canonicalWebtoonId:'daily-work',title:'임시 선정 작품',mainGenreLabel:'판타지',platform:'플랫폼',coverUrl:null,officialUrl:null,creators:[],contentLabels:[],appreciationPoints:[],artStyles:[],fit:null,fitStatus:'pending'}});
@@ -32,6 +34,7 @@ const postgres=require('postgres');
   const before=await preview.boundingBox();await preview.click();await sheet.waitFor();await sheet.getByText('세 편을 불러오는 중이에요…').waitFor();
   assert.ok(await sheet.evaluate(el=>{const r=document.querySelector('.wm-floating-search').getBoundingClientRect();return document.elementFromPoint(r.left+r.width/2,r.top+r.height/2)?.closest('dialog')===el;}),'global search remains under the native modal layer');
   mode='ok';release();await sheet.locator('.wm-daily-list > li').nth(2).waitFor();
+  const loadedCalls=calls;
   assert.ok(await sheet.getByText(/매일 자정, 한국시간/).isVisible());assert.equal(await sheet.locator('[role="meter"]').count(),0);
   for(const [width,height] of [[320,740],[390,844],[540,844],[900,800],[390,520]]){
    await page.setViewportSize({width,height});
@@ -51,6 +54,9 @@ const postgres=require('postgres');
   const after=await preview.boundingBox();assert.equal(after.width,before.width);assert.equal(after.height,before.height,'loaded covers do not change preview height');
   await preview.click();await sheet.waitFor();await page.mouse.click(3,3);await sheet.waitFor({state:'hidden'});
   await preview.click();await sheet.waitFor();await page.goBack();await sheet.waitFor({state:'hidden'});
+  assert.equal(calls,loadedCalls,'opening and closing loaded daily picks does not request selection again');
+  await page.evaluate(()=>{window.dispatchEvent(new Event('focus'));document.dispatchEvent(new Event('visibilitychange'));});
+  await page.waitForTimeout(700);assert.equal(calls,loadedCalls+1,'focus/visibility are coalesced into one cache recheck');
   await preview.click();await sheet.waitFor();const pageY=await page.evaluate(()=>scrollY);
   await sheet.getByRole('link',{name:'임시 선정 작품 작품 상세 보기',exact:true}).click();await page.waitForURL('**/match/work/daily-work?*');
   await page.getByRole('heading',{name:'임시 선정 작품',level:1,exact:true}).waitFor();assert.equal(await page.evaluate(()=>document.body.style.overflow),'');
@@ -59,6 +65,9 @@ const postgres=require('postgres');
   mode='fail';await page.reload();await preview.click();await sheet.getByRole('button',{name:'다시 불러오기'}).waitFor();
   mode='ok';await sheet.getByRole('button',{name:'다시 불러오기'}).click();await sheet.locator('.wm-daily-list > li').nth(2).waitFor();
   mode='empty';await page.reload();await sheet.getByText('현재 보여드릴 수 있는 작품을 준비 중이에요.').waitFor();assert.equal(await sheet.locator('.wm-daily-list > li').count(),0);
+  mode='preparing';await page.reload();await sheet.getByText('새 취향에 맞춰 세 편을 고르고 있어요…').waitFor();
+  assert.equal(await sheet.locator('.wm-daily-list > li').count(),0,'no previous-taste picks while the new batch is preparing');
+  mode='ok';await sheet.locator('.wm-daily-list > li').nth(2).waitFor();
   await sheet.getByRole('button',{name:'내 결과로 돌아가기'}).click();await sheet.waitFor({state:'hidden'});
   owner=false;const beforeVisitor=calls;await page.reload();await page.locator('.wm-result-title-mark').waitFor();assert.equal(await preview.count(),0);assert.equal(calls,beforeVisitor,'shared visitors never request owner-only picks');
   assert.deepEqual(errors,[]);await context.close();
@@ -82,6 +91,6 @@ const postgres=require('postgres');
    assert.equal(await actualSheet.locator('.wm-daily-list > li').count(),3);await real.screenshot({path:path.join(out,'daily_picks_actual_sheet.png')});
    await live.close();
   }
-  console.log(JSON.stringify({ok:true,out,checks:['independent loading','preview after explanation before own recommendations','personalized works without temporary notice','320/390/540/900 and short viewport','keyboard/backdrop/native history closing','detail navigation and sheet/scroll restoration','error retry and empty state','no shared-visitor request','all data writes blocked; captures use actual stored result and DB works']}));
+  console.log(JSON.stringify({ok:true,out,checks:['independent loading','preview after explanation before own recommendations','personalized works without temporary notice','320/390/540/900 and short viewport','keyboard/backdrop/native history closing','detail navigation and sheet/scroll restoration','error retry and empty state','pending polls without stale picks','reopening does not fetch; focus events coalesce','no shared-visitor request','source-data HTTP writes blocked; optional live GET may populate derived cache']}));
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

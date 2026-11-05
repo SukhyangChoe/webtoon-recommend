@@ -3,6 +3,15 @@ import { safeWorkReturnPath } from './workDetailPresentation.mjs';
 export const RECOMMENDATION_PROMPT_KEY = 'webtoon-match:recommendation-prompt:v1';
 const validId = value => typeof value === 'string' && /^[\w-]{1,100}$/.test(value);
 
+/** Repeat on normal result/discovery navigation, never home, testing or editing. */
+export function showRecommendationNudge(path) {
+  if (typeof path !== 'string') return false;
+  const pathname = path.split('?')[0];
+  return pathname.startsWith('/match/') && pathname !== '/match/'
+    && !/^\/match\/test(?:\/|$)/.test(pathname) && pathname !== '/match/result/building'
+    && !/\/recommendations\/?$/.test(pathname);
+}
+
 /** Only a personal result, pair result or work detail can be a post-registration destination. */
 export function recommendationReturnPath(value, profileId) {
   const fallback = `/match/result/${encodeURIComponent(profileId)}`;

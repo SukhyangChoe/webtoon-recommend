@@ -16,7 +16,8 @@ import { MatchCopyLinkButton } from "./MatchCopyLinkButton";
 import { MatchIcon } from "./MatchIcon";
 import { TastePointRow } from './TastePointRow';
 import { validateMatchNickname } from "../server/nickname.mjs";
-import { PersonalRecommendationCarousel } from "./RecommendationWork";
+import { PersonalRecommendationCarousel, type RecommendationWorkItem } from "./RecommendationWork";
+import { RecommendationEditor } from './RecommendationEditor';
 import { useHorizontalScrollIndicator } from "./useHorizontalScrollIndicator";
 import { TasteFeatureIcon } from "./TasteFeatureIcon";
 import { resultTitlePhrases } from "../config/tasteFeatureIcons.mjs";
@@ -27,23 +28,13 @@ type DisplayGenre = { genreKey: string; displayLabel: string; stars: number };
 type TasteDetail = { category: string; value: string };
 type PublicResult = { publicProfileId: string; nickname?: string | null; canManage?: boolean; activeChallengeCode?: string | null; readerExplanation?: ReaderExplanationModel; recommendationInfluence?: { workCount: number; recommendationPercent: number; testPercent: number }; displayGenres: DisplayGenre[]; topGenres: DisplayGenre[]; wellMatchedDetails?: TasteDetail[]; wellMatchedLabels: string[]; lessMatchedLabels: string[] };
 type ResultViewModel = PublicResult & { ownerActionPending?: boolean };
-type RecommendedWebtoon = {
-  canonicalWebtoonId: string;
-  title: string;
-  platform: string;
-  officialUrl: string | null;
-  mainGenre: string;
-  recommendationComment: string | null;
-  likeCount: number;
-  likedByViewer: boolean;
-  coverUrl?: string | null;
-};
 export function MatchResultView({ publicProfileId }: { publicProfileId: string }) {
   const [result, setResult] = useState<ResultViewModel | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [retry, setRetry] = useState(0);
-  const [recommendations, setRecommendations] = useState<RecommendedWebtoon[]>([]);
+  const [recommendations, setRecommendations] = useState<RecommendationWorkItem[]>([]);
+  const [editingWork, setEditingWork] = useState<RecommendationWorkItem | null>(null);
   const [nicknameOpen, setNicknameOpen] = useState(false);
   const [nicknameInput, setNicknameInput] = useState("");
   const [nicknameSaving, setNicknameSaving] = useState(false);
@@ -158,14 +149,15 @@ export function MatchResultView({ publicProfileId }: { publicProfileId: string }
     <div className="wm-result-body">
       <TasteProfile details={result.wellMatchedDetails ?? result.wellMatchedLabels.map((value) => ({ category: "취향", value }))} lessMatchedLabels={result.lessMatchedLabels} />
       <ReaderExplanation explanation={result.readerExplanation} />
-      {result.canManage || result.ownerActionPending ? <DailyTastePicks key={publicProfileId} publicProfileId={publicProfileId} verified={Boolean(result.canManage)} /> : null}
-      <section className="wm-panel"><div className="wm-panel-heading wm-recommendations-heading"><h2><MatchIcon name="book" />{result.canManage ? "내 추천작" : `${result.nickname ?? "이 사용자"}님의 추천작`}</h2>{result.canManage ? <Link href={`/match/result/${publicProfileId}/recommendations`} aria-label="내 추천작 관리"><MatchIcon name="settings" /><span>관리</span></Link> : null}</div><PersonalRecommendationCarousel items={recommendations} publicProfileId={publicProfileId} /></section>
+      {result.canManage || result.ownerActionPending ? <DailyTastePicks key={`${publicProfileId}:${retry}`} publicProfileId={publicProfileId} verified={Boolean(result.canManage)} /> : null}
+      <section className="wm-panel"><div className="wm-panel-heading wm-recommendations-heading"><h2><MatchIcon name="book" />{result.canManage ? "내 추천작" : `${result.nickname ?? "이 사용자"}님의 추천작`}</h2>{result.canManage ? <Link href={`/match/result/${publicProfileId}/recommendations`} aria-label="내 추천작 관리"><MatchIcon name="settings" /><span>관리</span></Link> : null}</div><PersonalRecommendationCarousel items={recommendations} publicProfileId={publicProfileId} onEdit={result.canManage ? setEditingWork : undefined} registrationHref={result.canManage ? `/match/result/${publicProfileId}/recommendations` : undefined} /></section>
     </div>
     <MatchActionBar label="취향 결과 바로가기" className="wm-result-actions">
       {result.canManage ? <Link className="match-button match-button--secondary" href={result.activeChallengeCode ? `/match/c/${encodeURIComponent(result.activeChallengeCode)}/ranking` : '/match/challenge/new'}><span className="wm-action-label">{relationshipLabel}</span><MatchIcon name="chevron" /></Link> : result.ownerActionPending ? <button className="match-button match-button--secondary wm-result-action-preview" type="button" disabled aria-label={`${relationshipLabel}, 확인 중`}><span className="wm-action-label">{relationshipLabel}</span><MatchIcon name="chevron" /></button> : null}
       <Link className="match-button match-button--secondary" href={`/match/share/personal?profilePublicId=${publicProfileId}`} aria-label="내 취향 결과를 Threads에 공유"><MatchIcon name="share" />공유</Link>
-      <MatchCopyLinkButton path={`/match/result/${encodeURIComponent(publicProfileId)}`} successMessage="공유 링크를 복사했어요." />
+      <MatchCopyLinkButton key={`${publicProfileId}:${result.canManage}:${result.ownerActionPending}:${result.activeChallengeCode ?? ''}`} challengeCode={result.ownerActionPending ? null : result.canManage ? result.activeChallengeCode ?? null : undefined} />
     </MatchActionBar>
+    {result.canManage && editingWork ? <RecommendationEditor key={editingWork.canonicalWebtoonId} item={editingWork} publicProfileId={publicProfileId} onClose={() => setEditingWork(null)} onSaved={items => { setRecommendations(items); setRetry(value => value + 1); }} /> : null}
     {result.canManage && nicknameOpen ? <div className="match-confirm-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target && !nicknameSaving) setNicknameOpen(false); }}><form className="match-confirm-dialog match-nickname-dialog" role="dialog" aria-modal="true" aria-labelledby="match-nickname-title" onSubmit={saveNickname}><p className="match-eyebrow">내 프로필</p><h2 id="match-nickname-title">닉네임 변경</h2><label><span>새 닉네임</span><input autoFocus type="text" minLength={2} maxLength={20} value={nicknameInput} onChange={(event) => { setNicknameInput(event.target.value); setNicknameMessage(""); }} /></label><small className={`match-field-guide${nicknameMessage ? " is-error" : ""}`}>{nicknameMessage || validateMatchNickname(nicknameInput).message}</small><div className="match-confirm-actions"><button className="match-button match-button--secondary" type="button" disabled={nicknameSaving} onClick={() => setNicknameOpen(false)}>취소</button><button className="match-button" type="submit" disabled={nicknameSaving || !validateMatchNickname(nicknameInput).valid}>{nicknameSaving ? "변경 중…" : "저장"}</button></div></form></div> : null}
   </main>;
 }

@@ -16,18 +16,19 @@ test('there is no fixed selection or preview fallback in the entry point',()=>{
  assert.match(source,/getDailyTastePicks = getRuntimeDailyTastePicks/);
 });
 test('daily picks require verified result ownership; invalid/other viewers cannot trigger selection',async()=>{
- let owns=true,selections=0,checks=0,fail=false;
+ let owns=true,selections=0,checks=0,fail=false,preparing=false;
  const route=load('../../src/app/api/v1/results/[profilePublicId]/daily-picks/route.ts',{
   '@/features/match/server/apiResponse':{matchJson:(_r,body,init)=>({body,status:init?.status??200})},
   '@/features/match/server/apiErrors':{toMatchApiFailure:()=>({error:'DAILY_PICKS_LOAD_FAILED',status:500})},
   '@/features/match/server/resultStore':{isTasteResultOwner:async()=>{checks++;return owns;}},
-  '@/features/match/server/dailyTastePicks':{getDailyTastePicks:async()=>{selections++;if(fail)throw new Error('private database error');return {mode:'personalized',items:[]};}},
+  '@/features/match/server/dailyTastePicks':{getDailyTastePicks:async()=>{selections++;if(fail)throw new Error('private database error');return {mode:preparing?'preparing':'personalized',items:[]};}},
   '@/features/match/storage/anonymousIdentity.mjs':{isAnonymousId:value=>value==='valid'},
  });
  const get=value=>route.GET({headers:{get:()=>value}},{params:Promise.resolve({profilePublicId:'profile'})});
  assert.equal((await get(null)).status,403);assert.equal((await get('invalid')).status,403);assert.equal(checks,0);
  owns=false;assert.equal((await get('valid')).status,403);assert.equal(selections,0);
  owns=true;assert.equal((await get('valid')).status,200);assert.equal(selections,1);
+ preparing=true;assert.equal((await get('valid')).status,202);
  fail=true;const response=await get('valid');assert.equal(response.status,500);assert.equal(response.body.error,'DAILY_PICKS_LOAD_FAILED');
 });
 test('approved personalized output replaces the preview; engine failure never falls back to fixed picks',async()=>{

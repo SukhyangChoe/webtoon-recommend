@@ -7,22 +7,19 @@
 .wm-floating-search:hover { background:#ffe89a; color:#153c45; }
 .wm-floating-search:active { background:#ffdf75; }
 .wm-floating-search:focus-visible { outline:3px solid #007e98; outline-offset:3px; }
+/* CSS floor survives Safari's visual viewport bounce before a resize callback. */
+.match-module:has(.wm-action-bar) .wm-floating-search { bottom:max(var(--wm-search-bottom),calc(83px + env(safe-area-inset-bottom))); }
 /* The last content item can scroll fully above the floating tool as well as the footer. */
 .match-module.match-cyan:has(.wm-floating-search) .match-page { padding-bottom:max(76px,var(--wm-search-clearance))!important; }
 .match-module:has(.wm-floating-search) .wm-work-reading { padding-bottom:72px; }
-.wm-recommendation-prompt { position:fixed; width:min(380px,calc(100vw - 32px)); max-height:calc(100dvh - 40px); margin:auto; padding:28px 24px 16px; overflow-y:auto; overscroll-behavior:contain; border:1px solid #cfe8ee; border-radius:24px; background:#fff; color:#193640; box-shadow:0 24px 80px #19364030; font-family:inherit; text-align:center; }
-.wm-recommendation-prompt[open] { display:grid; justify-items:center; }
-.wm-recommendation-prompt::backdrop { background:#19364066; backdrop-filter:blur(4px); }
-.wm-recommendation-prompt button { font:inherit; cursor:pointer; }
-.wm-prompt-close { position:absolute; top:8px; right:8px; width:44px; height:44px; display:grid; place-items:center; background:transparent; border:0; color:#647e87; }
-.wm-prompt-book { display:grid; place-items:center; width:64px; height:64px; border-radius:20px; background:#e3f8fc; color:#007e98; margin-bottom:14px; }
-.wm-prompt-book .wm-icon { width:32px; height:32px; }
-.wm-recommendation-prompt .wm-prompt-eyebrow { margin:0 0 8px; color:#007e98; font-size:12px; font-weight:700; }
-.wm-recommendation-prompt h2 { margin:0; font-size:25px; font-weight:800; line-height:1.4; letter-spacing:-.035em; }
-.wm-recommendation-prompt #wm-recommendation-prompt-copy { margin:16px 0 22px; color:#547581; font-size:14px; line-height:1.8; }
-.wm-prompt-register { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; min-height:50px; padding:12px; border:1px solid #00b8d7; border-radius:14px; background:#00c8ea; color:#073c47; font-weight:750!important; }
-.wm-prompt-later { min-height:44px; margin-top:6px; padding:10px 20px; border:0; background:transparent; color:#647e87; font-size:13px!important; }
-.wm-recommendation-prompt :focus-visible { outline:3px solid #007e98; outline-offset:3px; }
+.wm-recommendation-nudge { position:fixed; z-index:70; top:calc(var(--brand-bar-height,56px) + 10px); left:50%; transform:translateX(-50%); display:flex; align-items:flex-start; gap:10px; width:calc(100% - 32px); max-width:420px; box-sizing:border-box; padding:14px 12px 12px 14px; border:1px solid #cfe4eb; border-radius:16px; background:#fffffff7; color:#193640; box-shadow:0 6px 24px #1936401a; animation:wm-nudge-visit 6.5s both; }
+.wm-recommendation-nudge > .wm-icon { flex:0 0 22px; margin-top:3px; color:#007e98; }
+.wm-recommendation-nudge > div { flex:1; min-width:0; }
+.wm-recommendation-nudge p { margin:0; font-size:14px; font-weight:500; line-height:1.6; }
+.wm-recommendation-nudge .wm-recommendation-register-button { min-height:34px; margin-top:10px; padding:5px 12px; font-size:13px; }
+.wm-recommendation-nudge > button { display:grid; place-items:center; width:36px; height:36px; flex:0 0 36px; margin:-5px -3px 0 0; padding:0; border:0; background:transparent; color:#78909a; }
+@keyframes wm-nudge-visit { 0% { opacity:0; translate:0 -18px; } 5%,92% { opacity:1; translate:0 0; } 100% { opacity:0; translate:0 -18px; } }
+@media(prefers-reduced-motion:reduce) { .wm-recommendation-nudge { animation:none; } }
 .wm-search-entry { display:flex; align-items:center; gap:12px; padding:16px; margin-top:18px; border:1px solid #cfe8ee; border-radius:16px; background:#fff; color:#00697f; text-decoration:none; }
 .wm-search-entry > .wm-icon:first-child { width:26px; height:26px; flex-shrink:0; }
 .wm-search-entry > .wm-icon:last-child { margin-left:auto; flex-shrink:0; }

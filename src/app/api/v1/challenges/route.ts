@@ -1,7 +1,7 @@
 import { readMatchJson } from '@/features/match/server/requestBody';
 import { matchJson } from '@/features/match/server/apiResponse';
 import { isAnonymousId } from "@/features/match/storage/anonymousIdentity.mjs";
-import { createChallenge, getActiveChallengeForOwner } from "@/features/match/server/challengeStore";
+import { createChallenge, getActiveChallengeForOwner, getActiveInvitationCodeForOwner } from "@/features/match/server/challengeStore";
 import { toMatchApiFailure } from "@/features/match/server/apiErrors";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +14,10 @@ export async function GET(request: Request) {
       return matchJson(request, { error: "INVALID_CHALLENGE_OWNER" }, { status: 400 });
     }
 
+    if (url.searchParams.get('view') === 'invitation') {
+      const challengeCode = await getActiveInvitationCodeForOwner(anonymousId);
+      return matchJson(request, { active: Boolean(challengeCode), challengeCode });
+    }
     const challenge = await getActiveChallengeForOwner(anonymousId);
     if (!challenge) return matchJson(request, { active: false });
     return matchJson(request, {

@@ -1,4 +1,4 @@
-import { matchedAvoidanceWarnings } from '../../engine/avoidanceEngine.mjs';
+import { matchedAvoidanceTags } from '../../engine/avoidanceEngine.mjs';
 
 export const DAILY_AVOIDANCE_POLICY_VERSION = 'prefer-unmatched-with-warning-v1';
 
@@ -9,7 +9,7 @@ export const DAILY_AVOIDANCE_POLICY_VERSION = 'prefer-unmatched-with-warning-v1'
  * up a candidate or revive an upstream-rejected work.
  */
 export function avoidancePreferredPool(candidates, prefix, context, snapshot, seed) {
-  const warnings = candidate => matchedAvoidanceWarnings(snapshot, context.byId.get(candidate.canonicalWebtoonId)?.recommendation, seed);
+  const warnings = candidate => matchedAvoidanceTags(snapshot, context.byId.get(candidate.canonicalWebtoonId)?.recommendation, seed);
   const all = [...candidates, ...prefix];
   if (!all.some(candidate => warnings(candidate).length)) return { candidates, prefix };
   const decorate = candidate => {

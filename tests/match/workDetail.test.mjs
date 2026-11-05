@@ -23,6 +23,25 @@ test('integrated seed has five canonical genres and all 11910 works import witho
   assert.equal(rows.filter(row=>row.raw_data.recommendation?.genreScores?.action!==undefined).length,0);
   assert.equal(seed.filter(item=>item.recommendation===undefined).length,2);
 });
+test('catalog accepts fractional values across six axes without rounding or mutating source',()=>{
+  const source=work({recommendationEligible:true,sourceDb:'precision',qualityEvidenceGateDecision:'verified_precision',
+    metadata:{urlStatus:'valid'},officialUrl:'https://example.com/work',recommendation:{
+      genreScores:{fantasy:4.5},typeScores:{fantasy:{fantasy_hidden_power:0.75}},tagScores:{growth:0.1},
+      avoidanceTagScores:{progression_fatigue:1.25},contentAxisScores:{survival:2.5},artStyleScores:{detailed_rendering:0.33},
+    }});
+  const before=structuredClone(source);
+  assert.deepEqual(buildCatalogRows([source])[0].raw_data,before);
+  assert.deepEqual(source,before);
+});
+test('catalog fractional permission does not allow unsafe numbers, coercion or range changes',()=>{
+  for(const value of [NaN,Infinity,-Infinity,'1.5',true,null,-0.5,5.5]) {
+    assert.throws(()=>buildCatalogRows([work({recommendation:{genreScores:{fantasy:value}}})]),/INVALID_SCORE/);
+  }
+  for(const axis of ['tagScores','avoidanceTagScores','contentAxisScores','artStyleScores']) {
+    assert.throws(()=>buildCatalogRows([work({recommendation:{genreScores:{fantasy:5},[axis]:{key:3.5}}})]),/INVALID_SCORE/);
+  }
+  assert.throws(()=>buildCatalogRows([work({recommendation:{genreScores:{fantasy:5},typeScores:{fantasy:{key:3.5}}}})]),/INVALID_SCORE/);
+});
 test('catalog diff compares values independent of JSON key order and never deletes historical IDs',()=>{
   const previous=[{canonical_webtoon_id:'a',recommendation_eligible:false,catalog_status:'active',raw_data:{recommendation:{tagScores:{b:2,a:1}}}},{canonical_webtoon_id:'old',catalog_status:'retired'}];
   const next=[{...previous[0],raw_data:{recommendation:{tagScores:{a:1,b:2}}}}];

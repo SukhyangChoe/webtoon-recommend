@@ -251,7 +251,7 @@ test("recommendation fit compares multidimensional user and work vectors", () =>
   assert.equal(exact.highlighted, true);
   assert.equal(different.score, 0);
   assert.equal(different.highlighted, false);
-  assert.equal(RECOMMENDATION_FIT_HIGHLIGHT_DISPLAY_THRESHOLD, 75);
+  assert.equal(RECOMMENDATION_FIT_HIGHLIGHT_DISPLAY_THRESHOLD, 70);
 });
 
 test("recommendation fit omits missing axes and requires at least two comparable axes", () => {

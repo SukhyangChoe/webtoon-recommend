@@ -1,16 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { matchedAvoidanceWarnings, readerAvoidanceKeys } from '../../src/features/match/engine/avoidanceEngine.mjs';
+import { matchedAvoidanceWarnings, matchedAvoidanceTags, readerAvoidanceKeys, AVOIDANCE_WARNING_MIN_SCORE } from '../../src/features/match/engine/avoidanceEngine.mjs';
 import { avoidancePreferredPool, withDailyAvoidancePreference } from '../../src/features/match/server/dailyRecommendation/avoidancePreference.mjs';
 import { calculateRecommendationFit } from '../../src/features/match/engine/recommendationFitEngine.mjs';
 const seed=JSON.parse(fs.readFileSync(new URL('../../src/features/match/data/questionSeed.v0.4.json',import.meta.url),'utf8'));
 const snapshot={answers:{avoidance:['avoid_repetition']}};
-test('all mapped quiz burdens have a public warning label, including low but positive burden',()=>{
+test('all mapped quiz burdens have a public warning label at a clear 2+ burden',()=>{
+ assert.equal(AVOIDANCE_WARNING_MIN_SCORE,2);
  for(const feature of seed.avoidanceFeatureCatalog){
   const keys=feature.webtoonFitCompatibility?.avoidanceTagKeys||[];
   const reader={answers:{avoidance:[feature.featureKey]}};
-  const warnings=matchedAvoidanceWarnings(reader,{avoidanceTagScores:Object.fromEntries(keys.map(key=>[key,1]))},seed);
+  const warnings=matchedAvoidanceWarnings(reader,{avoidanceTagScores:Object.fromEntries(keys.map(key=>[key,2]))},seed);
   assert.equal(warnings.length,new Set(keys).size,feature.featureKey);
   assert.ok(warnings.every(item=>Object.keys(item).sort().join(',')==='key,label'));
  }
@@ -30,8 +31,21 @@ test('original none/empty answers override old blended vectors; old snapshots ca
 });
 test('partial/composite mappings expose only observed burden tags, never invent the whole feature or a missing burden',()=>{
  const warnings=matchedAvoidanceWarnings({answers:{avoidance:['avoid_slow_without_payoff','avoid_repetition']}},{avoidanceTagScores:{weak_immersion:2,progression_fatigue:1}},seed);
- assert.deepEqual(warnings.map(item=>item.key),['weak_immersion','progression_fatigue']);
+ assert.deepEqual(warnings.map(item=>item.key),['weak_immersion']);
  assert.equal(matchedAvoidanceWarnings({answers:{avoidance:['avoid_calm_healing_daily']}},{avoidanceTagScores:{heavy_tone:3}},seed).length,0);
+});
+test('visible warnings omit mild/fractional evidence, while daily preference still sees it',()=>{
+ for(const score of [.1,.5,.75,1,1.5,1.999]){
+  const work={avoidanceTagScores:{progression_fatigue:score}};
+  assert.equal(matchedAvoidanceWarnings(snapshot,work,seed).length,0);
+  assert.equal(matchedAvoidanceTags(snapshot,work,seed).length,1);
+ }
+ for(const score of [2,2.5,3])assert.equal(matchedAvoidanceWarnings(snapshot,{avoidanceTagScores:{progression_fatigue:score}},seed).length,1);
+ for(const score of [4,-1,Infinity,NaN,'2'])assert.equal(matchedAvoidanceWarnings(snapshot,{avoidanceTagScores:{progression_fatigue:score}},seed).length,0);
+ const mildContext={byId:new Map([['clear',{recommendation:{avoidanceTagScores:{}}}],['match',{recommendation:{avoidanceTagScores:{progression_fatigue:.75}}}]])};
+ const pool=avoidancePreferredPool([candidate('match'),candidate('clear')],[],mildContext,snapshot,seed);
+ assert.equal(pool.candidates[0].axisFilter.softTier,1);
+ assert.equal(pool.candidates[1].axisFilter.softTier,0);
 });
 test('a strong warning does not change the existing positive fit score or display thresholds',()=>{
  const user={tagScores:{growth:3},contentAxisScores:{martial_training:3},typeScores:{},artStyleScores:{},avoidanceTagScores:{progression_fatigue:3}};

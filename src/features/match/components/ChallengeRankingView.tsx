@@ -14,6 +14,7 @@ import { RELATIONSHIP_MIN_SCORE, RELATIONSHIP_MAX_PEOPLE } from "../engine/relat
 import { MatchDialog } from "./MatchDialog";
 import { MatchIcon } from "./MatchIcon";
 import { MatchActionBar } from "./MatchActionBar";
+import { MatchCopyLinkButton } from './MatchCopyLinkButton';
 import { PersonaAvatar } from "./PersonaAvatar";
 import { PairScoreGauge } from './PairScoreGauge';
 import { RelationshipMap, type RelationshipPerson } from "./RelationshipMap";
@@ -172,11 +173,6 @@ export function ChallengeRankingView({ challengeCode }: { challengeCode: string 
     finally { setMutating(""); }
   }
 
-  async function copyInvitationLink() {
-    try { await navigator.clipboard.writeText(`${window.location.origin}/match/c/${challengeCode}`); notify("초대 링크를 복사했어요."); }
-    catch { notify("링크를 복사하지 못했어요. 다시 시도해 주세요."); }
-  }
-
   function openSummary(entry: RelationshipPerson) { setMenuId(null); setSelected(entry); }
   function changePage(next: number) {
     setMenuId(null); setPage(next);
@@ -228,7 +224,7 @@ export function ChallengeRankingView({ challengeCode }: { challengeCode: string 
     <MatchActionBar className="wm-ranking-actions" label="관계도 바로가기">
       <Link className="match-button match-button--secondary" href={personalResultId ? `/match/result/${personalResultId}` : "/match/test/intro"}>{personalResultId ? "내 결과" : "테스트하기"}</Link>
       {ranking.canManage ? <Link className="match-button match-button--secondary" href={`/match/share/ranking?challengeCode=${challengeCode}`} aria-label="현재 랭킹을 Threads에 공유"><MatchIcon name="share" />공유</Link> : null}
-      <button className="match-button match-button--secondary wm-invite-button" type="button" onClick={() => void copyInvitationLink()}><MatchIcon name="invite" />초대하기</button>
+      <MatchCopyLinkButton key={`${ranking.canManage}:${ranking.status}:${ranking.challengeCode}`} challengeCode={ranking.canManage && ranking.status === 'active' ? ranking.challengeCode : undefined} />
     </MatchActionBar>
 
     {selected ? <MatchDialog sheet titleId="wm-pair-summary-title" onClose={() => setSelected(null)}><div className="wm-pair-summary"><header><PersonaAvatar genreKey={selected.genreKey} /><div className="wm-pair-summary-copy"><h2 id="wm-pair-summary-title">{selected.nickname}님과의 궁합</h2><p>{pairArchetypeFor(selected.score).name}</p></div><PairScoreGauge score={selected.score} compact /></header><div className="wm-pair-summary-genres"><span>함께 맞는 장르</span>{selected.sharedGenres.length ? selected.sharedGenres.slice(0, 2).map((label) => <b key={label}>{label}</b>) : <p>서로 다른 장르의 매력</p>}</div>

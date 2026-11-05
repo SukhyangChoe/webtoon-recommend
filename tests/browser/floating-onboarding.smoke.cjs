@@ -1,4 +1,4 @@
-/* All interaction writes are mocked. Actual-data screenshots replay a saved result's pending prompt, without DB writes. */
+/* All API writes are mocked. Test-completion and nonmodal registration navigation. */
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
 const {chromium}=require('playwright');
@@ -43,9 +43,10 @@ const {chromium}=require('playwright');
    if(url.pathname.endsWith('/ranking'))return reply({challengeCode:'invite',ownerNickname:'초대자',ownerGenreKey:'ropan',ownerTopGenreKeys:['ropan'],entryCount:0,status:'active',rankingVisibility:'public_by_link',canManage:false,top20:[],entries:[],graphEntries:[],pagination:{page:1,pageSize:6,totalItems:0,totalPages:1},hiddenEntries:[]});
    return reply({ownerNickname:'초대자',questionSetVersion:createEmptyMatchDraft().questionSetVersion,status:'active',entryCount:0,topScore:null});
   });
-  await page.goto(base+'/match');await page.locator('.wm-floating-search').waitFor();await page.locator('.wm-search-entry').waitFor();
+  await page.goto(base+'/match');await page.locator('.wm-floating-search').waitFor();
   await page.locator('.wm-floating-search').click();await page.waitForURL(base+'/match/search');
   async function fresh(mode){
+   registered=[];
    const draft={...createEmptyMatchDraft(),nickname:'도전자',currentPath:'/match/result/building'};
    await page.evaluate(({draft,mode})=>{
     localStorage.setItem('webtoon-match:test-draft:v1',JSON.stringify(draft));
@@ -56,16 +57,16 @@ const {chromium}=require('playwright');
    },{draft,mode});
    await page.goto(base+'/match/result/building');
    await page.waitForURL(base+(mode==='pair'?pairPath:mode==='work'?workPath:`/match/result/${profile}`));
-   await page.getByRole('dialog',{name:/좋아하는 작품을/}).waitFor();
+   await page.getByRole('complementary',{name:'추천작 등록 안내'}).waitFor();
   }
   await fresh('direct');assert.equal(snapshots,1);assert.equal(entries,0);
   for(const width of [320,390,540,900]){
    await page.setViewportSize({width,height:844});
-   assert.ok(await page.locator('.wm-recommendation-prompt').evaluate(el=>{const r=el.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.bottom<=innerHeight&&el.scrollWidth<=el.clientWidth;}));
+   assert.ok(await page.locator('.wm-recommendation-nudge').evaluate(el=>{const r=el.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.bottom<=innerHeight&&el.scrollWidth<=el.clientWidth;}));
   }
-  for(let n=0;n<8;n++){await page.keyboard.press('Tab');assert.ok(await page.locator('.wm-recommendation-prompt').evaluate(el=>el.contains(document.activeElement)),'native dialog traps keyboard focus');}
-  await page.keyboard.press('Escape');await page.locator('.wm-recommendation-prompt').waitFor({state:'detached'});
-  await page.reload();await page.locator('.wm-result-screen').waitFor();assert.equal(await page.locator('.wm-recommendation-prompt').count(),0,'dismissed prompt does not reopen on refresh');
+  assert.equal(await page.locator('dialog[open]').count(),0,'registration notice does not block the page');
+  await page.getByRole('button',{name:'추천작 등록 안내 닫기'}).click();await page.locator('.wm-recommendation-nudge').waitFor({state:'detached'});
+  await page.reload();await page.locator('.wm-recommendation-nudge').waitFor();await page.getByRole('button',{name:'추천작 등록 안내 닫기'}).click();
   await page.setViewportSize({width:390,height:844});
   const paths=[`/match/result/${profile}`,`/match/result/${profile}/recommendations`,pairPath,'/match/c/invite/ranking','/match/c/invite','/match/challenge/new',workPath,`/match/share/personal?profilePublicId=${profile}`];
   for(const path of paths){
@@ -76,33 +77,22 @@ const {chromium}=require('playwright');
   await page.goto(base+pairPath);await page.locator('.wm-floating-search').click();await page.waitForURL('**/match/search?*');assert.equal(new URL(page.url()).searchParams.get('from'),pairPath);
   await page.getByRole('link',{name:'이전 화면',exact:true}).click();await page.waitForURL(base+pairPath);
   await fresh('pair');assert.equal(entries,1);
-  await page.getByRole('button',{name:'추천작 등록하기',exact:true}).click();await page.waitForURL('**/recommendations?*');
+  await page.getByRole('link',{name:'추천작 등록하기',exact:true}).click();await page.waitForURL('**/recommendations?*');
   assert.equal(new URL(page.url()).searchParams.get('returnTo'),pairPath);
   await page.getByRole('searchbox',{name:'추천할 웹툰 검색'}).fill('작품');await page.getByRole('button',{name:'검색',exact:true}).click();await page.getByRole('button',{name:'추가',exact:true}).click();
   failSave=true;await page.getByRole('button',{name:'저장하고 궁합 보기',exact:true}).click();await page.locator('.wm-floating-toast').waitFor();assert.ok(page.url().includes('/recommendations?'));
-  failSave=false;const beforePair=pairReads;await page.getByRole('button',{name:'저장하고 궁합 보기',exact:true}).click();await page.waitForURL(base+pairPath);await page.getByRole('link',{name:'등록할 작품 작품 상세 보기',exact:true}).waitFor();assert.ok(pairReads>beforePair);assert.equal(await page.locator('.wm-recommendation-prompt').count(),0);
+  failSave=false;const beforePair=pairReads;await page.getByRole('button',{name:'저장하고 궁합 보기',exact:true}).click();await page.waitForURL(base+pairPath);await page.getByRole('link',{name:'등록할 작품 작품 상세 보기',exact:true}).waitFor();assert.ok(pairReads>beforePair);assert.equal(await page.locator('.wm-recommendation-nudge').count(),0);
   await page.goto(base+`/match/result/${profile}/recommendations?returnTo=${encodeURIComponent(pairPath)}`);await page.getByRole('link',{name:'궁합으로 돌아가기',exact:true}).click();await page.waitForURL(base+pairPath);assert.equal(saves,2,'cancel does not save');
-  registered=[];await fresh('work');const beforeWork=workReads;await page.getByRole('button',{name:'추천작 등록하기',exact:true}).click();await page.waitForURL('**/recommendations?*');
+  registered=[];await fresh('work');const beforeWork=workReads;await page.getByRole('link',{name:'추천작 등록하기',exact:true}).click();await page.waitForURL('**/recommendations?*');
   assert.equal(new URL(page.url()).searchParams.get('returnTo'),workPath);
   await page.getByRole('searchbox',{name:'추천할 웹툰 검색'}).fill('작품');await page.getByRole('button',{name:'검색',exact:true}).click();await page.getByRole('button',{name:'추가',exact:true}).click();
   await page.getByRole('button',{name:'저장하고 작품 상세 보기',exact:true}).click();await page.waitForURL(base+workPath);await page.getByRole('meter',{name:'핏점수',exact:true}).waitFor();assert.equal(await page.getByRole('meter').getAttribute('aria-valuenow'),'94');assert.ok(workReads>beforeWork);
   await page.getByRole('button',{name:'이전 화면으로 돌아가기'}).click();await page.waitForURL('**/match/search');
-  await fresh('direct');await page.getByRole('button',{name:'추천작 등록하기',exact:true}).click();await page.waitForURL('**/recommendations?*');await page.getByRole('button',{name:'저장하고 내 취향 결과 보기',exact:true}).click();await page.waitForURL(base+`/match/result/${profile}`);await page.locator('.wm-result-screen').waitFor();
-  // Cached/saved results do not show another post-test prompt or create another snapshot.
-  const beforeSnapshots=snapshots;await page.goto(base+'/match/result/building');await page.waitForURL(base+`/match/result/${profile}`);assert.equal(snapshots,beforeSnapshots);assert.equal(await page.locator('.wm-recommendation-prompt').count(),0);
+  await fresh('direct');await page.getByRole('link',{name:'추천작 등록하기',exact:true}).click();await page.waitForURL('**/recommendations?*');await page.getByRole('button',{name:'저장하고 내 취향 결과 보기',exact:true}).click();await page.waitForURL(base+`/match/result/${profile}`);await page.locator('.wm-result-screen').waitFor();
+  // Saved results may repeat the notice while the membership stays empty, but never recreate the test.
+  const beforeSnapshots=snapshots;await page.goto(base+'/match/result/building');await page.waitForURL(base+`/match/result/${profile}`);assert.equal(snapshots,beforeSnapshots);await page.locator('.wm-recommendation-nudge').waitFor();
   assert.deepEqual(errors,[]);await context.close();
 
-  // Real saved-result recovery state: no synthetic result, score, portrait or recommendation data.
-  const real=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:2,reducedMotion:'reduce'}),live=await real.newPage();
-  await real.route('**/api/v1/**',route=>route.request().method()==='GET'?route.continue():route.fulfill({status:202,contentType:'application/json',body:'{"ok":true}'}));
-  await live.goto(base+'/match');await live.locator('.wm-floating-search').waitFor();await live.locator('.match-home-readers').evaluate(img=>img.decode());await live.addStyleTag({content:'nextjs-portal{display:none!important}'});
-  await live.screenshot({path:path.join(output,'floating_search_live_home.png')});
-  const realProfile='xys7o3_7JlgZl91b';
-  await live.goto(base+`/match/result/${realProfile}`);await live.locator('.wm-persona-image').evaluate(img=>img.decode());await live.addStyleTag({content:'nextjs-portal{display:none!important}'});
-  await live.screenshot({path:path.join(output,'floating_search_live_result.png')});
-  await live.evaluate(({profile,draft})=>localStorage.setItem('webtoon-match:test-draft:v1',JSON.stringify({...draft,resultPublicId:profile,recommendationPromptPending:true})),{profile:realProfile,draft:createEmptyMatchDraft()});
-  await live.goto(base+'/match/result/building');await live.waitForURL(base+`/match/result/${realProfile}`);await live.getByRole('dialog',{name:/좋아하는 작품을/}).waitFor();await live.locator('.wm-persona-image').evaluate(img=>img.decode());await live.addStyleTag({content:'nextjs-portal{display:none!important}'});
-  await live.screenshot({path:path.join(output,'recommendation_prompt_live_result.png')});await real.close();
-  console.log(JSON.stringify({ok:true,checks:['home search icon opens catalog; tests excluded','all non-test routes get a 44px floating search','origin preserved','optional once-only dialog and Escape/focus trap','registration returns to personal/pair/work','failed save retains edits; cancel does not write','fresh pair/work data after registration','cached results skip prompt','all writes mocked; real-data screenshots'],artifacts:output}));
+  console.log(JSON.stringify({ok:true,checks:['home search icon opens catalog; tests excluded','all non-test routes get a 44px floating search','origin preserved','nonmodal recurring registration notice','registration returns to personal/pair/work','failed save retains edits; cancel does not write','fresh pair/work data after registration','cached results retain test identity','all API writes mocked'],artifacts:output}));
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

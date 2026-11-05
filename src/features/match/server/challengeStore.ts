@@ -516,6 +516,16 @@ export async function getChallengeInviteMetadata(challengeCode: string) {
   return challenge ? { ownerNickname: challenge.ownerNickname, status: challenge.status } : null;
 }
 
+/** Cheap footer read: no snapshots, participants, scores or management data. */
+export async function getActiveInvitationCodeForOwner(anonymousId: string) {
+  const rows = await getMatchDatabase()<{ challenge_code: string }[]>`
+    select c.challenge_code from public.match_challenges c
+    join public.match_profiles p on p.profile_id=c.owner_profile_id
+    where p.anonymous_id=${anonymousId}::uuid and c.status='active' limit 1
+  `;
+  return rows[0]?.challenge_code ?? null;
+}
+
 export async function getActiveChallengeForOwner(anonymousId: string) {
   const database = getMatchDatabase();
   const rows = await database<ChallengeRow[]>`

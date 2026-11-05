@@ -3,12 +3,12 @@
 .match-module.match-cyan .wm-taste-summary { padding:4px 16px; border:1px solid #dcebef; border-radius:16px; background:#fff; box-shadow:none; }
 .wm-taste-summary-row { display:grid; grid-template-columns:minmax(0,1fr); gap:8px; align-items:start; padding-block:12px; }
 .wm-taste-summary-row + .wm-taste-summary-row { border-top:1px solid #edf4f6; }
-.match-module.match-cyan .wm-taste-summary .wm-taste-summary-label { display:flex; align-items:center; gap:5px; min-height:20px; margin:0; color:#547985; font-size:13px; font-weight:600; line-height:1.5; white-space:nowrap; letter-spacing:-.02em; }
+.match-module.match-cyan .wm-taste-summary .wm-taste-summary-label { display:flex; align-items:center; gap:6px; min-height:22px; margin:0; color:#355e6b; font-size:15px; font-weight:700; line-height:1.5; white-space:nowrap; letter-spacing:-.02em; }
 .wm-taste-summary-label > span { flex-shrink:0; color:#ee86ac; font-size:18px; line-height:1; }
 .wm-taste-summary-row.is-muted .wm-taste-summary-label,.wm-taste-summary-row.is-muted .wm-taste-summary-label > span { color:#7694a1; }
 .wm-taste-summary .wm-taste-chips { display:flex; flex-wrap:wrap; gap:6px; min-width:0; margin:0; padding:0; list-style:none; }
 .wm-taste-summary .wm-taste-chips li { display:flex; align-items:center; gap:6px; min-width:0; max-width:100%; min-height:32px; padding:4px 9px; border:0; border-radius:9px; background:#eaf8fb; }
-.match-module.match-cyan .wm-taste-summary .wm-taste-chips strong { min-width:0; color:#245765; font-size:16px; font-weight:650; line-height:1.5; overflow-wrap:anywhere; word-break:keep-all; }
+.match-module.match-cyan .wm-taste-summary .wm-taste-chips strong { min-width:0; color:#456874; font-size:14px; font-weight:500; line-height:1.5; overflow-wrap:anywhere; word-break:keep-all; }
 .wm-taste-summary .wm-taste-icon { flex-shrink:0; width:16px; height:16px; color:#4b9aad; }
 .wm-taste-summary .wm-avoidance { display:flex; flex-wrap:wrap; gap:6px; min-width:0; margin:0; padding:0; list-style:none; }
 .match-module.match-cyan .wm-taste-summary .wm-avoidance li { max-width:100%; min-height:32px; padding:4px 8px; border:1px solid #e2e5e8; border-radius:9px; background:#eef0f2; color:#4b5057; font-size:14px; line-height:1.5; overflow-wrap:anywhere; word-break:keep-all; }

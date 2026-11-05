@@ -16,7 +16,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ prof
     if (!anonymousId || !isAnonymousId(anonymousId) || !await isTasteResultOwner(profilePublicId, anonymousId)) {
       return matchJson(request, { error: 'RESULT_OWNER_MISMATCH' }, { status: 403 });
     }
-    return matchJson(request, await getDailyTastePicks(profilePublicId));
+    const picks = await getDailyTastePicks(profilePublicId);
+    return matchJson(request, picks, picks.mode === 'preparing' ? { status: 202, headers: { 'Retry-After': '2' } } : undefined);
   } catch (error) {
     const failure = toMatchApiFailure(error, 'DAILY_PICKS_LOAD_FAILED');
     // Operational diagnosis without logging readers, answers, vectors or DB errors.

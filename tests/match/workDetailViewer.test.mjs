@@ -91,7 +91,10 @@ test('strong personal warnings update per viewer and work without altering posit
   assert.equal((await h.details.getWorkInfo('work-1')).avoidanceWarnings.length,0,'public info alone never borrows a viewer warning');
   h.changeWorkVector({avoidanceTagScores:{progression_fatigue:1}});
   const sparse=await h.details.getWorkFit('work-1',viewerA);
-  assert.equal(sparse.fit,null);assert.equal(sparse.avoidanceWarnings.length,1,'even low positive burden warns independently of the score');
+  assert.equal(sparse.fit,null);assert.equal(sparse.avoidanceWarnings.length,0,'mild burden alone no longer warns');
+  h.changeWorkVector({avoidanceTagScores:{progression_fatigue:2}});
+  const clearBurden=await h.details.getWorkFit('work-1',viewerA);
+  assert.equal(clearBurden.fit,null);assert.equal(clearBurden.avoidanceWarnings.length,1,'clear burden still warns without requiring a fit number');
   h.changeWorkVector({...murim,avoidanceTagScores:{progression_fatigue:0}});
   assert.equal((await h.details.getWorkFit('work-1',viewerA)).avoidanceWarnings.length,0,'updated DB analysis removes an obsolete warning');
 });

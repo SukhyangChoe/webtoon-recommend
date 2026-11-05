@@ -1,9 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { queueRecommendationPrompt, readRecommendationPrompt, dismissRecommendationPrompt, recommendationReturnPath, recommendationReturnLabel, recommendationManagerHref, RECOMMENDATION_PROMPT_KEY } from '../../src/features/match/config/recommendationOnboarding.mjs';
+import { queueRecommendationPrompt, readRecommendationPrompt, dismissRecommendationPrompt, recommendationReturnPath, recommendationReturnLabel, recommendationManagerHref, RECOMMENDATION_PROMPT_KEY, showRecommendationNudge } from '../../src/features/match/config/recommendationOnboarding.mjs';
 import { showFloatingSearch, searchBackPath, workSearchHref } from '../../src/features/match/config/workSearchPresentation.mjs';
 
 function memory() { const map=new Map();return {getItem:key=>map.get(key)??null,setItem:(key,value)=>map.set(key,value),removeItem:key=>map.delete(key)}; }
+
+test('recurring registration notice includes result/discovery routes but never home, test, retest or editor',()=>{
+ for(const path of ['/match/result/me','/match/c/invite/ranking','/match/c/invite/match/pair','/match/work/work','/match/search?q=검'])assert.equal(showRecommendationNudge(path),true,path);
+ for(const path of ['/match','/match/','/match?from=home','/match/?from=result','/match/test','/match/test/intro?from=retake','/match/test/genre-shelf/1','/match/test/duel/2','/match/test/taste/appeal','/match/test/recovery','/match/test/avoidance','/match/result/building','/match/result/me/recommendations?returnTo=x','/elsewhere',null])assert.equal(showRecommendationNudge(path),false,path);
+});
 
 test('floating search covers home and non-test match screens while excluding tests',()=>{
  for(const path of ['/match/test/intro','/match/test/duel/1','/match/test/avoidance','/match/result/building','/match/search'])assert.equal(showFloatingSearch(path),false,path);

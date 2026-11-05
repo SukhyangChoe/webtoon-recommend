@@ -1,6 +1,7 @@
 // Shared by viewer warnings and today's selection. A tag is a personal mismatch,
 // not a universal quality judgement about the work.
-export const AVOIDANCE_WARNING_VERSION = 'personal-avoidance-warning-v1';
+export const AVOIDANCE_WARNING_VERSION = 'personal-avoidance-warning-v2';
+export const AVOIDANCE_WARNING_MIN_SCORE = 2;
 const LABELS = Object.freeze({
   progression_fatigue: '반복·늘어지는 전개', weak_immersion: '몰입감 부족',
   character_frustration: '답답한 주인공', complexity_fatigue: '복잡한 설정·관계',
@@ -26,12 +27,18 @@ export function readerAvoidanceKeys(snapshot, seed) {
     .filter(([, value]) => positive(value)).map(([key]) => key);
 }
 
-/** Any observed positive burden on an explicitly avoided tag warns. Missing,
- * zero or invalid values are not invented into danger OR a claim of safety.
- * Public output has labels only, never the underlying vector scores. */
-export function matchedAvoidanceWarnings(snapshot, recommendation, seed) {
+/** Selection still prefers alternatives without even a mild observed burden.
+ * This is separate from the stronger evidence required for a visible warning. */
+export function matchedAvoidanceTags(snapshot, recommendation, seed) {
   const candidate = recommendation?.avoidanceTagScores || {};
-  return readerAvoidanceKeys(snapshot, seed).filter(key => LABELS[key] && positive(candidate[key]))
+  return readerAvoidanceKeys(snapshot, seed).filter(key => LABELS[key] && positive(candidate[key]) && candidate[key] <= 3)
     .sort((a, b) => candidate[b] - candidate[a] || a.localeCompare(b))
     .map(key => ({ key, label: LABELS[key] }));
+}
+
+/** Warn only for a clear burden (2+ on the 0..3 work scale). Missing or mild
+ * evidence is not a warning, nor a claim that the work has no such content. */
+export function matchedAvoidanceWarnings(snapshot, recommendation, seed) {
+  return matchedAvoidanceTags(snapshot, recommendation, seed)
+    .filter(({ key }) => recommendation.avoidanceTagScores[key] >= AVOIDANCE_WARNING_MIN_SCORE);
 }
