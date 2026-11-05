@@ -9,9 +9,12 @@ node_modules
 .env*
 .agents
 .codex
-coverage
-tests
+/coverage
+/tests
 *.tsbuildinfo
-*.log
+/*.log
 .DS_Store
 .private-daily-recommendations/install-*
+# Some verified vendor evidence files match Vercel's default ignore list.
+# Keep the installed, hash-verified runtime complete (server build input only).
+!/.private-daily-recommendations/runtime/**
