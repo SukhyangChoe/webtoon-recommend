@@ -3,6 +3,8 @@ export const DAILY_INPUT_VERSION = 'question-seed-v04-current-genres-v2';
 export const DAILY_TIME_ZONE = 'Asia/Seoul';
 export const DAILY_MAX_WORKS = 3;
 export const DAILY_INPUT_MAPPING_APPROVED = true;
+// Engine < hosting route (60s) < client (65s), including cold-start headroom.
+export const DAILY_ENGINE_TIMEOUT_MS = 45000;
 
 /** Explicitly approved: KST midnight OR changed answers/registered works; no cooldown. */
 export function dailyWindow(now = new Date()) {

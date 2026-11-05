@@ -11,6 +11,7 @@
     "test:match": "node --test tests/match/*.test.mjs",
     "check:daily-runtime": "node scripts/daily-recommendation/check-runtime.mjs",
     "check:daily-avoidance": "node -r ./scripts/daily-recommendation/portable-paths.cjs scripts/daily-recommendation/check-avoidance.cjs",
+    "check:daily-performance": "node -r ./scripts/daily-recommendation/portable-paths.cjs scripts/daily-recommendation/check-performance.cjs",
     "report:match-pilot": "node --env-file=.env.local scripts/webtoon-match-pilot-export.mjs",
     "sync:webtoon-catalog": "node --env-file=.env.local scripts/sync-webtoon-catalog.mjs --apply",
     "check:webtoon-catalog": "node --env-file=.env.local scripts/sync-webtoon-catalog.mjs --dry-run"

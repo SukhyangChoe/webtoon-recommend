@@ -21,6 +21,7 @@ process.stdin.on('end', async () => {
     const { buildDailyRequest } = await import(adapterUrl.href);
     const { withDailyAvoidancePreference } = await import(new URL('avoidancePreference.mjs', adapterUrl).href);
     const { withDailyGenrePreference } = await import(new URL('genrePreference.mjs', adapterUrl).href);
+    const { withDailyRelationIndex } = await import(new URL('performance.mjs', adapterUrl).href);
     const { input, questionSeed } = JSON.parse(Buffer.concat(chunks).toString('utf8'));
     chunks = [];
     const { request, audit } = buildDailyRequest(input, questionSeed, context);
@@ -37,9 +38,12 @@ process.stdin.on('end', async () => {
       })) };
     }
     const selector = require(path.join(engine, 'selection.cjs'));
-    const result = withDailyGenrePreference(require(path.join(engine, 'explicit_requirements.cjs')), questionSeed,
+    const relationRoot = path.join(engine, 'vendor/reference_relation_v021/build');
+    const result = withDailyRelationIndex(require(path.join(relationRoot, 'content_relations_v01/semantic.cjs')),
+      Object.values(require(path.join(relationRoot, 'score_relations_v021/engine.cjs')).catalog.axes),
+      () => withDailyGenrePreference(require(path.join(engine, 'explicit_requirements.cjs')), questionSeed,
       () => withDailyAvoidancePreference(selector, context, { answers: input.answers }, questionSeed,
-        () => require(path.join(engine, 'pipeline.cjs')).run(prepared, context, [])));
+        () => require(path.join(engine, 'pipeline.cjs')).run(prepared, context, []))));
     const jointReview = require(path.join(engine, 'joint_intent.cjs')).review(result, prepared);
     if (jointReview?.status === 'NEEDS_SEMANTIC_EVIDENCE_REVIEW') throw Error('DAILY_SEMANTIC_REVIEW_REQUIRED');
     const selected = result.recommendations || [];

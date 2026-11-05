@@ -43,7 +43,7 @@ export function DailyTastePicks({ publicProfileId, verified }: { publicProfileId
       try {
         const identity = ensureAnonymousId({ cookieText: document.cookie, storage: localStorage });
         const body = await loadWorkResource(`/api/v1/results/${encodeURIComponent(publicProfileId)}/daily-picks`, {
-          headers: { 'x-match-anonymous-id': identity.anonymousId }, signal: controller.signal, timeoutMs: 25000,
+          headers: { 'x-match-anonymous-id': identity.anonymousId }, signal: controller.signal, timeoutMs: 65000,
         }) as DailyPicks;
         if (body.publicProfileId !== publicProfileId || body.mode !== 'personalized' || !Array.isArray(body.items)) throw new Error('INVALID_DAILY_PICKS');
         if (active) setData(body);

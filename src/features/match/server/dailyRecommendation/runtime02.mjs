@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { DAILY_INPUT_VERSION, DAILY_SELECTION_VERSION, dailyWindow } from './policy.mjs';
+import { DAILY_ENGINE_TIMEOUT_MS, DAILY_INPUT_VERSION, DAILY_SELECTION_VERSION, dailyWindow } from './policy.mjs';
 
 const root = process.cwd();
 const runtimeRoot = () => path.join(root, '.private-daily-recommendations/runtime');
@@ -32,7 +32,7 @@ export function runRuntime02(input, questionSeed) {
       settled = true; clearTimeout(timer);
       if (error) reject(error); else resolve(result);
     };
-    const timer = setTimeout(() => { child.kill(); finish(Error('DAILY_ENGINE_TIMEOUT')); }, 20000);
+    const timer = setTimeout(() => { child.kill(); finish(Error('DAILY_ENGINE_TIMEOUT')); }, DAILY_ENGINE_TIMEOUT_MS);
     child.stdout.on('data', chunk => {
       if (Buffer.byteLength(output) + chunk.length > 64 * 1024) { overflow = true; child.kill(); }
       else output += chunk;
