@@ -44,7 +44,8 @@ const initial=[work('wt_murim_001','추천 작품 하나','기존 추천 한마�
   async function copyOwn(){await invite.click();assert.equal(await page.evaluate(()=>window.copyAttempts.at(-1)),base+'/match/c/own-invite');}
   async function gap(){return page.evaluate(()=>{const a=document.querySelector('.wm-action-bar').getBoundingClientRect(),b=document.querySelector('.wm-floating-search').getBoundingClientRect();return a.top-b.bottom;});}
   await page.goto(base+'/match/result/feedback-self');await page.locator('.wm-recommendation-edit').first().waitFor();
-  assert.equal(await page.locator('.wm-recommendation-edit').count(),2,'owner can edit even a work without a comment');
+  assert.equal(await page.locator('.wm-recommendation-edit').count(),1,'existing comment has a pencil');
+  assert.equal(await page.locator('.wm-recommendation-comment-needed').count(),1,'owner can add a missing comment with the red prompt');
   await copyOwn();
   await page.locator('.wm-recommendation-edit').first().click();
   const dialog=page.getByRole('dialog',{name:'추천 한마디 수정'}),comment=dialog.getByRole('textbox',{name:'추천 이유'});
@@ -67,11 +68,14 @@ const initial=[work('wt_murim_001','추천 작품 하나','기존 추천 한마�
   await page.getByRole('button',{name:'추천 작품 하나 추천 한마디 수정',exact:true}).click();await dialog.waitFor();
   await dialog.getByRole('button',{name:'추천작 삭제',exact:true}).click();assert.equal(items.length,2,'deletion requires confirmation');
   await dialog.getByRole('button',{name:'추천 목록에서 삭제',exact:true}).click();await dialog.waitFor({state:'detached'});assert.equal(items.length,1);
-  await page.goto(base+'/match/c/friend-invite/match/feedback-pair');await page.locator('.wm-pair-tabs').waitFor();
+  await page.goto(base+'/match/c/friend-invite/match/feedback-pair');await page.locator('.wm-pair-details').waitFor();
   await page.waitForFunction(()=>!document.querySelector('.wm-invite-button').disabled);await copyOwn();
   const recommendation=page.getByRole('heading',{name:'친구 닉네임님의 추천',exact:false});await recommendation.waitFor();
-  await page.getByRole('tab',{name:'비교 상세',exact:true}).click();assert.ok(await recommendation.isVisible(),'recommendations survive tab switching');
-  await page.getByRole('tab',{name:'궁합 요약',exact:true}).click();
+  assert.equal(await page.getByRole('tablist',{name:'궁합 정보'}).count(),0,'pair details do not require tab switching');
+  assert.ok(await page.locator('.wm-pair-common').isVisible());
+  assert.ok(await page.locator('.wm-pair-comparison-card').isVisible());
+  assert.ok(await page.locator('.wm-pair-reading').isVisible());
+  assert.ok(await recommendation.isVisible(),'recommendations stay with the complete comparison');
   assert.ok(await page.locator('.wm-taste-summary-label').first().evaluate(el=>parseFloat(getComputedStyle(el).fontSize)>parseFloat(getComputedStyle(document.querySelector('.wm-taste-chips strong')).fontSize)));
   for(const width of [320,375,390,540]){
    await page.setViewportSize({width,height:740});await page.evaluate(()=>scrollTo(0,document.documentElement.scrollHeight));
@@ -130,7 +134,7 @@ const initial=[work('wt_murim_001','추천 작품 하나','기존 추천 한마�
   assert.ok(await page.locator('.wm-search-section').evaluate(el=>el.compareDocumentPosition(document.querySelector('.wm-manager-section:not(.wm-search-section)'))&Node.DOCUMENT_POSITION_FOLLOWING));
   assert.equal(await page.locator('.wm-recommendation-nudge').count(),0);
   assert.deepEqual(errors,[]);assert.equal(requests.filter(x=>x.method==='DELETE').length,1);
-  console.log(JSON.stringify({ok:true,output,checks:['same own invitation across three pages','no active link: disabled gray button','summary headings larger than tags','recommendations remain in comparison tab','320/375/390/540 footer clearance','simulated iOS overshoot','owner edit/create/failed-save/retry/delete confirmation','likes retained and no stale-list PUT','foreign result has no edit controls','nonmodal recurring nudge stops after registration','manager search above selected works','all browser API writes intercepted']}));
+  console.log(JSON.stringify({ok:true,output,checks:['same own invitation across three pages','no active link: disabled gray button','summary headings larger than tags','recommendations remain below combined details','320/375/390/540 footer clearance','simulated iOS overshoot','owner edit/create/failed-save/retry/delete confirmation','likes retained and no stale-list PUT','foreign result has no edit controls','nonmodal recurring nudge stops after registration','manager search above selected works','all browser API writes intercepted']}));
   await context.close();
  }finally{await browser.close();}
  // Use the installed WebKit runtime when supported on this host. No installation.

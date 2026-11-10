@@ -8,8 +8,12 @@ import { WorkDetailLink } from './WorkDetailLink';
 import { MatchIcon } from './MatchIcon';
 import { MatchLoading } from './MatchLoading';
 import { TasteAvoidanceWarning, type AvoidanceWarning } from './TasteAvoidanceWarning';
+import { readDailyPicksResponse } from '../api/dailyPicksProgress.mjs';
+import { useDailyPickProgress, type DailyPickProgressStage } from './useDailyPickProgress';
+import { isDailyRecalculationStage } from '../config/dailyPicksPresentation.mjs';
+import { safeOfficialWorkUrl } from '../config/workDetailPresentation.mjs';
 
-type DailyPick = { canonicalWebtoonId: string; title: string; mainGenreLabel: string; platform: string; coverUrl: string | null; avoidanceWarnings?: AvoidanceWarning[] };
+type DailyPick = { canonicalWebtoonId: string; title: string; mainGenreLabel: string; platform: string; coverUrl: string | null; officialUrl?: string | null; avoidanceWarnings?: AvoidanceWarning[]; matchReason?: { version: number; summary: string; labels: string[] } };
 type DailyPicks = { publicProfileId: string; mode: 'personalized' | 'preparing'; selectionVersion: string; expiresAt?: string; retryAfterMs?: number; items: DailyPick[] };
 const OPEN_HASH = '#daily-picks';
 const CHANGE_EVENT = 'wm-daily-picks-change';
@@ -24,6 +28,7 @@ export function DailyTastePicks({ publicProfileId, verified }: { publicProfileId
   const [data, setData] = useState<DailyPicks | null>(null);
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
+  const [loadedCovers,setLoadedCovers] = useState<string[]>([]);
   const dialog = useRef<HTMLDialogElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const pushedEntry = useRef(false);
@@ -32,9 +37,25 @@ export function DailyTastePicks({ publicProfileId, verified }: { publicProfileId
   const restoreScroll = useRef<number | null>(null);
   const restorePage = useRef<number | null>(null);
   const titleId = useId();
-  const copyId = useId();
   const storageKey = `webtoon-match:daily-picks-return:v1:${publicProfileId}`;
-  const items = data?.mode === 'personalized' ? data.items : [];
+  const preparing = !error && (!verified || !data || data.mode === 'preparing');
+  const items = !preparing && data?.mode === 'personalized' ? data.items : [];
+  const { message: progressMessage, recalculating, start: startProgress, finish: finishProgress, onProgress } = useDailyPickProgress();
+  const coversPreparing = !error && items.some(item => item.coverUrl && !loadedCovers.includes(`${item.canonicalWebtoonId}:${item.coverUrl}`));
+  const busy = preparing || coversPreparing;
+  const showProgress = recalculating && !error && busy;
+  const loadingMessage = coversPreparing ? '선정한 작품 표지를 불러오고 있어요…' : progressMessage;
+
+  useEffect(() => {
+    if (!verified) return;
+    const changed = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (detail?.profileId !== publicProfileId || detail.membershipChanged === false) return;
+      pendingSince.current = null; setData(null); setError(''); setRetry(value=>value+1);
+    };
+    window.addEventListener('match-recommendations-changed',changed);
+    return () => window.removeEventListener('match-recommendations-changed',changed);
+  }, [publicProfileId,verified]);
 
   useEffect(() => {
     if (!verified) return;
@@ -43,15 +64,22 @@ export function DailyTastePicks({ publicProfileId, verified }: { publicProfileId
     loading.current = true;
     async function load() {
       setError('');
+      startProgress(pendingSince.current !== null);
       try {
         const identity = ensureAnonymousId({ cookieText: document.cookie, storage: localStorage });
         const body = await loadWorkResource(`/api/v1/results/${encodeURIComponent(publicProfileId)}/daily-picks`, {
-          headers: { 'x-match-anonymous-id': identity.anonymousId }, signal: controller.signal, timeoutMs: 65000,
+          headers: { 'x-match-anonymous-id': identity.anonymousId, accept: 'application/x-ndjson' }, signal: controller.signal, timeoutMs: 65000,
+          parseResponse: response => readDailyPicksResponse(response, (stage: DailyPickProgressStage) => {
+            if (active && !controller.signal.aborted) {
+              if (isDailyRecalculationStage(stage)) setData(null);
+              onProgress(stage);
+            }
+          }),
         }) as DailyPicks;
         if (body.publicProfileId !== publicProfileId || !['personalized', 'preparing'].includes(body.mode) || !Array.isArray(body.items)) throw new Error('INVALID_DAILY_PICKS');
         if (active) {
           if (body.mode === 'personalized') pendingSince.current = null;
-          else pendingSince.current ??= Date.now();
+          else { pendingSince.current ??= Date.now(); onProgress('waiting'); }
           setData(body);
         }
       } catch {
@@ -60,12 +88,12 @@ export function DailyTastePicks({ publicProfileId, verified }: { publicProfileId
           setError('작품을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.');
         }
       } finally {
-        if (active) loading.current = false;
+        if (active) { loading.current = false; finishProgress(); }
       }
     }
     void load();
-    return () => { active = false; loading.current = false; controller.abort(); };
-  }, [publicProfileId, verified, retry]);
+    return () => { active = false; loading.current = false; controller.abort(); finishProgress(); };
+  }, [publicProfileId, verified, retry, onProgress, startProgress, finishProgress]);
 
   useEffect(() => {
     if (!verified || error || data?.mode !== 'preparing') return;
@@ -88,7 +116,10 @@ export function DailyTastePicks({ publicProfileId, verified }: { publicProfileId
       if (document.visibilityState !== 'visible' || loading.current) return;
       window.clearTimeout(debounce);
       debounce = window.setTimeout(() => {
-        if (!loading.current) setRetry(value => value + 1);
+        if (!loading.current) {
+          if (Number.isFinite(expiry) && expiry <= Date.now()) { pendingSince.current = null; setData(null); }
+          setRetry(value => value + 1);
+        }
       }, 300);
     };
     const expiry = Date.parse(data.expiresAt ?? '');
@@ -161,13 +192,20 @@ export function DailyTastePicks({ publicProfileId, verified }: { publicProfileId
   function rememberScroll() {
     try { sessionStorage.setItem(storageKey, JSON.stringify({ at: Date.now(), pageY: window.scrollY, sheetY: dialog.current?.scrollTop ?? 0 })); } catch { /* Optional storage. */ }
   }
+  function coverLoaded(key: string) {
+    setLoadedCovers(previous => previous.includes(key) ? previous : [...previous, key]);
+  }
 
   return <section className="wm-daily-picks" aria-label="오늘의 취향작">
-    <button ref={trigger} className="wm-daily-preview" type="button" aria-haspopup="dialog" aria-expanded={open} onClick={show}>
-      <span className="wm-daily-preview-copy"><span className="wm-daily-eyebrow">취향으로 고른 작품</span><strong>오늘의 취향작</strong><span className="wm-daily-preview-description">오늘 꽂힐 이야기, 만나보세요.</span>{items.some(item => item.avoidanceWarnings?.length) ? <span className="wm-daily-preview-warning"><MatchIcon name="warning" />기피 요소가 겹치는 작품이 있어요</span> : null}<span className="wm-daily-preview-action">{data ? items.length ? `${items.length}편 만나보기` : '목록 확인하기' : error ? '다시 확인하기' : '3편 만나보기'}<MatchIcon name="chevron" /></span></span>
-      <span className="wm-daily-preview-covers" aria-hidden="true">{[0, 1, 2].map(index => <span key={index}>{items[index] ? <WorkCover item={items[index]} decorative sizes="40px" /> : <span className="wm-daily-cover-placeholder" />}</span>)}</span>
+    <button ref={trigger} className="wm-daily-preview" type="button" aria-label="오늘의 취향작 열기" aria-haspopup="dialog" aria-expanded={open} aria-busy={busy} onClick={show}>
+      <span className="wm-daily-preview-copy"><span className="wm-daily-eyebrow">나를 위한</span><strong>오늘의 취향작</strong>{showProgress ? <span className="wm-daily-preview-loading" role="status" aria-live="polite"><span className="wm-daily-preview-description">{loadingMessage}</span><span className="wm-daily-loading-track" aria-hidden="true"><span /></span></span> : null}{error ? <span className="wm-daily-preview-description">취향작을 불러오지 못했어요. 눌러서 확인해 주세요.</span> : null}{items.some(item => item.avoidanceWarnings?.length) ? <span className="wm-daily-preview-warning"><MatchIcon name="warning" />기피 요소가 겹치는 작품이 있어요</span> : null}</span>
+      <span className="wm-daily-preview-covers" aria-hidden="true">{[0, 1, 2].map(index => {
+        const item = items[index], key = item ? `${item.canonicalWebtoonId}:${item.coverUrl}` : '';
+        return <span key={key || index} className={showProgress && (!item || (item.coverUrl && !loadedCovers.includes(key))) ? 'wm-daily-cover-loading' : undefined} onLoadCapture={() => coverLoaded(key)} onErrorCapture={() => coverLoaded(key)}>{item ? <WorkCover item={item} eager decorative sizes="(max-width: 360px) 42px, 52px" /> : <span className="wm-daily-cover-placeholder" />}</span>;
+      })}</span>
+      <MatchIcon name="chevron" className="wm-daily-preview-arrow" />
     </button>
-    <dialog ref={dialog} className="wm-daily-sheet" aria-labelledby={titleId} aria-describedby={copyId} onKeyDown={event => {
+    <dialog ref={dialog} className="wm-daily-sheet" aria-labelledby={titleId} onKeyDown={event => {
       if (event.key !== 'Tab') return;
       const controls = event.currentTarget.querySelectorAll<HTMLElement>('a[href], button:not(:disabled)');
       const first = controls[0], last = controls[controls.length - 1];
@@ -179,11 +217,30 @@ export function DailyTastePicks({ publicProfileId, verified }: { publicProfileId
       if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) close();
     }}>
       <div className="wm-daily-sheet-grab" aria-hidden="true" />
-      <header className="wm-daily-sheet-heading"><div><p className="wm-daily-eyebrow">내 취향을 바탕으로</p><h2 id={titleId}>오늘의 취향작</h2></div><button className="wm-daily-close" type="button" onClick={close} aria-label="오늘의 취향작 닫기" autoFocus><MatchIcon name="close" /></button></header>
-      <p id={copyId} className="wm-daily-sheet-intro">{items.length ? `최신 취향을 참고해 고른 ${items.length}편이에요.` : '내 취향에 맞는 작품을 확인하고 있어요.'}</p>
-      {error ? <div className="wm-daily-state" role="alert"><p>{error}</p><button type="button" onClick={() => { pendingSince.current = null; setRetry(value => value + 1); }}>다시 불러오기</button></div> : !data || data.mode === 'preparing' ? <div className="wm-daily-state"><MatchLoading message={verified ? data?.mode === 'preparing' ? '새 취향에 맞춰 세 편을 고르고 있어요…' : '세 편을 불러오는 중이에요…' : '내 결과를 확인하고 있어요…'} /></div> : !items.length ? <p className="wm-daily-state">현재 보여드릴 수 있는 작품을 준비 중이에요.</p> : <ol className="wm-daily-list">{items.map(item => <li key={item.canonicalWebtoonId}><WorkDetailLink id={item.canonicalWebtoonId} returnTo={`/match/result/${encodeURIComponent(publicProfileId)}${OPEN_HASH}`} onOpen={rememberScroll} className="wm-daily-work" label={`${item.title} 작품 상세 보기`}><WorkCover item={item} sizes="72px" /><span className="wm-daily-work-copy"><small>{item.mainGenreLabel}</small><h3>{item.title}</h3><span>{item.platform}</span></span><MatchIcon name="chevron" /></WorkDetailLink><TasteAvoidanceWarning warnings={item.avoidanceWarnings ?? []} compact /></li>)}</ol>}
+      <header className="wm-daily-sheet-heading"><div><p className="wm-daily-eyebrow">나를 위한 맞춤 추천</p><h2 id={titleId}>오늘의 취향작</h2></div><button className="wm-daily-close" type="button" onClick={close} aria-label="오늘의 취향작 닫기" autoFocus><MatchIcon name="close" /></button></header>
+      {error ? <div className="wm-daily-state" role="alert"><p>{error}</p><button type="button" onClick={() => { pendingSince.current = null; setRetry(value => value + 1); }}>다시 불러오기</button></div> : !data || data.mode === 'preparing' ? <div className="wm-daily-state" aria-busy="true">{showProgress ? <MatchLoading message={loadingMessage} /> : <div className="wm-daily-quiet-placeholder" aria-hidden="true">{[0,1,2].map(index=><span key={index}><i /><span><i /><i /></span></span>)}</div>}</div> : !items.length ? <p className="wm-daily-state">현재 보여드릴 수 있는 작품을 준비 중이에요.</p> : <ol className="wm-daily-list">{items.map(item => <li key={item.canonicalWebtoonId}>
+        <div className="wm-daily-work">
+          <WorkCover item={item} sizes="(max-width: 360px) 64px, 82px" />
+          <div className="wm-daily-work-copy">
+            <small>{item.platform}</small><h3 title={item.title}>{item.title}</h3><span>{item.mainGenreLabel}</span>
+            <WorkDetailLink id={item.canonicalWebtoonId} returnTo={`/match/result/${encodeURIComponent(publicProfileId)}${OPEN_HASH}`} onOpen={rememberScroll} className="wm-daily-detail" label={`${item.title} 더 알아보기`}>더 알아보기<MatchIcon name="arrowRight" /></WorkDetailLink>
+          </div>
+          <DailyPickWatch item={item} />
+        </div>
+        {item.matchReason?.summary ? <div className="wm-daily-match-reason"><p><span aria-hidden="true">✦</span> 나와 맞는 부분</p><span>{item.matchReason.summary}</span></div> : null}
+        <TasteAvoidanceWarning warnings={item.avoidanceWarnings ?? []} compact />
+      </li>)}</ol>}
       <p className="wm-daily-sheet-note">매일 자정, 한국시간 기준으로 새로 골라요. 취향 답변이나 내 추천작을 바꾸면 바로 반영돼요.</p>
       <button className="wm-daily-return" type="button" onClick={close}>내 결과로 돌아가기</button>
     </dialog>
   </section>;
+}
+
+function DailyPickWatch({ item }: { item: DailyPick }) {
+  const officialUrl = safeOfficialWorkUrl(item.officialUrl);
+  if (!officialUrl) return null;
+  return <a className="wm-daily-watch" href={officialUrl} target="_blank" rel="noopener noreferrer" aria-label={`${item.title} ${item.platform}에서 감상하기 (새 탭)`}>
+    <span className="wm-daily-book-disc" aria-hidden="true"><MatchIcon name="bookClosed" className="wm-daily-book-closed" /><MatchIcon name="book" className="wm-daily-book-open" /></span>
+    <span>감상하기</span>
+  </a>;
 }

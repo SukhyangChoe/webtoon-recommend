@@ -81,10 +81,12 @@ export function RecommendationCard({ item, returnTo, onOpen, headingLevel = 4, l
         <div className="wm-pair-work-meta"><small>{item.mainGenreLabel ?? recommendationGenreLabel(item.mainGenre)}</small></div>
       </div>
     </div>
-    {item.recommendationComment?.trim() || onEdit ? <div className="wm-recommendation-comment" data-comment-id={item.commentId ?? undefined}>{item.recommendationComment?.trim() ? <blockquote><q>{item.recommendationComment}</q></blockquote> : <p className="wm-comment-placeholder">추천 한마디를 남겨보세요.</p>}<div className="wm-comment-actions">
+    {item.recommendationComment?.trim() ? <div className="wm-recommendation-comment" data-comment-id={item.commentId ?? undefined}>
+      <blockquote><q>{item.recommendationComment}</q></blockquote>
+      <div className="wm-comment-actions">
+      {onEdit ? <button type="button" className="wm-recommendation-edit" aria-label={`${item.title} ${item.recommendationComment?.trim() ? '추천 코멘트 수정 및 삭제' : '추천 한마디 입력'}`} onClick={onEdit}><MatchIcon name="edit" /></button> : null}
       {likeAction ? <button type="button" className={`wm-pair-work-like${likeAction.liked ? ' is-liked' : ''}`} disabled={likeAction.saving} aria-pressed={likeAction.liked} aria-label={`${item.title} 추천 코멘트 ${likeAction.liked ? '좋아요 취소' : '좋아요'}`} onClick={event => { event.preventDefault(); event.stopPropagation(); likeAction.onToggle(); }}><span aria-hidden="true">{likeAction.liked ? '♥' : '♡'}</span><b>{item.likeCount ?? 0}</b></button> : <span className="wm-pair-work-like-count" aria-label={`추천 코멘트 좋아요 ${item.likeCount ?? 0}개`}><span aria-hidden="true">♡</span> {item.likeCount ?? 0}</span>}
-      {onEdit ? <button type="button" className="wm-recommendation-edit" aria-label={`${item.title} 추천 코멘트 수정 및 삭제`} onClick={onEdit}><MatchIcon name="edit" /></button> : null}
-    </div></div> : null}
+    </div></div> : onEdit ? <button type="button" className="wm-recommendation-comment-needed" aria-label={`${item.title} 추천 한마디 입력`} onClick={onEdit}><b aria-hidden="true">!</b><span>추천 한마디</span></button> : null}
   </article>;
 }
 

@@ -11,8 +11,8 @@ test('recurring registration notice includes result/discovery routes but never h
 });
 
 test('floating search covers home and non-test match screens while excluding tests',()=>{
- for(const path of ['/match/test/intro','/match/test/duel/1','/match/test/avoidance','/match/result/building','/match/search'])assert.equal(showFloatingSearch(path),false,path);
- for(const path of ['/match','/match/result/me','/match/result/me/recommendations','/match/c/invite','/match/c/invite/ranking','/match/c/invite/match/pair','/match/work/work-1','/match/share/personal','/match/challenge/new'])assert.equal(showFloatingSearch(path),true,path);
+ for(const path of ['/match/test/intro','/match/test/duel/1','/match/test/avoidance','/match/result/building','/match/search','/match/result/me/recommendations','/match/result/me/recommendations/?returnTo=x'])assert.equal(showFloatingSearch(path),false,path);
+ for(const path of ['/match','/match/result/me','/match/c/invite','/match/c/invite/ranking','/match/c/invite/match/pair','/match/work/work-1','/match/share/personal','/match/challenge/new'])assert.equal(showFloatingSearch(path),true,path);
  for(const path of ['/match/result/me/recommendations?returnTo=%2Fmatch%2Fc%2Finvite%2Fmatch%2Fpair','/match/c/invite/match/pair?from=ranking','/match/work/work-1?returnTo=%2Fmatch%2Fsearch','/match/share/personal?profilePublicId=me']){
   assert.equal(searchBackPath(path),path);assert.equal(new URL(workSearchHref('',path),'http://localhost').searchParams.get('from'),path);
  }

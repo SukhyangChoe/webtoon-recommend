@@ -54,11 +54,7 @@ body:has(.wm-pair-page) .brand-bar__logo { left: 50% !important; right: auto !im
   .wm-pair-score.wm-pair-score--compact strong { font-size:24px; }
   .wm-pair-score.wm-pair-score--compact strong small { font-size:14px; }
 }
-.wm-pair-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 18px 0 14px; padding: 4px; background: #e6f0f4; border: 1px solid #dce9ef; border-radius: 24px; }
-.wm-pair-tabs button { min-width: 0; min-height: 44px; padding: 10px 8px; border: 0; border-radius: 20px; color: #456874; background: transparent; font-size: 16px; font-weight: 700; }
-.wm-pair-tabs button[aria-selected="true"] { color: #fff; background: #193e50; box-shadow: 0 2px 4px #19364012; }
-.wm-pair-page [role="tabpanel"]:not([hidden]) { display: grid; gap: 18px; }
-.wm-pair-page [hidden] { display: none !important; }
+.wm-pair-details { display:grid; gap:18px; margin-top:18px; min-width:0; }
 .wm-pair-panel { min-width: 0; border: 1px solid #ddebf1; border-radius: 16px; padding: 20px 16px; background: #fff; }
 .wm-pair-panel > h2, .wm-pair-recommendations > h2 { font-size: 19px; line-height: 1.5; font-weight: 750; margin: 0 0 16px; }
 .wm-pair-page .wm-pair-muted { color: #547581; font-size: 15px; line-height: 1.7; }
@@ -123,15 +119,15 @@ body:has(.wm-pair-page) .brand-bar__logo { left: 50% !important; right: auto !im
 @media (hover: hover) and (pointer: fine) {
   .wm-pair-work-like:not(.is-liked):hover:not(:disabled) { background: #f2f8fb; border-color: #d7e9ef; }
 }
-.wm-pair-work-like-count { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; padding: 4px 8px; border: 1px solid #ffffff55; border-radius: 999px; background: #ffffff14; color: #fff; font-size: 14px; line-height: 1.5; }
+.wm-pair-work-like-count { display:inline-flex; align-items:center; gap:4px; flex-shrink:0; padding:0; border:0; background:transparent; color:#456775; font-size:14px; line-height:1.5; }
 .wm-pair-work-like-count > span { color: #ffc0d4; font-size: 17px; }
 .wm-pair-work-track blockquote { margin: 10px 0 0; padding-inline: 11px; font-size: 15px; line-height: 1.65; color: #456775; overflow-wrap: anywhere; }
-.wm-recommendation-comment { margin-top: 10px; padding: 12px; border: 1px solid #dcebef; border-radius: 14px; background: #fff; }
-.wm-pair-work-track .wm-recommendation-comment blockquote { margin: 0; padding: 0; }
+.wm-recommendation-comment { margin-top:10px; padding:12px; border:1px solid #dcebef; border-radius:14px; background:#fff; }
+.wm-pair-work-track .wm-recommendation-comment blockquote { margin:0; padding:0; }
 .wm-comment-actions { display: flex; justify-content: flex-end; align-items:center; gap:6px; margin-top: 6px; }
 .wm-comment-actions .wm-pair-work-like { border-color: #cfe4eb; background: #f3fafc; box-shadow: none; }
 .wm-comment-actions .wm-pair-work-like.is-liked { background: #ffe5ef; border-color: #f3b2ca; }
-.wm-comment-actions .wm-pair-work-like-count { color: #456775; border-color: #dcebef; background: #f3fafc; min-height: 36px; }
+.wm-comment-actions .wm-pair-work-like-count { color:#456775; border:0; background:transparent; min-height:36px; }
 .wm-comment-actions .wm-pair-work-like-count > span { color: #b64268; }
 .wm-pair-work-track q::before { content: '“'; color: #8ca8b6; }
 .wm-pair-work-track q::after { content: '”'; color: #8ca8b6; }
@@ -150,10 +146,6 @@ body:has(.wm-pair-page) .brand-bar__logo { left: 50% !important; right: auto !im
 .wm-pair-profiles li > small { color: #547581; font-size: 12px; }
 .wm-pair-profiles li > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .wm-pair-profiles li > b { color: #94630d; white-space: nowrap; font-size: 12px; }
-.wm-pair-rank { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 16px; padding: 16px; border-radius: 14px; background: #e9f4f9; }
-.wm-pair-rank > span { color: #547581; font-size: 14px; min-width: 0; overflow-wrap: anywhere; }
-.wm-pair-rank strong { color: #00697f; font-size: 20px; white-space: nowrap; }
-.wm-pair-rank small { color: #547581; font-size: 13px; font-weight: 500; }
 .wm-pair-about { margin-top: 12px; color: #547581; font-size: 14px; }
 .wm-pair-about summary { cursor: pointer; min-height: 44px; padding: 14px 4px; }
 .wm-pair-about p { padding: 0 4px 10px; line-height: 1.7; }

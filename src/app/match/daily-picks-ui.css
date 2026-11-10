@@ -1,13 +1,18 @@
 /* A compact discovery entrance, deliberately separate from the user's recommendation rail. */
-.wm-daily-preview { display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; min-height:144px; padding:18px; border:0; border-radius:18px; background:#e3f8fc; color:#193640; text-align:left; cursor:pointer; -webkit-tap-highlight-color:transparent; }
-.wm-daily-preview-copy { display:grid; justify-items:start; gap:5px; min-width:0; }
+.wm-daily-preview { display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; min-height:170px; padding:18px; border:0; border-radius:18px; background:#e3f8fc; color:#193640; text-align:left; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.wm-daily-preview-copy { display:grid; flex:1; justify-items:start; gap:5px; min-width:0; }
 .match-module.match-cyan .wm-daily-eyebrow { margin:0; color:#00778d; font-size:12px; font-weight:700; line-height:1.5; }
 .wm-daily-preview-copy > strong { font-size:20px; font-weight:750; line-height:1.5; letter-spacing:-.03em; }
-.wm-daily-preview-description { color:#547581; font-size:13px; line-height:1.6; word-break:keep-all; }
-.wm-daily-preview-action { display:flex; align-items:center; gap:5px; margin-top:5px; color:#00697f; font-size:13px; font-weight:700; line-height:1.5; }
-.wm-daily-preview-action .wm-icon { width:15px; height:15px; }
+.wm-daily-preview-description { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; color:#547581; font-size:13px; line-height:1.6; word-break:keep-all; }
+.wm-daily-preview-loading { display:grid; gap:7px; width:100%; }
+.wm-daily-loading-track { display:block; width:100%; max-width:190px; height:4px; overflow:hidden; border-radius:6px; background:#c6e8ee; }
+.wm-daily-loading-track > span { display:block; width:38%; height:100%; border-radius:inherit; background:#00a9c6; animation:wm-loading-sweep 1.3s ease-in-out infinite alternate; }
+.wm-daily-preview-covers > .wm-daily-cover-loading { background:#ccebf2; animation:wm-daily-cover-pulse 1.3s ease-in-out infinite alternate; }
+@keyframes wm-daily-cover-pulse { from { opacity:.5; } to { opacity:1; } }
+@media(prefers-reduced-motion:reduce) { .wm-daily-loading-track > span { animation:none; width:55%; margin:auto; } .wm-daily-preview-covers > .wm-daily-cover-loading { animation:none; } }
+.wm-daily-preview-arrow { flex:0 0 18px; width:18px; height:22px; color:#00778d; }
 .wm-daily-preview-covers { display:flex; align-items:center; flex-shrink:0; padding:6px 4px; isolation:isolate; }
-.wm-daily-preview-covers > span { position:relative; display:block; flex-shrink:0; width:39px; height:58px; margin-left:-2px; overflow:hidden; border:2px solid #e3f8fc; border-radius:5px; background:#ccebf2; }
+.wm-daily-preview-covers > span { position:relative; display:block; flex-shrink:0; width:52px; height:77px; margin-left:-4px; overflow:hidden; border:2px solid #e3f8fc; border-radius:6px; background:#ccebf2; }
 .wm-daily-preview-covers > span:first-child { z-index:1; margin-left:0; transform:rotate(-8deg) translateY(3px); }
 .wm-daily-preview-covers > span:nth-child(2) { z-index:3; transform:translateY(-2px); }
 .wm-daily-preview-covers > span:last-child { z-index:2; transform:rotate(8deg) translateY(3px); }
@@ -18,22 +23,47 @@
 .wm-daily-sheet::backdrop { background:#1936406b; }
 .wm-daily-sheet * { box-sizing:border-box; }
 .wm-daily-sheet-grab { width:54px; height:4px; margin:0 auto 15px; border-radius:4px; background:#bed5dd; }
-.wm-daily-sheet-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; }
-.match-module.match-cyan .wm-daily-sheet-heading h2 { margin:3px 0 0; font-size:24px; font-weight:750; line-height:1.5; letter-spacing:-.035em; }
+.wm-daily-sheet-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:20px; }
+.match-module.match-cyan .wm-daily-sheet-heading h2 { margin:3px 0 0; font-size:26px; font-weight:750; line-height:1.5; letter-spacing:-.035em; }
 .wm-daily-close { display:grid; place-items:center; flex-shrink:0; width:44px; height:44px; padding:0; border:0; border-radius:50%; background:#f1f7fa; color:#456874; cursor:pointer; }
 .match-module.match-cyan .wm-daily-sheet-intro { margin:8px 0 15px; font-size:14px; color:#547581; line-height:1.7; word-break:keep-all; }
 .wm-daily-list { margin:0; padding:0; list-style:none; }
-.wm-daily-list > li { border-top:1px solid #e5eef2; }
-.wm-daily-work { display:flex; align-items:center; gap:14px; padding:14px 0; color:inherit; text-decoration:none; }
-.wm-daily-work > .wm-work-cover { display:block; flex:0 0 68px; width:68px; height:102px; border:0; border-radius:7px; object-fit:cover; }
+.wm-daily-list > li { padding:18px 0; border-top:1px solid #e5eef2; }
+.wm-daily-work { display:flex; align-items:center; gap:12px; color:inherit; }
+.wm-daily-work > .wm-work-cover { display:block; flex:0 0 82px; width:82px; height:123px; border:0; border-radius:8px; object-fit:cover; }
 .wm-daily-work-copy { display:block; flex:1; min-width:0; }
-.wm-daily-work-copy > small { color:#00778d; font-size:12px; font-weight:650; line-height:1.5; }
-.match-module.match-cyan .wm-daily-work-copy > h3 { margin:5px 0; font-size:17px; font-weight:750; line-height:1.5; letter-spacing:-.025em; word-break:keep-all; overflow-wrap:anywhere; }
-.wm-daily-work-copy > span { display:block; color:#647e87; font-size:12px; line-height:1.6; overflow-wrap:anywhere; }
-.wm-daily-work > .wm-icon { width:16px; height:16px; color:#6d8793; }
-.match-module.match-cyan .wm-daily-sheet-note { margin:10px 0 0; color:#6d8793; font-size:12px; line-height:1.7; word-break:keep-all; }
+.wm-daily-work-copy > small { color:#64828d; font-size:14px; font-weight:500; line-height:1.5; overflow-wrap:anywhere; }
+.match-module.match-cyan .wm-daily-work-copy > h3 { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; margin:5px 0; font-size:21px; font-weight:700; line-height:1.45; letter-spacing:-.025em; word-break:keep-all; overflow-wrap:anywhere; }
+.wm-daily-work-copy > span { display:block; color:#00778d; font-size:14px; line-height:1.6; overflow-wrap:anywhere; }
+.wm-daily-detail { display:inline-flex; align-items:center; justify-content:flex-start; gap:5px; min-height:44px; padding:0; border:0; background:transparent; color:#00778d; font-size:13px; font-weight:650; text-decoration:underline; text-decoration-color:#91c7d1; text-underline-offset:4px; white-space:nowrap; }
+.wm-daily-detail .wm-icon { width:14px; height:14px; }
+.wm-daily-detail:hover { text-decoration-color:currentColor; }
+.wm-daily-watch { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px; flex:0 0 62px; min-height:82px; padding:3px 0; border:0; background:transparent; color:#193640; font-size:12px; font-weight:650; line-height:1.5; text-decoration:none; white-space:nowrap; }
+.wm-daily-book-disc { position:relative; display:grid; place-items:center; width:54px; height:54px; border-radius:50%; background:#00c8ea; color:#073c47; perspective:100px; }
+.wm-daily-book-disc .wm-icon { width:25px; height:25px; stroke-width:1.8; }
+.wm-daily-book-closed { position:absolute; opacity:0; }
+.wm-daily-watch:is(:focus-visible,:active) .wm-daily-book-open { animation:wm-daily-book-unfold .38s ease-out both; }
+.wm-daily-watch:is(:focus-visible,:active) .wm-daily-book-closed { animation:wm-daily-book-cover .24s ease-out both; }
+@media(hover:hover) and (pointer:fine) {
+  .wm-daily-watch:hover .wm-daily-book-open { animation:wm-daily-book-unfold .38s ease-out both; }
+  .wm-daily-watch:hover .wm-daily-book-closed { animation:wm-daily-book-cover .24s ease-out both; }
+}
+@keyframes wm-daily-book-unfold { 0%,20% { opacity:0; transform:rotateY(-65deg) scaleX(.6); } 100% { opacity:1; transform:rotateY(0) scaleX(1); } }
+@keyframes wm-daily-book-cover { 0%,20% { opacity:1; transform:rotate(-8deg); } 100% { opacity:0; transform:rotateY(-65deg); } }
+@media(prefers-reduced-motion:reduce) {
+  .wm-daily-watch .wm-daily-book-open,.wm-daily-watch .wm-daily-book-closed { animation:none!important; }
+}
+.wm-daily-match-reason { margin-top:12px; padding:12px 14px; border-radius:12px; background:#f0f9fb; color:#416a78; font-size:14px; line-height:1.75; word-break:keep-all; overflow-wrap:anywhere; }
+.match-module.match-cyan .wm-daily-match-reason p { margin:0 0 4px; color:#00778d; font-size:13px; font-weight:650; }
+.match-module.match-cyan .wm-daily-sheet-note { margin:10px 0 0; color:#6d8793; font-size:13px; line-height:1.7; word-break:keep-all; }
 .match-module.match-cyan .wm-daily-return { width:100%; min-height:46px; margin-top:16px; padding:10px 14px; border:0; border-radius:12px; background:#eaf7fa; color:#00697f; font-size:14px; font-weight:700; cursor:pointer; }
 .wm-daily-state { display:grid; justify-items:center; gap:12px; min-height:160px; align-content:center; padding:22px 4px; color:#547581; text-align:center; font-size:14px; line-height:1.7; }
 .wm-daily-state button { min-height:44px; padding:9px 15px; border:0; border-radius:10px; background:#eaf7fa; color:#00697f; cursor:pointer; }
+.wm-daily-quiet-placeholder { display:grid; gap:24px; width:100%; }
+.wm-daily-quiet-placeholder > span { display:flex; align-items:center; gap:14px; }
+.wm-daily-quiet-placeholder > span > i { display:block; flex:0 0 64px; height:96px; border-radius:8px; background:#edf6f8; }
+.wm-daily-quiet-placeholder > span > span { display:grid; gap:12px; flex:1; }
+.wm-daily-quiet-placeholder > span > span > i { display:block; width:70%; height:12px; border-radius:4px; background:#edf6f8; }
+.wm-daily-quiet-placeholder > span > span > i:last-child { width:40%; }
 .wm-daily-picks :focus-visible { outline:3px solid #007e98; outline-offset:3px; }
-@media(max-width:360px) { .wm-daily-preview { gap:8px; padding:16px 14px; } .wm-daily-preview-covers > span { width:33px; height:50px; } .wm-daily-preview-copy > strong { font-size:19px; } .wm-daily-sheet { padding-inline:16px; } .wm-daily-work { gap:11px; } }
+@media(max-width:360px) { .wm-daily-preview { gap:6px; padding:16px 14px; } .wm-daily-preview-covers { padding-inline:0; } .wm-daily-preview-covers > span { width:42px; height:63px; } .wm-daily-preview-copy > strong { font-size:17px; } .wm-daily-sheet { padding-inline:16px; } .wm-daily-work { gap:9px; } .wm-daily-work > .wm-work-cover { flex-basis:64px; width:64px; height:96px; } .wm-daily-detail { font-size:12px; } .wm-daily-watch { flex-basis:54px; } .wm-daily-book-disc { width:48px; height:48px; } .match-module.match-cyan .wm-daily-work-copy > h3 { font-size:19px; } }

@@ -38,7 +38,8 @@ const { chromium } = require("playwright");
     });
     await page.goto(`${base}/match/c/ui-preview/match/ui-pair?from=ranking`);
     await page.getByRole("heading", { name: "상세 궁합", exact: true }).waitFor();
-    assert.equal(await page.getByRole("tabpanel", { name: "궁합 요약" }).count(), 1);
+    assert.equal(await page.locator(".wm-pair-details").count(), 1);
+    assert.equal(await page.getByRole("tablist", { name: "궁합 정보" }).count(), 0);
     assert.equal(await page.locator(".wm-pair-comic .wm-persona-avatar img").count(), 2);
     assert.equal(await page.locator(".wm-pair-work-card").count(), 10);
     assert.equal(await page.locator(".wm-pair-work-slide").count(), 10);
@@ -148,18 +149,15 @@ const { chromium } = require("playwright");
     await page.waitForURL('**/match/work/work-0?**');
     allowLikes = true;
     await page.goto(readonlyUrl, { waitUntil: 'domcontentloaded' });
-    await page.getByRole('tab', { name: '궁합 요약', exact: true }).waitFor();
-    await page.getByRole("tab", { name: "비교 상세" }).click();
-    assert.equal(await page.getByRole("tabpanel", { name: "궁합 요약" }).count(), 0);
+    await page.locator('.wm-pair-details').waitFor();
+    await page.locator('.wm-pair-reading').waitFor();
+    assert.ok(await page.locator(".wm-pair-common").isVisible(), "common tastes stay visible with comparison details");
     await page.getByRole("heading", { name: "각자의 취향 TOP 3" }).waitFor();
     assert.equal(await page.locator(".wm-pair-profiles ol li").count(), 5);
     assert.equal(await page.getByRole("heading", { name: "서로에게 물어볼 장르" }).count(), 0);
     assert.equal(await page.getByRole("heading", { name: "서로 다른 장르", exact: true }).count(), 0);
     assert.equal(await page.getByRole("heading", { name: "이 사람 추천, 믿어도 될까?" }).count(), 0);
     assert.equal(await page.getByRole("heading", { name: "둘이 같이 보면", exact: true }).count(), 1);
-    await page.getByRole("tab", { name: "비교 상세" }).focus();
-    await page.keyboard.press("ArrowLeft");
-    assert.equal(await page.getByRole("tab", { name: "궁합 요약" }).getAttribute("aria-selected"), "true");
     const longTitle = page.locator('.wm-scrolling-title').first();
     const shortTitle = page.locator('.wm-scrolling-title').nth(2);
     await longTitle.scrollIntoViewIfNeeded();
@@ -193,96 +191,89 @@ const { chromium } = require("playwright");
       await page.setViewportSize({ width, height: 844 });
       await page.waitForFunction(value=>innerWidth===value,width);
       await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
-      for (const tabName of ["궁합 요약", "비교 상세"]) {
-        await page.getByRole("tab", { name: tabName }).click();
-        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `no overflow ${width} ${tabName}`);
-        assert.ok(await sharedResult.evaluate(el=>{
-          const box=el.getBoundingClientRect(),heading=el.querySelector('.wm-pair-result-heading').getBoundingClientRect();
-          return [...el.querySelectorAll('.wm-pair-result-name,.wm-pair-score')].every(item=>{const r=item.getBoundingClientRect();return r.top>=heading.bottom+7&&r.left>=box.left&&r.right<=box.right&&r.bottom<=box.bottom;});
-        }),`the shared result heading spans both name and percentage at ${width}`);
-        assert.ok(await sharedResult.evaluate(el=>{
-          const name=el.querySelector('.wm-pair-result-name').getBoundingClientRect(),band=el.querySelector('.wm-pair-result-band').getBoundingClientRect(),score=el.querySelector('.wm-pair-score').getBoundingClientRect();
-          return band.top>=name.bottom+7&&Math.abs(band.left-name.left)<1&&band.right<=score.left-11;
-        }),`compatibility band sits below the result name, not above the score at ${width}`);
-        if (tabName === '비교 상세') {
-          assert.ok(await page.locator('.wm-pair-reading').evaluate(el=>{
-            const title=getComputedStyle(el.querySelector('.wm-story-title')),heading=getComputedStyle(el.querySelector('.wm-story-subtitle')),body=getComputedStyle(el.querySelector('.wm-story-scene > .wm-story-copy'));
-            return title.fontSize==='19px'&&heading.fontSize==='13px'&&Number(heading.fontWeight)>=700&&body.fontSize==='15px'&&heading.color!==body.color&&heading.borderLeftWidth==='3px'&&getComputedStyle(el.querySelector('.wm-story-scene')).backgroundColor==='rgb(238, 249, 251)';
-          }), `shared story hierarchy and scene surface match personal results at ${width}`);
-        }
-        assert.equal(await page.locator(".wm-pair-ask").count(), 0);
-        assert.ok(await page.locator(".wm-pair-bubble-words").evaluate((el) => {
-          const words = el.getBoundingClientRect();
-          const bubble = el.parentElement.getBoundingClientRect();
-          return words.left >= bubble.left + 5 && words.right <= bubble.right - 5 && words.top >= bubble.top && words.bottom <= bubble.bottom;
-        }), `bubble text fits ${width}`);
-        if (tabName === "궁합 요약") {
-          assert.equal(await page.locator('.wm-pair-work-empty').count(),1);
-          assert.ok(await page.locator('.wm-pair-work-empty').evaluate(el=>{
-            const style=getComputedStyle(el),rect=el.getBoundingClientRect(),group=el.closest('.wm-pair-work-group').getBoundingClientRect();
-            return el.textContent==='등록한 추천작이 없어요.'&&style.backgroundColor==='rgb(255, 255, 255)'&&style.borderTopWidth==='1px'&&style.borderRadius==='14px'&&rect.height>=88&&rect.left>=group.left&&rect.right<=group.right;
-          }),`empty recommendations have their own bounded surface at ${width}`);
-          assert.ok(await page.locator('.wm-pair-character .wm-persona-avatar').evaluateAll(items=>items.every(el=>{
-            const crop=el.getBoundingClientRect(),image=el.querySelector('img').getBoundingClientRect();
-            return crop.height/image.height>=.7&&crop.height/image.height<=.75&&Math.abs((image.left+image.right)/2-(crop.left+crop.right)/2)<1&&Math.abs(image.top-crop.top)<1;
-          })), 'SD framing includes the head and upper body instead of magnifying only the face');
-          assert.ok(await page.locator('.wm-pair-comic').evaluate(el=>{
-            const comic=el.getBoundingClientRect(),bubble=el.querySelector('.wm-pair-bubble').getBoundingClientRect(),tail=el.querySelector('.wm-pair-bubble-tail').getBoundingClientRect();
-            return Math.abs(bubble.top-comic.top-54)<1&&[...el.querySelectorAll('.wm-persona-avatar')].every(avatar=>Math.max(bubble.bottom,tail.bottom)<avatar.getBoundingClientRect().top+48);
-          }),'raised compact bubble and shorter tails stay above the character face area');
-          assert.equal(await page.locator('.wm-pair-work-fit').first().textContent(),'✦취향 저격');
-          assert.ok(await page.locator('.wm-pair-work-fit').first().evaluate(el=>{
-            const style=getComputedStyle(el),badge=el.getBoundingClientRect(),cover=el.parentElement.getBoundingClientRect();
-            return style.position==='absolute'&&style.pointerEvents==='none'&&style.backgroundColor==='rgb(237, 255, 107)'&&Math.abs(badge.top-cover.top-8)<1&&Math.abs(badge.left-cover.left-8)<1&&badge.right<=cover.right-7&&badge.bottom<el.parentElement.querySelector('.wm-pair-work-copy').getBoundingClientRect().top&&el.scrollWidth<=el.clientWidth;
-          }),'fit badge sits in the upper left, stays readable and does not block cover clicks');
-          assert.ok(await page.locator('.wm-pair-work-track').first().evaluate(track=>{
-            const cards=[...track.querySelectorAll('article')].slice(0,2);
-            const tops=cards.map(card=>card.querySelector('.wm-recommendation-comment').getBoundingClientRect().top);
-            return Math.abs(tops[0]-tops[1])<1;
-          }),'highlighted and ordinary cards have the same comment start position');
-          assert.ok(await page.locator('.wm-pair-work-card.is-taste-fit .wm-pair-work-artwork').evaluateAll(items=>items.every(el=>getComputedStyle(el,'::after').borderTopColor==='rgb(232, 255, 56)'&&getComputedStyle(el,'::after').borderTopWidth==='3px')),'highlighted covers use the fluorescent yellow outline');
-          const cards = await page.locator(".wm-pair-work-card").evaluateAll((items) => items.slice(0, 2).map((el) => ({ x: el.getBoundingClientRect().x, y: el.getBoundingClientRect().y, right: el.getBoundingClientRect().right, width: el.getBoundingClientRect().width })));
-          const track = await page.locator(".wm-pair-work-track").first().boundingBox();
-          assert.equal(cards.length, 2);
-          assert.equal(cards[0].y, cards[1].y, `recommendation cards share a row at ${width}`);
-          assert.ok(cards[0].x >= track.x && cards[0].right <= track.x + track.width, "first card is fully visible");
-          assert.equal(cards[0].width,160,`compact covers stay fixed while the number visible adapts at ${width}`);
-          assert.ok(Math.abs(cards[0].width - cards[1].width) < 1, "balanced equal-width cards");
-          assert.ok(await page.locator(".wm-pair-work-track").first().evaluate((el) => {
-            el.scrollTop = 50;
-            return el.scrollHeight <= el.clientHeight + 1 && el.scrollTop === 0 && getComputedStyle(el).overflowY === "hidden";
-          }), "the recommendation rail has no vertical scrolling or clipped tall cards");
-          assert.ok(await page.locator(".wm-pair-work-card").evaluateAll((items) => items.every((el) => {
-            const cover = el.querySelector(".wm-work-cover").getBoundingClientRect();
-            const artwork = el.querySelector(".wm-pair-work-artwork").getBoundingClientRect();
-            const copy = el.querySelector(".wm-pair-work-copy").getBoundingClientRect();
-            const title = el.querySelector(".wm-pair-work-title").getBoundingClientRect();
-            const meta = el.querySelector(".wm-pair-work-meta").getBoundingClientRect();
-            const comment = el.querySelector("blockquote").getBoundingClientRect();
-            return Math.abs(cover.width / cover.height - 2 / 3) < .01 && Math.abs(cover.height - artwork.height) < 1 && Math.abs(cover.width - artwork.width) < 1 && copy.top >= artwork.top && Math.abs(copy.bottom - artwork.bottom) < 1 && title.top >= copy.top && Math.abs(title.left - copy.left - 9) < 1 && Math.abs(title.width - copy.width + 18) < 1 && meta.top >= title.bottom && comment.top >= artwork.bottom + 9;
-          })), "full-bleed portrait cover, readable title/metadata overlay and separate quote");
-          assert.ok(await page.locator('.wm-pair-work-artwork').evaluateAll(items => {
-            const height = items[0].getBoundingClientRect().height;
-            return items.every(el => Math.abs(el.getBoundingClientRect().height - height) < 1);
-          }), "every work has the same cover height regardless of source image ratio");
-          assert.ok(await page.locator(".wm-pair-work-copy").evaluateAll((items) => items.every((el) => getComputedStyle(el).backgroundImage.includes("linear-gradient"))), "every cover has a dark readability gradient");
-          assert.ok(await page.locator(".wm-pair-work-card").evaluateAll((items) => items.every((el) => getComputedStyle(el).borderTopWidth === "0px")), "no nested outer card borders");
-          assert.equal(await page.locator(".wm-pair-work-card a button").count(), 0, "likes are not nested inside navigation links");
-          assert.equal(await page.locator('.wm-pair-work-artwork .wm-pair-work-like,.wm-pair-work-artwork .wm-pair-work-like-count').count(),0,'likes are no longer attached to the work cover');
-          assert.ok(await page.locator('.wm-recommendation-comment').evaluateAll(items=>items.every(el=>{const quote=el.querySelector('blockquote').getBoundingClientRect(),like=el.querySelector('button,.wm-pair-work-like-count').getBoundingClientRect();return like.top>=quote.bottom&&like.right<=el.getBoundingClientRect().right;})),'hearts belong to their individual comment');
-          assert.ok(await page.locator(".wm-pair-work-card h4").evaluateAll((items) => items.every((el) => {
-            const style = getComputedStyle(el);
-            return style.whiteSpace === 'nowrap' && style.overflowX === 'hidden' && Math.abs(el.clientHeight - parseFloat(style.lineHeight)) < 1;
-          })), "all titles occupy exactly one clipped line at every mobile width");
-          assert.ok(await page.locator(".wm-pair-work-card h4").evaluateAll((items) => items.every((el) => parseFloat(getComputedStyle(el).fontSize) >= 16)), "mobile titles are at least 16px");
-          assert.ok(await page.locator(".wm-pair-work-card blockquote").evaluateAll((items) => items.every((el) => parseFloat(getComputedStyle(el).fontSize) >= 15)), "mobile comments are at least 15px");
-          assert.ok(await page.locator('.wm-recommendation-card blockquote').evaluateAll(items=>items.every(el=>{
-            const quote=el.querySelector('q').getBoundingClientRect(),cover=el.closest('article').querySelector('.wm-pair-work-artwork').getBoundingClientRect();
-            const style=getComputedStyle(el.closest('.wm-recommendation-comment'));
-            return style.paddingLeft==='12px'&&style.paddingRight==='12px'&&quote.left>=cover.left+10&&quote.right<=cover.right-10;
-          })), 'recommendation reasons are inset from both cover edges and stay within their own card');
-        }
-      }
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `no overflow ${width}`);
+      assert.ok(await sharedResult.evaluate(el=>{
+        const box=el.getBoundingClientRect(),heading=el.querySelector('.wm-pair-result-heading').getBoundingClientRect();
+        return [...el.querySelectorAll('.wm-pair-result-name,.wm-pair-score')].every(item=>{const r=item.getBoundingClientRect();return r.top>=heading.bottom+7&&r.left>=box.left&&r.right<=box.right&&r.bottom<=box.bottom;});
+      }),`the shared result heading spans both name and percentage at ${width}`);
+      assert.ok(await sharedResult.evaluate(el=>{
+        const name=el.querySelector('.wm-pair-result-name').getBoundingClientRect(),band=el.querySelector('.wm-pair-result-band').getBoundingClientRect(),score=el.querySelector('.wm-pair-score').getBoundingClientRect();
+        return band.top>=name.bottom+7&&Math.abs(band.left-name.left)<1&&band.right<=score.left-11;
+      }),`compatibility band sits below the result name, not above the score at ${width}`);
+      assert.ok(await page.locator('.wm-pair-reading').evaluate(el=>{
+        const title=getComputedStyle(el.querySelector('.wm-story-title')),heading=getComputedStyle(el.querySelector('.wm-story-subtitle')),body=getComputedStyle(el.querySelector('.wm-story-scene > .wm-story-copy'));
+        return title.fontSize==='19px'&&heading.fontSize==='13px'&&Number(heading.fontWeight)>=700&&body.fontSize==='15px'&&heading.color!==body.color&&heading.borderLeftWidth==='3px'&&getComputedStyle(el.querySelector('.wm-story-scene')).backgroundColor==='rgb(238, 249, 251)';
+      }), `shared story hierarchy and scene surface match personal results at ${width}`);
+      assert.equal(await page.locator(".wm-pair-ask").count(), 0);
+      assert.ok(await page.locator(".wm-pair-bubble-words").evaluate((el) => {
+        const words = el.getBoundingClientRect();
+        const bubble = el.parentElement.getBoundingClientRect();
+        return words.left >= bubble.left + 5 && words.right <= bubble.right - 5 && words.top >= bubble.top && words.bottom <= bubble.bottom;
+      }), `bubble text fits ${width}`);
+      assert.equal(await page.locator('.wm-pair-work-empty').count(),1);
+      assert.ok(await page.locator('.wm-pair-work-empty').evaluate(el=>{
+        const style=getComputedStyle(el),rect=el.getBoundingClientRect(),group=el.closest('.wm-pair-work-group').getBoundingClientRect();
+        return el.textContent==='등록한 추천작이 없어요.'&&style.backgroundColor==='rgb(255, 255, 255)'&&style.borderTopWidth==='1px'&&style.borderRadius==='14px'&&rect.height>=88&&rect.left>=group.left&&rect.right<=group.right;
+      }),`empty recommendations have their own bounded surface at ${width}`);
+      assert.ok(await page.locator('.wm-pair-character .wm-persona-avatar').evaluateAll(items=>items.every(el=>{
+        const crop=el.getBoundingClientRect(),image=el.querySelector('img').getBoundingClientRect();
+        return crop.height/image.height>=.7&&crop.height/image.height<=.75&&Math.abs((image.left+image.right)/2-(crop.left+crop.right)/2)<1&&Math.abs(image.top-crop.top)<1;
+      })), 'SD framing includes the head and upper body instead of magnifying only the face');
+      assert.ok(await page.locator('.wm-pair-comic').evaluate(el=>{
+        const comic=el.getBoundingClientRect(),bubble=el.querySelector('.wm-pair-bubble').getBoundingClientRect(),tail=el.querySelector('.wm-pair-bubble-tail').getBoundingClientRect();
+        return Math.abs(bubble.top-comic.top-54)<1&&[...el.querySelectorAll('.wm-persona-avatar')].every(avatar=>Math.max(bubble.bottom,tail.bottom)<avatar.getBoundingClientRect().top+48);
+      }),'raised compact bubble and shorter tails stay above the character face area');
+      assert.equal(await page.locator('.wm-pair-work-fit').first().textContent(),'✦취향 저격');
+      assert.ok(await page.locator('.wm-pair-work-fit').first().evaluate(el=>{
+        const style=getComputedStyle(el),badge=el.getBoundingClientRect(),cover=el.parentElement.getBoundingClientRect();
+        return style.position==='absolute'&&style.pointerEvents==='none'&&style.backgroundColor==='rgb(237, 255, 107)'&&Math.abs(badge.top-cover.top-8)<1&&Math.abs(badge.left-cover.left-8)<1&&badge.right<=cover.right-7&&badge.bottom<el.parentElement.querySelector('.wm-pair-work-copy').getBoundingClientRect().top&&el.scrollWidth<=el.clientWidth;
+      }),'fit badge sits in the upper left, stays readable and does not block cover clicks');
+      assert.ok(await page.locator('.wm-pair-work-track').first().evaluate(track=>{
+        const cards=[...track.querySelectorAll('article')].slice(0,2);
+        const tops=cards.map(card=>card.querySelector('.wm-recommendation-comment').getBoundingClientRect().top);
+        return Math.abs(tops[0]-tops[1])<1;
+      }),'highlighted and ordinary cards have the same comment start position');
+      assert.ok(await page.locator('.wm-pair-work-card.is-taste-fit .wm-pair-work-artwork').evaluateAll(items=>items.every(el=>getComputedStyle(el,'::after').borderTopColor==='rgb(232, 255, 56)'&&getComputedStyle(el,'::after').borderTopWidth==='3px')),'highlighted covers use the fluorescent yellow outline');
+      const cards = await page.locator(".wm-pair-work-card").evaluateAll((items) => items.slice(0, 2).map((el) => ({ x: el.getBoundingClientRect().x, y: el.getBoundingClientRect().y, right: el.getBoundingClientRect().right, width: el.getBoundingClientRect().width })));
+      const track = await page.locator(".wm-pair-work-track").first().boundingBox();
+      assert.equal(cards.length, 2);
+      assert.equal(cards[0].y, cards[1].y, `recommendation cards share a row at ${width}`);
+      assert.ok(cards[0].x >= track.x && cards[0].right <= track.x + track.width, "first card is fully visible");
+      assert.equal(cards[0].width,160,`compact covers stay fixed while the number visible adapts at ${width}`);
+      assert.ok(Math.abs(cards[0].width - cards[1].width) < 1, "balanced equal-width cards");
+      assert.ok(await page.locator(".wm-pair-work-track").first().evaluate((el) => {
+        el.scrollTop = 50;
+        return el.scrollHeight <= el.clientHeight + 1 && el.scrollTop === 0 && getComputedStyle(el).overflowY === "hidden";
+      }), "the recommendation rail has no vertical scrolling or clipped tall cards");
+      assert.ok(await page.locator(".wm-pair-work-card").evaluateAll((items) => items.every((el) => {
+        const cover = el.querySelector(".wm-work-cover").getBoundingClientRect();
+        const artwork = el.querySelector(".wm-pair-work-artwork").getBoundingClientRect();
+        const copy = el.querySelector(".wm-pair-work-copy").getBoundingClientRect();
+        const title = el.querySelector(".wm-pair-work-title").getBoundingClientRect();
+        const meta = el.querySelector(".wm-pair-work-meta").getBoundingClientRect();
+        const comment = el.querySelector("blockquote").getBoundingClientRect();
+        return Math.abs(cover.width / cover.height - 2 / 3) < .01 && Math.abs(cover.height - artwork.height) < 1 && Math.abs(cover.width - artwork.width) < 1 && copy.top >= artwork.top && Math.abs(copy.bottom - artwork.bottom) < 1 && title.top >= copy.top && Math.abs(title.left - copy.left - 9) < 1 && Math.abs(title.width - copy.width + 18) < 1 && meta.top >= title.bottom && comment.top >= artwork.bottom + 9;
+      })), "full-bleed portrait cover, readable title/metadata overlay and separate quote");
+      assert.ok(await page.locator('.wm-pair-work-artwork').evaluateAll(items => {
+        const height = items[0].getBoundingClientRect().height;
+        return items.every(el => Math.abs(el.getBoundingClientRect().height - height) < 1);
+      }), "every work has the same cover height regardless of source image ratio");
+      assert.ok(await page.locator(".wm-pair-work-copy").evaluateAll((items) => items.every((el) => getComputedStyle(el).backgroundImage.includes("linear-gradient"))), "every cover has a dark readability gradient");
+      assert.ok(await page.locator(".wm-pair-work-card").evaluateAll((items) => items.every((el) => getComputedStyle(el).borderTopWidth === "0px")), "no nested outer card borders");
+      assert.equal(await page.locator(".wm-pair-work-card a button").count(), 0, "likes are not nested inside navigation links");
+      assert.equal(await page.locator('.wm-pair-work-artwork .wm-pair-work-like,.wm-pair-work-artwork .wm-pair-work-like-count').count(),0,'likes are no longer attached to the work cover');
+      assert.ok(await page.locator('.wm-recommendation-comment').evaluateAll(items=>items.every(el=>{const quote=el.querySelector('blockquote').getBoundingClientRect(),like=el.querySelector('button,.wm-pair-work-like-count').getBoundingClientRect();return like.top>=quote.bottom&&like.right<=el.getBoundingClientRect().right;})),'hearts belong to their individual comment');
+      assert.ok(await page.locator(".wm-pair-work-card h4").evaluateAll((items) => items.every((el) => {
+        const style = getComputedStyle(el);
+        return style.whiteSpace === 'nowrap' && style.overflowX === 'hidden' && Math.abs(el.clientHeight - parseFloat(style.lineHeight)) < 1;
+      })), "all titles occupy exactly one clipped line at every mobile width");
+      assert.ok(await page.locator(".wm-pair-work-card h4").evaluateAll((items) => items.every((el) => parseFloat(getComputedStyle(el).fontSize) >= 16)), "mobile titles are at least 16px");
+      assert.ok(await page.locator(".wm-pair-work-card blockquote").evaluateAll((items) => items.every((el) => parseFloat(getComputedStyle(el).fontSize) >= 15)), "mobile comments are at least 15px");
+      assert.ok(await page.locator('.wm-recommendation-card blockquote').evaluateAll(items=>items.every(el=>{
+        const quote=el.querySelector('q').getBoundingClientRect(),cover=el.closest('article').querySelector('.wm-pair-work-artwork').getBoundingClientRect();
+        const style=getComputedStyle(el.closest('.wm-recommendation-comment'));
+        return style.paddingLeft==='12px'&&style.paddingRight==='12px'&&quote.left>=cover.left+10&&quote.right<=cover.right-10;
+      })), 'recommendation reasons are inset from both cover edges and stay within their own card');
       const actions = await page.locator(".wm-action-bar .match-button").evaluateAll((items) => items.map((el) => ({ y: el.getBoundingClientRect().y, height: el.getBoundingClientRect().height })));
       assert.equal(new Set(actions.map((action) => action.y)).size, 1);
       assert.ok(actions.every((action) => action.height >= 44));
@@ -290,7 +281,7 @@ const { chromium } = require("playwright");
     for (const count of [5, 3, 2, 1, 0]) {
       workCount = count;
       await page.reload();
-      await page.getByRole("tab", { name: "궁합 요약" }).waitFor();
+      await page.locator('.wm-pair-details').waitFor();
       assert.equal(await page.locator(".wm-pair-work-card").count(), count);
       assert.equal(await page.locator(".wm-pair-work-slide").count(), count);
       if (count > 1) {
@@ -346,7 +337,7 @@ const { chromium } = require("playwright");
     const live = await liveContext.newPage();
     await live.route("**/api/v1/analytics/**", (route) => route.fulfill({ status: 200, contentType: "application/json", body: '{"ok":true}' }));
     await live.goto(`${base}/match/c/mKOdmiLcE0JU/match/VIbseuqFQuk6RRDr?from=ranking`);
-    await live.getByRole("tab", { name: "궁합 요약" }).waitFor();
+    await live.locator('.wm-pair-details').waitFor();
     await live.locator(".wm-pair-comic img").evaluateAll((items) => Promise.all(items.map((img) => img.decode().catch(() => {}))));
     // Hide the development-only Next.js badge in screenshots, never in application code.
     await live.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
@@ -391,7 +382,6 @@ const { chromium } = require("playwright");
     }
     await captureRecommendations("pair_card_peek.png");
     const liveTracks=live.locator('.wm-pair-work-track');
-    const lastWorkCount=await liveTracks.last().locator(':scope > li').count();
     await liveTracks.last().focus();await live.keyboard.press('End');
     await live.waitForFunction(() => {
       const rail = [...document.querySelectorAll(".wm-pair-work-track")].at(-1);
@@ -402,13 +392,13 @@ const { chromium } = require("playwright");
     assert.equal(await live.locator('.wm-pair-carousel-controls button').count(),0);
     await live.waitForFunction(()=>document.querySelector('.wm-pair-work-group:last-child')?.dataset.scrolling!=='true');
     if(await live.locator('.wm-pair-scrollbar').count()>1)assert.ok(await live.locator('.wm-pair-scrollbar').first().evaluate(el=>parseFloat(el.firstElementChild.style.left)<1),'scrolling the second group leaves the first indicator unchanged');
-    await live.getByRole("tab", { name: "비교 상세" }).click();
-    await live.evaluate(() => window.scrollTo(0, document.querySelector(".wm-pair-tabs").getBoundingClientRect().top + scrollY - 12));
+    await live.locator('.wm-pair-reading').waitFor();
+    await live.evaluate(() => window.scrollTo(0, document.querySelector(".wm-pair-details").getBoundingClientRect().top + scrollY - 12));
     await live.screenshot({ path: path.join(shots, "pair_comparison.png") });
     await live.locator('.wm-pair-reading').scrollIntoViewIfNeeded();
     await live.evaluate(() => window.scrollBy(0, 180));
     await live.locator('.wm-pair-reading').screenshot({ path: path.join(shots, 'pair_reading_subtitle.png') });
     await liveContext.close();
-    console.log(JSON.stringify({ ok: true, screenshots: shots, checks: ["real result screenshots", "single-line titles, overflow-only panning reaches final characters, stationary short titles, reduced-motion fallback", "two-tail shared bubble, all six badges, local Nanum Gothic", "summary/comparison tabs and keyboard", "all ten recommendations with free scrolling", "compact 160px slim 2:3 covers, without fixed peek ratios", "full-bleed portrait cover with title/metadata gradient overlay and separate quote", "real cover loading and failed-image fallback", "no vertical scrolling, full 80-character comments", "no arrows; touch swipe and keyboard navigation", "shared accurate scrollbar: active 1, idle .4, same cyan; hidden for zero/one item; independent groups", "removed ask genres", "unchanged fit selection with fluorescent outline and caption", "heart/count-only like buttons with accessible labels and 44px touch targets", "larger mobile titles and comments", "like persistence/rollback", "320/390/435px without overflow", "zero score and empty shared genre", "error state", "existing links preserved"] }, null, 2));
+    console.log(JSON.stringify({ ok: true, screenshots: shots, checks: ["real result screenshots", "single-line titles, overflow-only panning reaches final characters, stationary short titles, reduced-motion fallback", "two-tail shared bubble, all six badges, local Nanum Gothic", "all pair sections visible together", "all ten recommendations with free scrolling", "compact 160px slim 2:3 covers, without fixed peek ratios", "full-bleed portrait cover with title/metadata gradient overlay and separate quote", "real cover loading and failed-image fallback", "no vertical scrolling, full 80-character comments", "no arrows; touch swipe and keyboard navigation", "shared accurate scrollbar: active 1, idle .4, same cyan; hidden for zero/one item; independent groups", "removed ask genres", "unchanged fit selection with fluorescent outline and caption", "heart/count-only like buttons with accessible labels and 44px touch targets", "larger mobile titles and comments", "like persistence/rollback", "320/390/435px without overflow", "zero score and empty shared genre", "error state", "existing links preserved"] }, null, 2));
   } finally { await browser.close(); }
 })().catch((error) => { console.error(error); process.exitCode = 1; });

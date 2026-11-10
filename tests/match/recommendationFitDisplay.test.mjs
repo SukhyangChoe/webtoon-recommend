@@ -1,10 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { recommendationFitDisplayScore as display, recommendationFitPresentation as present } from '../../src/features/match/config/recommendationFitDisplay.mjs';
+import { recommendationFitDisplayScore as display, recommendationFitPresentation as present, FIT_SCORE_GUIDE_BANDS } from '../../src/features/match/config/recommendationFitDisplay.mjs';
 import { calculateRecommendationFit } from '../../src/features/match/engine/recommendationFitEngine.mjs';
 import { recommendationToTasteVector } from '../../src/features/match/engine/tasteVectorEngine.mjs';
 import { createRequire } from 'node:module';
 const seed = createRequire(import.meta.url)('../../src/features/match/data/questionSeed.v0.4.json');
+
+test('reader-facing fit guide covers every display score exactly once without changing conversion',()=>{
+  for(let score=0;score<=100;score++)assert.equal(FIT_SCORE_GUIDE_BANDS.filter(band=>score>=band.min&&score<=band.max).length,1);
+  assert.equal(FIT_SCORE_GUIDE_BANDS.find(band=>band.min===70).max,89);
+  assert.ok(FIT_SCORE_GUIDE_BANDS.every(band=>!/%|확률/.test(band.label)));
+});
 
 test('sqrt display uses explicit 0..1 engine units and rounds only the final display', () => {
   for (const [raw100, expected] of [[0,0],[25,50],[40,63],[50,71],[60,77],[65,81],[70,84],[80,89],[100,100]]) {

@@ -51,6 +51,7 @@ const { chromium } = require('playwright');
     const after = await store.getProfileRecommendations(owner.public_profile_id, owner.anonymous_id);
     assert.equal(JSON.stringify(after), JSON.stringify(before), 'rollback preserves the actual saved list');
 
+
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });
     await context.addCookies([{ name: 'wm_aid', value: owner.anonymous_id, url: base }]);
     const page = await context.newPage();
@@ -59,17 +60,21 @@ const { chromium } = require('playwright');
     await page.route('**/api/v1/match-events', route => route.fulfill({ status: 202, contentType: 'application/json', body: '{"accepted":true}' }));
     await page.route('**/api/v1/analytics/**', route => route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }));
     let saves = 0;
-    await page.route(`**/api/v1/results/${owner.public_profile_id}/recommendations`, route => {
-      if (route.request().method() !== 'PUT') return route.continue();
+    await page.route(`**/api/v1/results/${owner.public_profile_id}/recommendations/**`, route => {
+      assert.equal(route.request().method(),'PATCH');
       saves++;
-      assert.equal(JSON.stringify(route.request().postDataJSON().recommendations), JSON.stringify(before.map(item => ({ canonicalWebtoonId: item.canonicalWebtoonId, recommendationComment: item.recommendationComment }))));
+      assert.equal(route.request().postDataJSON().recommendations,undefined);
+      assert.equal(route.request().postDataJSON().recommendationComment,before[0].recommendationComment??'');
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: saved.items, recommendationInfluence: { workCount: saved.items.length, recommendationPercent: 80, testPercent: 20 } }) });
     });
     await page.goto(`${base}/match/result/${owner.public_profile_id}/recommendations`);
-    const covers = page.locator('.wm-selected-list img.wm-work-cover');
+    const covers = page.locator('.wm-library-grid img.wm-work-cover');
     await covers.first().waitFor();
     const sources = await covers.evaluateAll(items => items.map(img => img.getAttribute('src')));
-    await page.getByRole('button', { name: '추천작 저장', exact: true }).click();
+    await page.locator('.wm-library-grid button').first().click();
+    await page.getByRole('dialog',{name:'추천 한마디 수정'}).getByRole('button',{name:'저장',exact:true}).click();
+    await page.locator('.wm-recommendation-editor').waitFor({state:'detached'});
+    await page.locator('.wm-local-nav a').click();
     await page.waitForURL(`${base}/match/result/${owner.public_profile_id}`);
     await page.locator('.wm-result-screen').waitFor();
     assert.equal(await page.locator('.wm-floating-toast[role=status]').count(), 0);
@@ -79,13 +84,13 @@ const { chromium } = require('playwright');
     assert.equal(await covers.count(), before.length);
     assert.deepEqual(await covers.evaluateAll(items => items.map(img => img.getAttribute('src'))), sources, 'covers survive saving, returning to the result and reopening the manager');
     await covers.evaluateAll(items => Promise.all(items.map(img => img.decode())));
-    assert.equal(await page.locator('.wm-selected-list .wm-work-cover--empty').count(), 0);
+    assert.equal(await page.locator('.wm-library-grid .wm-work-cover--empty').count(), 0);
     // Deliverable screenshot is a fresh real server read, not the intercepted save state.
     await page.reload();
     await covers.first().waitFor();
     await covers.evaluateAll(items => Promise.all(items.map(img => img.decode())));
     await page.addStyleTag({ content: 'nextjs-portal { display:none !important; }' });
-    const card = page.locator('.wm-selected-list > li').first();
+    const card = page.locator('.wm-library-grid > li').first();
     await card.evaluate(el => window.scrollTo({ top: el.getBoundingClientRect().top + scrollY - 80, behavior: 'instant' }));
     await page.screenshot({ path: path.join(shots, 'saved_recommendation_real_cover.png') });
     assert.deepEqual(errors, []);

@@ -11,13 +11,13 @@ const {chromium}=require('playwright');
     await context.route('**/api/v1/**',route=>['GET','HEAD'].includes(route.request().method())?route.continue():route.fulfill({status:202,json:{ok:true}}));
     const page=await context.newPage(),errors=[];
     page.on('pageerror',error=>errors.push(error.message));
-    const routes=['/match','/match/result/xys7o3_7JlgZl91b','/match/c/mKOdmiLcE0JU/ranking','/match/c/mKOdmiLcE0JU/match/VIbseuqFQuk6RRDr?from=ranking','/match/result/xys7o3_7JlgZl91b/recommendations','/match/share/personal?profilePublicId=xys7o3_7JlgZl91b','/match/challenge/new','/match/work/wt_romance_ropan_019'];
+    const routes=['/match','/match/result/xys7o3_7JlgZl91b','/match/c/mKOdmiLcE0JU/ranking','/match/c/mKOdmiLcE0JU/match/VIbseuqFQuk6RRDr?from=ranking','/match/share/personal?profilePublicId=xys7o3_7JlgZl91b','/match/challenge/new','/match/work/wt_romance_ropan_019'];
     for(const route of routes){
       await page.goto(base+route);
       const search=page.getByRole('link',{name:'작품 검색',exact:true});await search.waitFor();
       if(route==='/match/result/xys7o3_7JlgZl91b')await page.locator('.wm-result-title-mark').waitFor();
       if(route.includes('/ranking'))await page.locator('.wm-relationship-heading').waitFor();
-      if(route.includes('/match/VI'))await page.locator('.wm-pair-tabs').waitFor();
+      if(route.includes('/match/VI'))await page.locator('.wm-pair-details').waitFor();
       if(route.includes('/work/')){await page.locator('.wm-work-action').waitFor();await page.getByRole('button',{name:'취향 테스트로 핏점수 확인하기',exact:true}).waitFor();}
       for(const width of [320,390,900]){
         await page.setViewportSize({width,height:844});await page.mouse.move(0,843);

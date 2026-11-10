@@ -12,7 +12,7 @@ const {chromium}=require('playwright'),postgres=require('postgres');
    viewerRole:role,viewerPublicProfileId:'newer-result-unrelated-to-old-snapshot-id',ownerNickname:'주인장',challengerNickname:'참여자',ownerGenreKey:'fantasy',challengerGenreKey:'murim',ownerTopGenres:[],challengerTopGenres:[],score:80,band:{label:'취향 잘 맞음'},sharedGenres:[],differentGenres:[],sharedTasteLabels:[],ownerRecommendations:Array.from({length:ownerCount},(_,i)=>item('owner',i)),challengerRecommendations:Array.from({length:guestCount},(_,i)=>item('challenger',i)),ownerRecommendedGenres:[],challengerRecommendedGenres:[],trustSentence:'함께 볼 작품',rank:1,entryCount:2
   }:{ok:true})}));
   for(const who of ['owner','challenger',null]){
-   role=who;await page.goto(base+'/match/c/check/match/pair');await page.getByRole('tab',{name:'궁합 요약',exact:true}).waitFor();
+   role=who;await page.goto(base+'/match/c/check/match/pair');await page.locator('.wm-pair-details').waitFor();
    assert.equal(await page.locator('.wm-pair-work-group').count(),who?1:2);
    assert.equal(await page.getByRole('heading',{name:'서로의 추천작',exact:true}).count(),who?0:1);
    assert.equal(await page.locator('.wm-pair-work-card').count(),who==='owner'?guestCount:who==='challenger'?ownerCount:ownerCount+guestCount);
@@ -21,7 +21,7 @@ const {chromium}=require('playwright'),postgres=require('postgres');
   for(const who of ['owner','challenger']){
    role=who;ownerCount=0;guestCount=0;await page.reload();await page.locator('.wm-pair-work-empty').waitFor();
    assert.equal(await page.locator('.wm-pair-work-group').count(),1,'an empty self group is hidden too');
-   for(const width of [320,390,435]){await page.setViewportSize({width,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.ok(await page.locator('.wm-pair-work-empty').evaluate(el=>{const r=el.getBoundingClientRect(),rank=document.querySelector('.wm-pair-rank').getBoundingClientRect();return getComputedStyle(el).borderTopWidth==='1px'&&r.bottom+15<=rank.top;}),'empty recommendations are visually separated from rank information');}
+   for(const width of [320,390,435]){await page.setViewportSize({width,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.ok(await page.locator('.wm-pair-work-empty').evaluate(el=>{const r=el.getBoundingClientRect(),about=document.querySelector('.wm-pair-about').getBoundingClientRect();return getComputedStyle(el).borderTopWidth==='1px'&&r.bottom+15<=about.top;}),'empty recommendations are visually separated from the result explanation');}
   }
   await context.close();
   const liveContext=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:2,reducedMotion:'reduce'}),live=await liveContext.newPage();
@@ -45,7 +45,7 @@ const {chromium}=require('playwright'),postgres=require('postgres');
   await group.evaluate(el=>scrollTo(0,el.getBoundingClientRect().top+scrollY-100));
   await group.locator('img.wm-work-cover').evaluateAll(images=>Promise.all(images.map(img=>img.decode().catch(()=>{}))));
   await live.addStyleTag({content:'nextjs-portal{display:none!important}'});
-  const clip=await group.evaluate(el=>{const r=el.getBoundingClientRect(),rank=document.querySelector('.wm-pair-rank').getBoundingClientRect();return{x:r.x,y:r.y-8,width:r.width,height:Math.min(innerHeight-r.y-110,rank.bottom-r.y+24)};});
+  const clip=await group.evaluate(el=>{const r=el.getBoundingClientRect(),about=document.querySelector('.wm-pair-about').getBoundingClientRect();return{x:r.x,y:r.y-8,width:r.width,height:Math.min(innerHeight-r.y-110,about.bottom-r.y+24)};});
   await live.screenshot({path:path.join(output,'other_recommendations_only.png'),clip});
   const ownerSql=postgres(process.env.WEBTOON_MATCH_DATABASE_URL,{max:1,prepare:false,ssl:'require',connect_timeout:4});
   let ownerIdentity;
@@ -59,7 +59,7 @@ const {chromium}=require('playwright'),postgres=require('postgres');
   if(!ownerView.challengerRecommendations.length){
     await live.locator('.wm-pair-work-empty').waitFor();
     await group.evaluate(el=>scrollTo(0,el.getBoundingClientRect().top+scrollY-100));await live.addStyleTag({content:'nextjs-portal{display:none!important}'});
-    const emptyClip=await group.evaluate(el=>{const r=el.getBoundingClientRect(),rank=document.querySelector('.wm-pair-rank').getBoundingClientRect();return{x:r.x,y:r.y-8,width:r.width,height:rank.bottom-r.y+24};});
+    const emptyClip=await group.evaluate(el=>{const r=el.getBoundingClientRect(),about=document.querySelector('.wm-pair-about').getBoundingClientRect();return{x:r.x,y:r.y-8,width:r.width,height:about.bottom-r.y+24};});
     await live.screenshot({path:path.join(output,'other_recommendations_empty.png'),clip:emptyClip});
   }
   await liveContext.close();console.log(JSON.stringify({ok:true,checks:['both participant roles hide self recommendations','counterpart name becomes the main heading','empty counterpart remains boxed','anonymous viewer keeps both groups','retakes cannot confuse snapshot IDs with identity','real API role and private caching','no data deletion or server writes'],artifacts:output}));

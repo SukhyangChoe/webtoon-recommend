@@ -8,17 +8,17 @@ import { toMatchApiFailure } from '@/features/match/server/apiErrors';
 
 export const dynamic = 'force-dynamic';
 type Context = { params: Promise<{ profilePublicId: string; canonicalWebtoonId: string }> };
-async function mutate(request: Request, context: Context, action: 'comment' | 'remove') {
+async function mutate(request: Request, context: Context, action: 'add' | 'comment' | 'remove') {
   try {
     const { profilePublicId, canonicalWebtoonId } = await context.params;
     const body = await readMatchJson(request) as { anonymousId?: string; recommendationComment?: string | null };
     if (!body || !body.anonymousId || !isAnonymousId(body.anonymousId) || !/^[\w-]{1,100}$/.test(canonicalWebtoonId)
-      || action === 'comment' && typeof body.recommendationComment !== 'string' && body.recommendationComment !== null) {
+      || action !== 'remove' && typeof body.recommendationComment !== 'string' && body.recommendationComment !== null) {
       return matchJson(request, { error: 'INVALID_REQUEST_BODY' }, { status: 400 });
     }
     const changed = await editProfileRecommendation({ publicProfileId: profilePublicId, anonymousId: body.anonymousId,
       canonicalWebtoonId, action, recommendationComment: body.recommendationComment });
-    if (action === 'remove') await refreshCompatibilityForProfile(changed.profileId);
+    if (action !== 'comment') await refreshCompatibilityForProfile(changed.profileId);
     return matchJson(request, { items: await getProfileRecommendations(profilePublicId, body.anonymousId) },
       { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
@@ -28,3 +28,4 @@ async function mutate(request: Request, context: Context, action: 'comment' | 'r
 }
 export const PATCH = (request: Request, context: Context) => mutate(request, context, 'comment');
 export const DELETE = (request: Request, context: Context) => mutate(request, context, 'remove');
+export const POST = (request: Request, context: Context) => mutate(request, context, 'add');

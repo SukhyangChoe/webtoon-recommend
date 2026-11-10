@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { buildCatalogRows, catalogDiff, importedDetailData } from '../../scripts/webtoon-catalog-import.mjs';
-import { rankedWorkLabels, safeOfficialWorkUrl, safeWorkReturnPath, sharedFitReasons, workArtStyleCards, workDetailHref, workStatusLabel } from '../../src/features/match/config/workDetailPresentation.mjs';
+import { rankedWorkLabels, safeOfficialWorkUrl, safeWorkReturnPath, sharedFitReasons, WORK_ART_STYLES, workArtStyleCards, workDetailHref, workStatusLabel } from '../../src/features/match/config/workDetailPresentation.mjs';
+import { WORK_FEATURE_READING_COPY, workFeatureReadingDescription } from '../../src/features/match/config/workFeatureReadingCopy.mjs';
 
 const work = (extra = {}) => ({canonicalWebtoonId:'work-1',title:'작품',platform:'플랫폼',mainGenre:'fantasy',recommendationEligible:false,...extra});
 test('coverage without a reviewed vector remains missing, never a synthetic zero vector',()=>{
@@ -67,6 +68,50 @@ test('feature cards omit unknown and zero values, retain label provenance and di
   assert.equal(workStatusLabel('hiatus'),'휴재');
   assert.equal(workStatusLabel('unverified'),null);
   assert.deepEqual(sharedFitReasons({tagScores:{b:1}},{tagScores:{a:3,b:2}},{a:'A',b:'B'},{}),[{key:'tagScores.b',label:'B',icon:'spark'}]);
+});
+test('expanded match explanations include up to five genuine overlaps, category and readable context, without duplicates',()=>{
+  const user={tagScores:{growth:3,relationship_bond:3,unused:0},contentAxisScores:{combat_growth:3},artStyleScores:{bright_vivid:3,detailed_rendering:3}};
+  const work={tagScores:{growth:3,relationship_bond:2,unused:3},contentAxisScores:{combat_growth:2},artStyleScores:{bright_vivid:2,detailed_rendering:2}};
+  const result=sharedFitReasons(user,work,{growth:'성장',relationship_bond:'동료',unused:'맞지 않는 요소'},{combat_growth:'전투 성장'},{limit:5,descriptions:true});
+  assert.equal(result.length,5);assert.equal(new Set(result.map(item=>item.label)).size,5);
+  assert.ok(result.every(item=>item.category&&item.description));assert.ok(!result.some(item=>item.label==='맞지 않는 요소'));
+  assert.match(result.find(item=>item.key==='tagScores.growth').description,/전투 방식/);
+});
+test('reading descriptions cover every displayed catalog feature without repeating the matching verdict',()=>{
+  for(const [file,axis] of [['tags/tagLabels.ts','tagScores'],['contentAxis/contentAxisLabels.ts','contentAxisScores']]) {
+    const labels=readFileSync(new URL(`../../src/data/${file}`,import.meta.url),'utf8');
+    const keys=[...labels.matchAll(/^\s+([a-z_]+): "/gm)].map(match=>match[1]);
+    assert.ok(keys.length>0);
+    for(const key of keys)assert.ok(WORK_FEATURE_READING_COPY[axis][key],`${axis}.${key} has a reading lens`);
+  }
+  for(const key of Object.keys(WORK_ART_STYLES)) {
+    assert.ok(workFeatureReadingDescription(`artStyleScores.${key}`,{}));
+  }
+  for(const axis of Object.values(WORK_FEATURE_READING_COPY))for(const copy of Object.values(axis)) {
+    assert.doesNotMatch(copy,/내 취향|겹쳐요|함께 찾았|공통으로 나타/);
+  }
+});
+test('the same matched tag gets a work-grounded reading lens without changing match selection',()=>{
+  const user={tagScores:{story_immersion:3,growth:3,humor_comedy:3}};
+  const martial={tagScores:{story_immersion:3,growth:3,humor_comedy:2},contentAxisScores:{martial_training:3}};
+  const system={...martial,contentAxisScores:{system_leveling:3}};
+  const explain=work=>sharedFitReasons(user,work,{story_immersion:'몰입감',growth:'성장',humor_comedy:'유쾌함'},{},{limit:5,descriptions:true});
+  const first=explain(martial),second=explain(system);
+  const selected=items=>items.map(({key,label,icon,category})=>({key,label,icon,category}));
+  assert.deepEqual(selected(first),selected(second));
+  assert.match(first.find(item=>item.label==='성장').description,/무공|수련/);
+  assert.match(second.find(item=>item.label==='성장').description,/레벨|능력/);
+  assert.match(first.find(item=>item.label==='몰입감').description,/이번에는 어떻게 넘어설까/);
+  assert.notEqual(workFeatureReadingDescription('tagScores.humor_comedy',{}),workFeatureReadingDescription('tagScores.humor_comedy',{tagScores:{relationship_bond:3}}));
+});
+test('weak, absent and unknown context cannot produce invented setting details or filler',()=>{
+  const generic=workFeatureReadingDescription('tagScores.growth',{});
+  for(const score of [0,.75,1.5,'3',NaN,Infinity]) {
+    assert.equal(workFeatureReadingDescription('tagScores.growth',{contentAxisScores:{martial_training:score}}),generic);
+  }
+  assert.doesNotMatch(generic,/무공|레벨|회귀/);
+  const [unknown]=sharedFitReasons({tagScores:{new_feature:3}},{tagScores:{new_feature:3}},{new_feature:'새 요소'},{},{descriptions:true});
+  assert.equal(unknown.label,'새 요소');assert.equal(unknown.description,null);
 });
 test('detail storage and API isolate presentation from source imports and private vectors',()=>{
   const migration=readFileSync(new URL('../../supabase/migrations/202610240001_webtoon_details.sql',import.meta.url),'utf8');

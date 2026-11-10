@@ -1,4 +1,5 @@
 import { safeWorkCoverUrl } from './recommendationPresentation.mjs';
+import { workFeatureReadingDescription } from './workFeatureReadingCopy.mjs';
 
 export const WORK_ART_STYLES = {
   sharp_powerful: { label: '날카롭고 강한 인상', category: '인물 표현', icon: 'pen' },
@@ -66,7 +67,7 @@ export function workStatusLabel(value) {
 }
 
 // Explain actual shared signals, not a generic work blurb masquerading as personalization.
-export function sharedFitReasons(userVector, recommendation, tagLabels, contentLabels) {
+export function sharedFitReasons(userVector, recommendation, tagLabels, contentLabels, { limit = 2, descriptions = false } = {}) {
   if (!userVector || !recommendation) return [];
   return [['tagScores', tagLabels], ['contentAxisScores', contentLabels], ['artStyleScores', Object.fromEntries(Object.entries(WORK_ART_STYLES).map(([key, value]) => [key, value.label]))]]
     .flatMap(([axis, labels]) => Object.entries(recommendation[axis] ?? {}).flatMap(([key, value]) => {
@@ -75,5 +76,8 @@ export function sharedFitReasons(userVector, recommendation, tagLabels, contentL
       return [{ key: `${axis}.${key}`, label: labels[key], icon: axis === 'artStyleScores' ? 'palette' : WORK_POINT_ICONS[key] ?? 'spark', strength: Math.min(value, user) }];
     }))
     .sort((a, b) => b.strength - a.strength || a.key.localeCompare(b.key))
-    .slice(0, 2).map(({ key, label, icon }) => ({ key, label, icon }));
+    .filter((item, index, all) => all.findIndex(other => other.label === item.label) === index)
+    .slice(0, limit).map(({ key, label, icon }) => ({ key, label, icon,
+      ...(descriptions ? { category: key.startsWith('artStyleScores.') ? '작화·분위기' : key.startsWith('contentAxisScores.') ? '소재·전개' : '이야기 취향',
+        description: workFeatureReadingDescription(key, recommendation) } : {}) }));
 }

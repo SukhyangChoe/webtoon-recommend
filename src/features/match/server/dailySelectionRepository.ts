@@ -2,7 +2,7 @@ import 'server-only';
 import { randomUUID } from 'node:crypto';
 import { getMatchDatabase } from './database';
 
-type Selection = { items: Array<{ canonicalWebtoonId: string; title: string; platform: string }> };
+type Selection = { items: Array<{ canonicalWebtoonId: string; title: string; platform: string; matchReason?: { version: number; summary: string; labels: string[] } }> };
 
 export function dailySelectionRepository(database = getMatchDatabase()) {
   return {

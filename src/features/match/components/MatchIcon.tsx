@@ -1,12 +1,15 @@
 import type { CSSProperties } from "react";
 
 const paths = {
+  plus: 'M12 5v14M5 12h14',
   edit: 'm4 16 11-11 4 4L8 20l-5 1 1-5ZM13 7l4 4',
   warning: 'M10.3 3.8 1.8 18.5A1.7 1.7 0 0 0 3.3 21h17.4a1.7 1.7 0 0 0 1.5-2.5L13.7 3.8a2 2 0 0 0-3.4 0ZM12 9v4m0 4h.01',
   search: 'M21 21l-5-5M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0',
   close: "M6 6l12 12M18 6L6 18",
   chevron: "M9 5l7 7-7 7",
+  arrowRight: "M4 12h16m-6-6 6 6-6 6",
   book: "M12 6v15M12 6C9 4 5 3.5 2 4v15c3-.5 7 0 10 2 3-2 7-2.5 10-2V4c-3-.5-7 0-10 2Z",
+  bookClosed: "M4 19V5a3 3 0 0 1 3-3h13v20H7a3 3 0 0 1 0-6h13",
   down: "M5 9l7 7 7-7",
   share: "M12 16V3m-5 5 5-5 5 5M5 12H3v9h18v-9h-2",
   download: "M12 3v12m-5-5 5 5 5-5M4 15v6h16v-6",

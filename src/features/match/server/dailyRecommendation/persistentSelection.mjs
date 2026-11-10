@@ -1,9 +1,10 @@
 import { dailySelectionKey } from './runtime02.mjs';
 import { dailyWindow } from './policy.mjs';
+import { publicDailyMatchReason } from './matchReason.mjs';
 
 // Increment when the persisted envelope changes, independently of the ranking policy.
 export function persistedSelectionKey(evidence, catalogRevision, questionSeed, now = new Date()) {
-  return dailySelectionKey({ persistenceVersion: 1, evidence, catalogRevision }, questionSeed, now);
+  return dailySelectionKey({ persistenceVersion: 2, evidence, catalogRevision }, questionSeed, now);
 }
 
 function publicIdentities(selection) {
@@ -14,7 +15,8 @@ function publicIdentities(selection) {
       || seen.has(item.canonicalWebtoonId)) throw Error('DAILY_ENGINE_RESPONSE_INVALID');
     seen.add(item.canonicalWebtoonId);
     // Never persist internal scores, input evidence or worker diagnostics.
-    return { canonicalWebtoonId: item.canonicalWebtoonId, title: item.title, platform: item.platform };
+    const matchReason = publicDailyMatchReason(item.matchReason);
+    return { canonicalWebtoonId: item.canonicalWebtoonId, title: item.title, platform: item.platform, ...(matchReason ? { matchReason } : {}) };
   }) };
 }
 
@@ -22,7 +24,7 @@ function publicIdentities(selection) {
  * The first request awaits computation (no serverless fire-and-forget). Others poll.
  * A crashed worker can be replaced after its bounded lease expires.
  */
-export async function resolvePersistedSelection({ repository, profileId, key, window, run, isCurrent, now = () => new Date() }) {
+export async function resolvePersistedSelection({ repository, profileId, key, window, run, isCurrent, onPersist = () => {}, now = () => new Date() }) {
   const saved = await repository.read(profileId, key);
   if (saved) return publicIdentities(saved);
   const token = await repository.claim(profileId, key, window.expiresAt);
@@ -33,6 +35,7 @@ export async function resolvePersistedSelection({ repository, profileId, key, wi
   try {
     const selection = publicIdentities(await run());
     if (dailyWindow(now()).day !== window.day || !await isCurrent()) return null;
+    onPersist();
     return await repository.complete(profileId, key, token, selection) ? selection : null;
   } catch (error) {
     // A different reader may currently occupy this process's engine lane.

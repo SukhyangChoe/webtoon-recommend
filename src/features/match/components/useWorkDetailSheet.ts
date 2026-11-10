@@ -172,6 +172,7 @@ export function useWorkDetailSheet(enabled: boolean, firstPanel: Panel = 'reason
       if (current === 'collapsed') open(firstPanelRef.current); else close();
     };
     const key = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return; // A nested modal handles Escape first.
       if (event.key === 'Escape') { if (drag) cancelDrag(); else close(); }
       if (current !== 'collapsed' && preview.contains(document.activeElement) && ['PageDown', 'PageUp', 'Home', 'End'].includes(event.key) && !(event.target instanceof HTMLElement && event.target.closest('input,textarea,select,[contenteditable]'))) {
         event.preventDefault();

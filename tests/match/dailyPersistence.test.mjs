@@ -94,3 +94,13 @@ test('malformed or duplicate identities fail closed and never poison the persist
     assert.equal(f.rows.get('owner').selection, undefined);
   }
 });
+test('bounded public match explanations persist with the three identities; raw diagnostic fields are stripped',async()=>{
+ const f=fixture(),reason={version:1,summary:'내 취향과 겹치는 성장 요소가 있어요.',labels:['성장']};
+ const value=await resolvePersistedSelection({...f.args(),run:async()=>({items:[{...selection.items[0],matchReason:{...reason,rawScore:.99,vector:[1]},rawEvidence:'private'}]})});
+ assert.deepEqual(value.items[0].matchReason,reason);
+ const reread=await resolvePersistedSelection({...f.args(),run:async()=>{throw Error('must not recompute');}});
+ assert.deepEqual(reread,value);assert.doesNotMatch(JSON.stringify(reread),/rawScore|rawEvidence|vector/);
+ for(const matchReason of [{version:1,summary:'x'.repeat(181),labels:[]},{version:1,summary:'요약',labels:Array(3).fill('성장')},{version:2,summary:'요약',labels:[]}]){
+  const fresh=fixture();await assert.rejects(resolvePersistedSelection({...fresh.args(),run:async()=>({items:[{...selection.items[0],matchReason}]})}),/DAILY_ENGINE_RESPONSE_INVALID/);
+ }
+});

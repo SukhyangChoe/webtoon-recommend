@@ -70,7 +70,7 @@ async function workFit(row: DetailRow, anonymousId?: string | null, read?: WorkR
     avoidanceWarnings: matchedAvoidanceWarnings(snapshot, row.recommendation, questionSeed) as Array<{ key: string; label: string }>,
     fit: comparable ? { ...presentation!, highlighted: fit.highlighted,
       profilePublicId: snapshot!.publicProfileId, nickname: snapshot!.profileDisplayName || null,
-      reasons: sharedFitReasons(snapshot!.tasteVector, row.recommendation, tagLabelMap, CONTENT_AXIS_LABELS) } : null,
+      reasons: sharedFitReasons(snapshot!.tasteVector, row.recommendation, tagLabelMap, CONTENT_AXIS_LABELS, { limit: 5, descriptions: true }) } : null,
   };
 }
 

@@ -11,7 +11,7 @@ const {chromium}=require('playwright');
   const works=(await(await page.request.get(`${base}/api/v1/webtoons/search?q=${encodeURIComponent('북검')}`)).json()).items;
   const work=works.find(item=>!original.some(saved=>saved.canonicalWebtoonId===item.canonicalWebtoonId));assert.ok(work);
   const ids=['11111111-1111-4111-8111-111111111111','22222222-2222-4222-8222-222222222222'];
-  let mode='manager',restores=0,failRestore=false,releaseRestore,holdRestore=true,submitted;
+  let mode='manager',restores=0,failRestore=false,releaseRestore,holdRestore=true,submitted,members=[...original],savedComment='이전에 저장해 둔 추천 코멘트';
   const pendingLikes=new Map();
   await context.route('**/api/v1/**',async route=>{
    const request=route.request(),url=new URL(request.url()),reply=(body,status=200)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});
@@ -20,11 +20,15 @@ const {chromium}=require('playwright');
     restores++;assert.ok(request.headers()['x-match-anonymous-id']);
     if(failRestore)return reply({error:'LOAD_FAILED'},500);
     if(holdRestore)await new Promise(resolve=>{releaseRestore=resolve;});
-    return reply({commentId:ids[0],recommendationComment:'이전에 저장해 둔 추천 코멘트'});
+    return reply({commentId:ids[0],recommendationComment:savedComment});
    }
    if(mode==='manager'&&url.pathname==='/api/v1/webtoons/search')return reply({items:[work]});
-   if(mode==='manager'&&request.method()==='PUT'){
-    submitted=request.postDataJSON().recommendations;return reply({error:'RECOMMENDATIONS_SAVE_FAILED'},500);
+   if(mode==='manager'&&['POST','PATCH','DELETE'].includes(request.method())){
+    assert.ok(url.pathname.endsWith('/recommendations/'+work.canonicalWebtoonId));
+    submitted=request.postDataJSON();assert.equal(submitted.recommendations,undefined);
+    if(request.method()==='DELETE')members=members.filter(item=>item.canonicalWebtoonId!==work.canonicalWebtoonId);
+    else{savedComment=submitted.recommendationComment;members=[...members.filter(item=>item.canonicalWebtoonId!==work.canonicalWebtoonId),{...work,recommendationComment:savedComment,commentId:ids[0],likeCount:3}];}
+    return reply({items:members});
    }
    if(mode==='pair'&&url.pathname.endsWith('/results/comments-pair')){
     const item=(id,body)=>({...work,commentId:id,recommendationComment:body,likeCount:0,likedByViewer:false,canViewerLike:true,recommenderPublicProfileId:id,tasteFitHighlighted:false});
@@ -38,25 +42,28 @@ const {chromium}=require('playwright');
   });
   const manager=`${base}/match/result/${profile}/recommendations`;
   await page.goto(manager);await page.getByRole('searchbox',{name:'추천할 웹툰 검색'}).fill('북검');await page.getByRole('button',{name:'검색',exact:true}).click();
-  await page.locator('.wm-search-results').getByRole('button',{name:'추가',exact:true}).click();
-  await page.getByRole('button',{name:'불러오는 중…',exact:true}).waitFor();assert.equal(await page.locator('.wm-save-tray button').isDisabled(),true);
-  releaseRestore();await page.locator('.wm-restored-comment').waitFor();
-  const selected=()=>page.locator('.wm-selected-list > li').filter({has:page.getByRole('heading',{name:work.title,exact:true})});
-  assert.equal(await selected().locator('textarea').inputValue(),'이전에 저장해 둔 추천 코멘트');
-  await selected().locator('textarea').fill('수정 중인 코멘트');await selected().getByRole('button',{name:`${work.title} 추천작에서 삭제`,exact:true}).click();
-  await page.getByRole('searchbox',{name:'추천할 웹툰 검색'}).click();await page.locator('.wm-search-results').getByRole('button',{name:'추가',exact:true}).click();assert.equal(await selected().locator('textarea').inputValue(),'수정 중인 코멘트');assert.equal(restores,1,'local removal/re-add preserves unsaved text without another request');
-  await selected().locator('textarea').fill('');await selected().getByRole('button',{name:`${work.title} 추천작에서 삭제`,exact:true}).click();await page.getByRole('searchbox',{name:'추천할 웹툰 검색'}).click();await page.locator('.wm-search-results').getByRole('button',{name:'추가',exact:true}).click();assert.equal(await selected().locator('textarea').inputValue(),'','explicit empty text is not replaced with an older comment');
-  await selected().locator('textarea').fill('그대로 저장할 수정 코멘트');await page.locator('.wm-save-tray button').click();await page.getByRole('alert').filter({hasText:'추천작을 저장하지 못했어요.'}).waitFor();assert.equal(submitted.find(item=>item.canonicalWebtoonId===work.canonicalWebtoonId).recommendationComment,'그대로 저장할 수정 코멘트');
-  holdRestore=false;failRestore=true;await page.goto(manager);await page.getByRole('searchbox',{name:'추천할 웹툰 검색'}).fill('북검');await page.getByRole('button',{name:'검색',exact:true}).click();await page.locator('.wm-search-results').getByRole('button',{name:'추가',exact:true}).click();await page.getByRole('alert').filter({hasText:'이전 코멘트를 확인하지 못했어요.'}).waitFor();assert.equal(await selected().count(),0,'restore failure cannot silently add an empty replacement');
-  failRestore=false;await page.locator('.wm-search-results').getByRole('button',{name:'추가',exact:true}).click();await page.locator('.wm-restored-comment').waitFor();
+  const editor=page.getByRole('dialog',{name:/추천작 담기|추천 한마디 수정/});
+  await page.getByRole('button',{name:work.title+' 추천작 담기',exact:true}).click();
+  await editor.waitFor();assert.equal(await editor.getByRole('button',{name:'저장',exact:true}).isDisabled(),true);
+  while(!releaseRestore)await page.waitForTimeout(10);holdRestore=false;releaseRestore();
+  await page.waitForFunction(()=>!document.querySelector('#wm-edit-comment').disabled);
+  assert.equal(await editor.locator('textarea').inputValue(),'이전에 저장해 둔 추천 코멘트');
+  await editor.locator('textarea').fill('수정한 코멘트');await editor.getByRole('button',{name:'저장',exact:true}).click();await editor.waitFor({state:'detached'});
+  assert.equal(submitted.recommendationComment,'수정한 코멘트');
+  const selected=()=>page.locator('.wm-library-grid').getByRole('button').filter({hasText:work.title});
+  await selected().click();await editor.locator('textarea').fill('');await editor.getByRole('button',{name:'저장',exact:true}).click();await editor.waitFor({state:'detached'});
+  await selected().click();assert.equal(await editor.locator('textarea').inputValue(),'');await editor.getByRole('button',{name:'추천작 삭제',exact:true}).click();await editor.getByRole('button',{name:'추천 목록에서 삭제',exact:true}).click();await editor.waitFor({state:'detached'});
+  failRestore=true;await page.getByRole('searchbox',{name:'추천할 웹툰 검색'}).click();await page.getByRole('button',{name:work.title+' 추천작 담기',exact:true}).click();await editor.getByRole('alert').waitFor();assert.equal(await selected().count(),0);
+  failRestore=false;await editor.getByRole('button',{name:'다시 불러오기'}).click();await page.waitForFunction(()=>!document.querySelector('#wm-edit-comment').disabled);assert.equal(await editor.locator('textarea').inputValue(),'','cleared comment stays blank after delete/re-add');
+  assert.ok(restores>=3,'initial load, failed re-add and successful retry all read preserved comments');
+  await editor.getByRole('button',{name:'닫기',exact:true}).click();
   mode='pair';await page.goto(base+'/match/c/comments-demo/match/comments-pair');await page.locator('.wm-recommendation-comment').first().waitFor();
   assert.equal(await page.locator('.wm-pair-work-artwork .wm-pair-work-like').count(),0);assert.equal(await page.locator('.wm-pair-work-like').count(),2);assert.equal(await page.locator('.wm-pair-work-card').filter({has:page.getByRole('heading',{name:'코멘트 없는 항목',exact:true})}).locator('.wm-pair-work-like,.wm-pair-work-like-count').count(),0);
   const a=page.locator(`[data-comment-id="${ids[0]}"] button`),b=page.locator(`[data-comment-id="${ids[1]}"] button`);
   await a.click();await b.click();assert.ok(await a.isDisabled()&&await b.isDisabled(),'requests are tracked per comment, not per work');
   await pendingLikes.get(ids[1])();await pendingLikes.get(ids[0])(500);await page.getByRole('alert').filter({hasText:'좋아요를 저장하지 못했어요.'}).waitFor();assert.equal(await a.getAttribute('aria-pressed'),'false');assert.equal(await b.getAttribute('aria-pressed'),'true','one failed comment does not undo another author’s like on the same work');
   for(const width of [320,390,435]){await page.setViewportSize({width,height:844});await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.ok(await page.locator('.wm-recommendation-comment').evaluateAll(items=>items.every(el=>el.querySelector('button,.wm-pair-work-like-count').getBoundingClientRect().top>=el.querySelector('blockquote').getBoundingClientRect().bottom)));}
-  mode='live';await page.setViewportSize({width:390,height:1400});await page.goto(`${base}/match/result/${profile}`);await page.locator('.wm-recommendation-comment').first().waitFor();
-  await page.evaluate(()=>document.fonts.ready);const card=page.locator('.wm-recommendation-card').filter({has:page.locator('.wm-recommendation-comment')}).first();await card.locator('img').evaluateAll(images=>Promise.all(images.map(img=>img.decode().catch(()=>{}))));await page.evaluate(()=>scrollTo(0,document.documentElement.scrollHeight));await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));await page.addStyleTag({content:'nextjs-portal{display:none!important}'});assert.ok(await card.evaluate(el=>el.getBoundingClientRect().bottom<document.querySelector('.wm-action-bar').getBoundingClientRect().top),'comment hearts remain visible above the fixed action bar');await card.screenshot({path:path.join(output,'recommendation_comment_heart_live.png')});
-  assert.deepEqual(errors,[]);console.log(JSON.stringify({ok:true,checks:['old comment automatically restored','pending restoration blocks save','unsaved edits and explicit blanks survive removal/re-add','safe restoration failure and retry','saved payload retains edited comment','comment-only heart; no blank-comment likes','same work, two authors: independent in-flight likes and rollback','320/390/435px layout','only real current service data in screenshot','all writes intercepted'],output},null,2));await context.close();
+  await page.setViewportSize({width:390,height:1100});await page.addStyleTag({content:'nextjs-portal{display:none!important}'});const card=page.locator('.wm-pair-work-card').filter({has:page.locator('.wm-recommendation-comment')}).first();await card.screenshot({path:path.join(output,'recommendation_comment_heart_fixture.png')});
+  assert.deepEqual(errors,[]);console.log(JSON.stringify({ok:true,checks:['old comment automatically restored','pending restoration blocks save','saved edits and explicit blanks survive deletion/re-add','safe restoration failure and retry','saved payload retains edited comment','comment-only heart; no blank-comment likes','same work, two authors: independent in-flight likes and rollback','320/390/435px layout','synthetic pair fixture screenshot','all writes intercepted'],output},null,2));await context.close();
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

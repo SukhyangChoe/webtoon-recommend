@@ -18,6 +18,7 @@ import { WorkTasteTestButton } from './WorkTasteTestButton';
 import { loadWorkResource } from '../api/loadWorkResource.mjs';
 import { recommendationFitDisplayScore } from '../config/recommendationFitDisplay.mjs';
 import { TasteAvoidanceWarning } from './TasteAvoidanceWarning';
+import { FitScoreGuide } from './FitScoreGuide';
 
 export function WorkDetailView({ id, returnTo }: { id: string; returnTo?: string }) {
   const router = useRouter();
@@ -34,7 +35,7 @@ export function WorkDetailView({ id, returnTo }: { id: string; returnTo?: string
   const [infoRevision, setInfoRevision] = useState(0);
   const workReady = Boolean(work && work.canonicalWebtoonId === id && !loading);
   const hasInfo = Boolean(work && (work.creators.length || work.platform || work.statusLabel || work.ageRating || work.artStyles.length || work.contentLabels.length));
-  const hasReading = Boolean(work && (work.introduction || work.fit?.reasons.length || work.avoidanceWarnings?.length || work.appreciationPoints.length || work.contentLabels.length));
+  const hasReading = Boolean(work && (work.introduction || work.fit?.reasons.length || work.avoidanceWarnings?.length || work.contentLabels.length));
   const { stage, compact, root, sheet, summary, header, body, info, footer, handle, openPanel, closePanel } = useWorkDetailSheet(!loading && Boolean(work), hasReading ? 'reasons' : 'info');
   const expanded = stage !== 'collapsed';
   const reasonTab = useRef<HTMLButtonElement>(null);
@@ -102,9 +103,9 @@ export function WorkDetailView({ id, returnTo }: { id: string; returnTo?: string
       <button ref={handle} type="button" className="wm-work-grab" disabled={!hasReading && !hasInfo} aria-controls="wm-work-reading" aria-expanded={expanded} aria-label={expanded ? '누르거나 아래로 드래그하여 작품 정보 접기' : '누르거나 위로 드래그하여 작품 소개 열기'}><span /></button>
       <div className="wm-work-header-clip" aria-hidden={!expanded} inert={!expanded}><div ref={header}>
         <header className="wm-work-sheet-header"><div><span className="wm-work-eyebrow">{work.mainGenreLabel}</span><h2 id="wm-work-detail-title" tabIndex={-1}>{compact ? '작품 상세' : work.title}</h2></div><button type="button" onClick={closePanel} aria-label="작품 정보 접기"><MatchIcon name="close" /></button></header>
-        {displayFitScore !== null ? <div className="wm-work-reading-fit" role="meter" aria-label="핏점수" aria-valuenow={displayFitScore} aria-valuetext={`${displayFitScore}점 / 100점`} aria-valuemin={0} aria-valuemax={100}>
-          <div className="wm-work-reading-fit-copy"><div><span className="wm-work-reading-fit-title"><WorkFeatureIcon name="spark" />핏 점수</span><span className="wm-work-reading-fit-caption">내 취향 × 이 작품</span></div><strong>{displayFitScore}<small>점</small></strong></div>
-          <div className="wm-work-fit-track" aria-hidden="true"><span style={{ width: `${displayFitScore}%` }} /></div>
+        {displayFitScore !== null ? <div className="wm-work-reading-fit">
+          <div className="wm-work-reading-fit-copy"><div><div className="wm-fit-label-row"><span className="wm-work-reading-fit-title"><WorkFeatureIcon name="spark" />핏 점수</span><FitScoreGuide /></div><span className="wm-work-reading-fit-caption">내 취향 × 이 작품</span></div><strong>{displayFitScore}<small>점</small></strong></div>
+          <div className="wm-work-fit-track" role="meter" aria-label="핏점수" aria-valuenow={displayFitScore} aria-valuetext={`${displayFitScore}점 / 100점`} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${displayFitScore}%` }} /></div>
         </div> : null}
         <div className="wm-work-tabs" role="tablist" aria-label="작품 상세 정보" onKeyDown={event => { if (['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) { event.preventDefault(); const next = !hasReading ? 'info' : !hasInfo ? 'reasons' : event.key === 'Home' ? 'reasons' : event.key === 'End' ? 'info' : stage === 'reasons' ? 'info' : 'reasons'; openPanel(next); (next === 'reasons' ? reasonTab : infoTab).current?.focus(); } }}>
           {hasReading ? <button ref={reasonTab} id="wm-work-reasons-tab" type="button" role="tab" aria-controls="wm-work-reading" aria-selected={stage === 'reasons'} tabIndex={stage === 'reasons' ? 0 : -1} onClick={() => openPanel('reasons')}>궁합 · 소개</button> : null}{hasInfo ? <button ref={infoTab} id="wm-work-info-tab" type="button" role="tab" aria-controls="wm-work-reading" aria-selected={stage === 'info'} tabIndex={stage === 'info' ? 0 : -1} onClick={() => openPanel('info')}>작품 정보</button> : null}
@@ -113,7 +114,7 @@ export function WorkDetailView({ id, returnTo }: { id: string; returnTo?: string
       <div ref={body} className="wm-work-dialog-body" tabIndex={expanded ? 0 : -1} aria-label="작품 상세 세로 스크롤">
     <div ref={summary} className="wm-work-summary" aria-hidden={expanded} inert={expanded}>
       <div className="wm-work-summary-heading"><div className="wm-work-summary-title"><span className="wm-work-eyebrow">{work.mainGenreLabel}</span><h1>{work.title}</h1>{credits ? <p className="wm-work-credits">{credits}</p> : null}</div>
-        {displayFitScore !== null ? <div className="wm-work-fit"><div><span><WorkFeatureIcon name="spark" />핏점수</span><strong>{displayFitScore}<small>점</small></strong></div><div className="wm-work-fit-track" role="meter" aria-label={fitLabel} aria-valuenow={displayFitScore} aria-valuetext={`${displayFitScore}점 / 100점`} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${displayFitScore}%` }} /></div></div> : fitLoading ? <div className="wm-work-fit wm-work-fit-pending" ><MatchLoading compact message="핏점수 확인 중…" /></div> : null}
+        {displayFitScore !== null ? <div className="wm-work-fit"><div><div className="wm-fit-label-row"><span><WorkFeatureIcon name="spark" />핏점수</span><FitScoreGuide /></div><strong>{displayFitScore}<small>점</small></strong></div><div className="wm-work-fit-track" role="meter" aria-label={fitLabel} aria-valuenow={displayFitScore} aria-valuetext={`${displayFitScore}점 / 100점`} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${displayFitScore}%` }} /></div></div> : fitLoading ? <div className="wm-work-fit wm-work-fit-pending" ><MatchLoading compact message="핏점수 확인 중…" /></div> : null}
       </div>
       <TasteAvoidanceWarning warnings={work.avoidanceWarnings ?? []} compact />
       {fitLoading && fitSlow ? <p className="wm-work-fit-note" role="status">핏점수 확인에 시간이 걸리고 있어요. 작품 정보는 먼저 볼 수 있어요.</p> : null}
@@ -124,10 +125,9 @@ export function WorkDetailView({ id, returnTo }: { id: string; returnTo?: string
         <TasteAvoidanceWarning warnings={work.avoidanceWarnings ?? []} />
         {compact ? <h2 className="wm-work-flow-title">{work.title}</h2> : null}
         {hasReading ? <div className="wm-work-sheet-page" id="wm-work-reasons" hidden={stage === 'info'}>
-          {work.fit?.reasons.length ? <section className="wm-work-reasons"><h3>이런 점이 잘 맞아요</h3>{work.fit.reasons.map(item => <div className="wm-work-reason" key={item.key}><span><WorkFeatureIcon name={item.icon} /></span><strong>{item.label}</strong></div>)}</section> : null}
           {work.introduction ? <section className="wm-work-section"><h3>{work.introductionKind === 'official' ? '작품 소개' : '어떤 작품인가요?'}</h3><p>{work.introduction}</p></section> : null}
           {work.contentLabels.length ? <div className="wm-work-tags">{work.contentLabels.map(item => <span key={item.key}>{item.label}</span>)}</div> : null}
-          {work.appreciationPoints.length ? <section className="wm-work-section wm-work-points"><h3>감상 포인트</h3><ul>{work.appreciationPoints.map(item => <li key={item.key}><WorkFeatureIcon name={item.icon} /><strong>{item.label}</strong></li>)}</ul></section> : null}
+          {work.fit?.reasons.length ? <section className="wm-work-reasons"><h3>이런 점이 잘 맞아요</h3>{work.fit.reasons.map(item => <div className="wm-work-reason" key={item.key}><span><WorkFeatureIcon name={item.icon} /></span><div>{item.category ? <small>{item.category}</small> : null}<strong>{item.label}</strong>{item.description ? <p>{item.description}</p> : null}</div></div>)}</section> : null}
         </div> : null}
         {hasInfo ? <section ref={info} className="wm-work-sheet-page wm-work-info" id="wm-work-info" hidden={stage !== 'info'}>
           <h3 tabIndex={-1}>작품 정보</h3>

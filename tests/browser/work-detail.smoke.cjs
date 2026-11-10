@@ -60,7 +60,7 @@ const postgres = require('postgres');
     assert.equal((await page.request.get(`${base}/api/v1/webtoons/does-not-exist`)).status(),404);
 
     await page.goto(base+pairPath);
-    await page.getByRole('tab',{name:'궁합 요약',exact:true}).waitFor();
+    await page.locator('.wm-pair-details').waitFor();
     await page.getByRole('link',{name:first.title,exact:true}).first().click();
     await page.waitForURL(/\/match\/work\//);
     await page.getByRole('heading',{name:first.title,exact:true,level:1}).waitFor();
@@ -68,7 +68,7 @@ const postgres = require('postgres');
     await page.getByRole('meter',{name:'핏점수',exact:true}).waitFor();
     await page.getByRole('button',{name:'이전 화면으로 돌아가기',exact:true}).click();
     await page.waitForURL(base+pairPath);
-    await page.getByRole('tab',{name:'궁합 요약',exact:true}).waitFor();
+    await page.locator('.wm-pair-details').waitFor();
     const previousFetches=detailFetches;
     await page.getByRole('link',{name:first.title,exact:true}).first().click();
     await page.waitForURL(/\/match\/work\//);
@@ -76,7 +76,7 @@ const postgres = require('postgres');
     assert.ok(detailFetches>previousFetches,'reopening the same work fetches fresh viewer/work data instead of restoring a cached score');
     await page.getByRole('button',{name:'이전 화면으로 돌아가기'}).click();
     await page.waitForURL(base+pairPath);
-    await page.getByRole('tab',{name:'궁합 요약',exact:true}).waitFor();
+    await page.locator('.wm-pair-details').waitFor();
     const pairTrack=page.locator('.wm-pair-work-track').first();
     if(await pairTrack.locator(':scope > li').count()>1){
       await pairTrack.focus();await page.keyboard.press('ArrowRight');

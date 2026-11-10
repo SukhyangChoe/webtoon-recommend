@@ -14,6 +14,7 @@ import "./insight-ui.css";
 import "./daily-picks-ui.css";
 import "./avoidance-ui.css";
 import "./share-ui.css";
+import "./manager-ui.css";
 import { Suspense, type CSSProperties } from "react";
 import { MatchScreenHeader } from "@/features/match/components/MatchScreenHeader";
 import { MATCH_UI_THEME } from "@/features/match/config/uiTheme.mjs";

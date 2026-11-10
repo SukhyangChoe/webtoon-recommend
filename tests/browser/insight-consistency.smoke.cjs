@@ -57,7 +57,7 @@ const {chromium}=require('playwright');
       assert.deepEqual(await summaryStyle(),summary,`same summary family at ${width}px`);await fits('.wm-taste-summary');await labelsAboveValues();
       assert.equal(await page.locator('.wm-pair-row-icon').count(),0,'oversized boxed icons removed');
       assert.equal(await page.locator('.wm-pair-labels .wm-taste-icon').count(),3,'real taste values reuse personal pictograms');
-      await page.getByRole('tab',{name:'비교 상세',exact:true}).click();
+      await page.locator('.wm-pair-reading').waitFor();
       assert.deepEqual(await storyStyle(),story,`same editorial hierarchy at ${width}px`);await fits('.wm-story-card');await fits('.wm-pair-comparison-card');
       assert.equal(await page.getByRole('heading',{name:'서로 다른 장르',exact:true}).count(),0);
     }
@@ -78,7 +78,7 @@ const {chromium}=require('playwright');
     if(entry)pairId=entry.resultId;
     await live.goto(base+`/match/c/mKOdmiLcE0JU/match/${encodeURIComponent(pairId)}`);await live.locator('.wm-pair-common').waitFor();await live.evaluate(()=>document.fonts.ready);await live.addStyleTag({content:'nextjs-portal{display:none!important}'});
     await live.locator('.wm-pair-common').screenshot({path:path.join(output,'pair_taste_summary_live.png')});
-    await live.getByRole('tab',{name:'비교 상세',exact:true}).click();await live.locator('.wm-pair-reading').screenshot({path:path.join(output,'pair_story_unified_live.png')});
+    await live.locator('.wm-pair-reading').waitFor();await live.locator('.wm-pair-reading').screenshot({path:path.join(output,'pair_story_unified_live.png')});
     await liveContext.close();
     console.log(JSON.stringify({ok:true,output,checks:['same summary labels/chips across both pages','same title/eyebrow/body/subtitle/card styling','320/375/390/435/540/900px','labels above full-width values at every viewport','neutral grey avoidance retained','shared taste pictograms','no clipping','no extra difference card','real-data captures only','all data writes blocked']}));
   }finally{await browser.close();}

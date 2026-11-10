@@ -50,7 +50,7 @@ const postgres=require('postgres');
    await page.setViewportSize({width:390,height:844});
    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
    await page.addStyleTag({content:'nextjs-portal{display:none!important}'});await page.screenshot({path:path.join(out,'work_fit_collapsed_actual.png')});
-   await page.locator('.wm-work-open').click();const badge=page.locator('.wm-work-reading-fit');await badge.waitFor();
+   await page.locator('.wm-work-open').click();const badge=page.locator('.wm-work-reading-fit [role=meter]');await badge.waitFor();
    assert.equal(await badge.getAttribute('aria-valuenow'),score);
    const fonts=await badge.evaluate(el=>{const body=getComputedStyle(document.querySelector('.wm-work-section p')),label=getComputedStyle(el.querySelector('.wm-work-reading-fit-title')),number=getComputedStyle(el.querySelector('strong'));return {body:body.fontFamily,label:label.fontFamily,number:number.fontFamily,labelWeight:label.fontWeight,numberWeight:number.fontWeight,labelSize:label.fontSize,numberSize:number.fontSize,numberTracking:number.letterSpacing};});
    assert.equal(fonts.label,fonts.body);assert.equal(fonts.number,fonts.body);

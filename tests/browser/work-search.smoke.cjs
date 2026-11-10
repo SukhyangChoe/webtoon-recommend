@@ -87,7 +87,7 @@ const {chromium}=require('playwright');
   }
   await page.waitForURL('**/match/test/avoidance');await page.locator('.match-ranked-card').first().click();await page.getByRole('button',{name:'결과 만들기',exact:true}).click();
   await page.waitForURL('**/match/work/search-work-22?*');
-  await page.getByRole('button',{name:'나중에 할게요',exact:true}).click();
+  await page.getByRole('button',{name:'추천작 등록 안내 닫기',exact:true}).click();
   const meter=page.getByRole('meter',{name:'핏점수',exact:true});await meter.waitFor();assert.equal(await meter.getAttribute('aria-valuenow'),'88');assert.equal(snapshots,1);
   await page.locator('.wm-work-open').click();await page.locator('.wm-work-reason').getByText('복수',{exact:true}).waitFor();
   await page.getByRole('button',{name:'작품 정보 접기',exact:true}).click();
