@@ -3,6 +3,7 @@ import { matchJson } from '@/features/match/server/apiResponse';
 import { getPublicTasteResultForViewer, saveAccuracyFeedback, type AccuracyFeedback } from "@/features/match/server/resultStore";
 import { toMatchApiFailure } from "@/features/match/server/apiErrors";
 import { isAnonymousId } from "@/features/match/storage/anonymousIdentity.mjs";
+import { withReaderComic } from '@/features/match/server/readerComics.mjs';
 
 export const dynamic = "force-dynamic";
 const FEEDBACK = new Set<AccuracyFeedback>(["almost_exact", "mostly_right", "slightly_off", "very_off"]);
@@ -13,7 +14,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ prof
     const anonymousId = new URL(request.url).searchParams.get("anonymousId");
     const result = await getPublicTasteResultForViewer(profilePublicId, anonymousId && isAnonymousId(anonymousId) ? anonymousId.toLowerCase() : null);
     if (!result) return matchJson(request, { error: "RESULT_NOT_FOUND" }, { status: 404 });
-    return matchJson(request, result);
+    return matchJson(request, { ...result, readerExplanation: withReaderComic(result.readerExplanation) });
   } catch (error) {
     const failure = toMatchApiFailure(error, "RESULT_LOAD_FAILED");
     return matchJson(request, { error: failure.error }, { status: failure.status });

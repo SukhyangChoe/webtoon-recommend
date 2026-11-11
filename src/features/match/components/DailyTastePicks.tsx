@@ -12,8 +12,9 @@ import { readDailyPicksResponse } from '../api/dailyPicksProgress.mjs';
 import { useDailyPickProgress, type DailyPickProgressStage } from './useDailyPickProgress';
 import { isDailyRecalculationStage } from '../config/dailyPicksPresentation.mjs';
 import { safeOfficialWorkUrl } from '../config/workDetailPresentation.mjs';
+import { useDailyPickSheet } from './useDailyPickSheet';
 
-type DailyPick = { canonicalWebtoonId: string; title: string; mainGenreLabel: string; platform: string; coverUrl: string | null; officialUrl?: string | null; avoidanceWarnings?: AvoidanceWarning[]; matchReason?: { version: number; summary: string; labels: string[] } };
+type DailyPick = { canonicalWebtoonId: string; title: string; mainGenreLabel: string; platform: string; coverUrl: string | null; officialUrl?: string | null; avoidanceWarnings?: AvoidanceWarning[]; matchReason?: { version: number; summary: string; labels: string[]; referenceWork?: {canonicalWebtoonId:string;title:string;labels:string[]} } };
 type DailyPicks = { publicProfileId: string; mode: 'personalized' | 'preparing'; selectionVersion: string; expiresAt?: string; retryAfterMs?: number; items: DailyPick[] };
 const OPEN_HASH = '#daily-picks';
 const CHANGE_EVENT = 'wm-daily-picks-change';
@@ -30,6 +31,7 @@ export function DailyTastePicks({ publicProfileId, verified }: { publicProfileId
   const [retry, setRetry] = useState(0);
   const [loadedCovers,setLoadedCovers] = useState<string[]>([]);
   const dialog = useRef<HTMLDialogElement>(null);
+  const sheetBody = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const pushedEntry = useRef(false);
   const loading = useRef(false);
@@ -140,6 +142,7 @@ export function DailyTastePicks({ publicProfileId, verified }: { publicProfileId
     const previousOverflow = document.body.style.overflow;
     const returnFocus = trigger.current;
     element.showModal();
+    element.querySelector<HTMLButtonElement>('.wm-daily-close')?.focus({preventScroll:true});
     document.body.style.overflow = 'hidden';
     try {
       const saved = JSON.parse(sessionStorage.getItem(storageKey) ?? 'null');
@@ -157,8 +160,8 @@ export function DailyTastePicks({ publicProfileId, verified }: { publicProfileId
   }, [open, storageKey]);
 
   useLayoutEffect(() => {
-    if (open && data && dialog.current && restoreScroll.current !== null) {
-      const element = dialog.current, sheetY = restoreScroll.current, pageY = restorePage.current;
+    if (open && data && sheetBody.current && restoreScroll.current !== null) {
+      const element = sheetBody.current, sheetY = restoreScroll.current, pageY = restorePage.current;
       let frame = 0;
       const until = performance.now() + 400;
       const cancel = () => { cancelAnimationFrame(frame); restoreScroll.current = null; restorePage.current = null; };
@@ -176,13 +179,15 @@ export function DailyTastePicks({ publicProfileId, verified }: { publicProfileId
     }
   }, [open, data]);
 
+  const {handle:sheetHandle,expanded:sheetExpanded,close} = useDailyPickSheet(open,dialog,commitClose);
+
   function show() {
     if (open) return;
     pushedEntry.current = true;
     window.history.pushState(null, '', `${location.pathname}${location.search}${OPEN_HASH}`);
     window.dispatchEvent(new Event(CHANGE_EVENT));
   }
-  function close() {
+  function commitClose() {
     if (pushedEntry.current) { pushedEntry.current = false; window.history.back(); }
     else {
       window.history.replaceState(null, '', location.pathname + location.search);
@@ -190,7 +195,7 @@ export function DailyTastePicks({ publicProfileId, verified }: { publicProfileId
     }
   }
   function rememberScroll() {
-    try { sessionStorage.setItem(storageKey, JSON.stringify({ at: Date.now(), pageY: window.scrollY, sheetY: dialog.current?.scrollTop ?? 0 })); } catch { /* Optional storage. */ }
+    try { sessionStorage.setItem(storageKey, JSON.stringify({ at: Date.now(), pageY: window.scrollY, sheetY: sheetBody.current?.scrollTop ?? 0 })); } catch { /* Optional storage. */ }
   }
   function coverLoaded(key: string) {
     setLoadedCovers(previous => previous.includes(key) ? previous : [...previous, key]);
@@ -216,22 +221,24 @@ export function DailyTastePicks({ publicProfileId, verified }: { publicProfileId
       const rect = event.currentTarget.getBoundingClientRect();
       if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) close();
     }}>
-      <div className="wm-daily-sheet-grab" aria-hidden="true" />
+      <button ref={sheetHandle} className="wm-daily-sheet-grab" type="button" aria-label="취향작 팝업 크기 조절" aria-expanded={sheetExpanded}><span /></button>
       <header className="wm-daily-sheet-heading"><div><p className="wm-daily-eyebrow">나를 위한 맞춤 추천</p><h2 id={titleId}>오늘의 취향작</h2></div><button className="wm-daily-close" type="button" onClick={close} aria-label="오늘의 취향작 닫기" autoFocus><MatchIcon name="close" /></button></header>
+      <div ref={sheetBody} className="wm-daily-sheet-body" tabIndex={0} aria-label="오늘의 취향작 목록 스크롤">
       {error ? <div className="wm-daily-state" role="alert"><p>{error}</p><button type="button" onClick={() => { pendingSince.current = null; setRetry(value => value + 1); }}>다시 불러오기</button></div> : !data || data.mode === 'preparing' ? <div className="wm-daily-state" aria-busy="true">{showProgress ? <MatchLoading message={loadingMessage} /> : <div className="wm-daily-quiet-placeholder" aria-hidden="true">{[0,1,2].map(index=><span key={index}><i /><span><i /><i /></span></span>)}</div>}</div> : !items.length ? <p className="wm-daily-state">현재 보여드릴 수 있는 작품을 준비 중이에요.</p> : <ol className="wm-daily-list">{items.map(item => <li key={item.canonicalWebtoonId}>
         <div className="wm-daily-work">
-          <WorkCover item={item} sizes="(max-width: 360px) 64px, 82px" />
+          <WorkDetailLink id={item.canonicalWebtoonId} returnTo={`/match/result/${encodeURIComponent(publicProfileId)}${OPEN_HASH}`} onOpen={rememberScroll} className="wm-daily-cover-link" label={`${item.title} 표지로 더 알아보기`}><WorkCover item={item} sizes="(max-width: 360px) 76px, 94px" /></WorkDetailLink>
           <div className="wm-daily-work-copy">
-            <small>{item.platform}</small><h3 title={item.title}>{item.title}</h3><span>{item.mainGenreLabel}</span>
+            <small>{item.platform}</small><h3 title={item.title}><WorkDetailLink id={item.canonicalWebtoonId} returnTo={`/match/result/${encodeURIComponent(publicProfileId)}${OPEN_HASH}`} onOpen={rememberScroll} label={`${item.title} 제목으로 더 알아보기`}>{item.title}</WorkDetailLink></h3><span>{item.mainGenreLabel}</span>
             <WorkDetailLink id={item.canonicalWebtoonId} returnTo={`/match/result/${encodeURIComponent(publicProfileId)}${OPEN_HASH}`} onOpen={rememberScroll} className="wm-daily-detail" label={`${item.title} 더 알아보기`}>더 알아보기<MatchIcon name="arrowRight" /></WorkDetailLink>
           </div>
           <DailyPickWatch item={item} />
         </div>
-        {item.matchReason?.summary ? <div className="wm-daily-match-reason"><p><span aria-hidden="true">✦</span> 나와 맞는 부분</p><span>{item.matchReason.summary}</span></div> : null}
+        {item.matchReason?.summary ? <div className="wm-daily-match-reason"><p><span aria-hidden="true">✦</span> 나와 맞는 부분</p>{item.matchReason.referenceWork ? <WorkDetailLink id={item.matchReason.referenceWork.canonicalWebtoonId} returnTo={`/match/result/${encodeURIComponent(publicProfileId)}${OPEN_HASH}`} onOpen={rememberScroll} className="wm-daily-reference" label={`내 추천작 ${item.matchReason.referenceWork.title} 더 알아보기`}><MatchIcon name="book" /><span>내 추천작 <strong>{item.matchReason.referenceWork.title}</strong>와 닮았어요</span><MatchIcon name="chevron" /></WorkDetailLink> : null}<span>{item.matchReason.summary}</span></div> : null}
         <TasteAvoidanceWarning warnings={item.avoidanceWarnings ?? []} compact />
       </li>)}</ol>}
       <p className="wm-daily-sheet-note">매일 자정, 한국시간 기준으로 새로 골라요. 취향 답변이나 내 추천작을 바꾸면 바로 반영돼요.</p>
       <button className="wm-daily-return" type="button" onClick={close}>내 결과로 돌아가기</button>
+      </div>
     </dialog>
   </section>;
 }

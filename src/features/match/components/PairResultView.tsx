@@ -35,6 +35,7 @@ type RecommendedWebtoon = {
   recommenderPublicProfileId: string | null;
   canViewerLike: boolean;
   tasteFitHighlighted: boolean;
+  tasteFitWorthTrying?: boolean;
   coverUrl?: string | null;
   fitTargetPublicProfileId?: string | null;
 };
@@ -177,10 +178,9 @@ function RecommendationCarousel({ nickname, items, mainHeading = false, likeSavi
 }) {
   const { listRef, railKey, prepareNavigation, onKeyDown } = useRecommendationCarousel(items.length, `pair:${items[0]?.recommenderPublicProfileId ?? nickname}:${items[0]?.fitTargetPublicProfileId ?? ''}`);
   const { containerRef, barRef, thumbRef } = useHorizontalScrollIndicator(listRef, items.length);
-  const highlightedCount = items.filter((item) => item.tasteFitHighlighted).length;
   const Heading = mainHeading ? 'h2' : 'h3';
 
-  return <div ref={containerRef} className="wm-panel wm-pair-work-group"><header><div><Heading><MatchIcon name="book" /><span>{nickname}님의 추천</span><small>{items.length}</small></Heading>{highlightedCount ? <span className="wm-pair-fit-note">상대 취향에 맞는 작품 {highlightedCount}</span> : null}</div></header>{items.length ? <ol ref={listRef} data-recommendation-rail={railKey} className={`wm-pair-work-track${items.length === 1 ? " is-single" : ""}`} tabIndex={items.length > 1 ? 0 : undefined} aria-label={`${nickname}님의 추천작 목록`} onKeyDown={onKeyDown}>{items.map((item, itemIndex) => {
+  return <div ref={containerRef} className="wm-panel wm-pair-work-group"><header><div><Heading><MatchIcon name="book" /><span>{nickname}님의 추천</span><small>{items.length}</small></Heading></div></header>{items.length ? <ol ref={listRef} data-recommendation-rail={railKey} className={`wm-pair-work-track${items.length === 1 ? " is-single" : ""}`} tabIndex={items.length > 1 ? 0 : undefined} aria-label={`${nickname}님의 추천작 목록`} onKeyDown={onKeyDown}>{items.map((item, itemIndex) => {
       return <li className="wm-pair-work-slide" key={item.canonicalWebtoonId} aria-label={`추천작 ${itemIndex + 1} / ${items.length}`}><RecommendationCard item={item} returnTo={typeof window === 'undefined' ? '/match' : window.location.pathname + window.location.search} onOpen={prepareNavigation} likeAction={item.canViewerLike && item.commentId ? { liked: item.likedByViewer, saving: likeSavingKey.has(item.commentId), onToggle: () => void onToggleLike(item) } : undefined} /></li>;
     })}</ol> : <div className="wm-pair-work-empty"><p className="wm-pair-muted">등록한 추천작이 없어요.</p></div>}{items.length > 1 ? <div ref={barRef} className="wm-rail-scrollbar wm-pair-scrollbar" aria-hidden="true"><span ref={thumbRef} /></div> : null}</div>;
 }

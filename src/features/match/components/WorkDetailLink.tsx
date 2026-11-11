@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { workDetailHref } from '../config/workDetailPresentation.mjs';
-import { clearWorkReturn, writeWorkReturn } from '../storage/workReturnStorage.mjs';
+import { clearWorkReturn, rememberManagerWorkReturn, writeWorkReturn } from '../storage/workReturnStorage.mjs';
 
 export function WorkDetailLink({ id, returnTo, children, className, label, newTab = false, onOpen }: {
   id: string; returnTo: string; children: ReactNode;
@@ -15,6 +15,7 @@ export function WorkDetailLink({ id, returnTo, children, className, label, newTa
     onClick={event => {
       if (event.defaultPrevented || newTab || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       onOpen?.();
+      rememberManagerWorkReturn(href);
       try {
         sessionStorage.setItem('wm-work-entry', JSON.stringify({ href, at: Date.now() }));
         const rail=event.currentTarget.closest<HTMLOListElement>('[data-recommendation-rail]');

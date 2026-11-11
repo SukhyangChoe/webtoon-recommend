@@ -2,10 +2,14 @@ import 'server-only';
 import { randomUUID } from 'node:crypto';
 import { getMatchDatabase } from './database';
 
-type Selection = { items: Array<{ canonicalWebtoonId: string; title: string; platform: string; matchReason?: { version: number; summary: string; labels: string[] } }> };
+type Selection = { items: Array<{ canonicalWebtoonId: string; title: string; platform: string; matchReason?: { version: number; summary: string; labels: string[]; referenceWork?: {canonicalWebtoonId:string;title:string;labels:string[]} } }> };
 
 export function dailySelectionRepository(database = getMatchDatabase()) {
   return {
+    async updateExplanations(profileId:string,key:string,selection:Selection){
+      await database`update public.match_daily_selections set selected_items=${database.json(selection.items)}
+        where profile_id=${profileId}::uuid and request_key=${key} and expires_at>clock_timestamp() and selected_items is not null`;
+    },
     async read(profileId: string, key: string): Promise<Selection | null> {
       const [row] = await database<{ selected_items: Selection['items'] }[]>`
         select selected_items from public.match_daily_selections

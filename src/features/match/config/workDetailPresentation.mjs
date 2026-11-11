@@ -66,8 +66,20 @@ export function workStatusLabel(value) {
   return ({ ongoing: '연재 중', completed: '완결', hiatus: '휴재', season_break: '시즌 휴재' })[value] ?? null;
 }
 
+export function workIsWellMade(metadata) {
+  return typeof metadata?.qualityScore === 'number' && Number.isFinite(metadata.qualityScore)
+    && metadata.qualityScore >= 4.5 && metadata.qualityBand === 5;
+}
+
+export function workFitAxes(comparableAxes, displayScore) {
+  return [
+    ['typeScores','세부 취향'], ['tagScores','이야기 요소'],
+    ['contentAxisScores','소재·전개'], ['artStyleScores','작화·분위기'],
+  ].map(([key,label])=>({key,label,score:displayScore(comparableAxes?.find(axis=>axis.axisKey===key)?.similarity)}));
+}
+
 // Explain actual shared signals, not a generic work blurb masquerading as personalization.
-export function sharedFitReasons(userVector, recommendation, tagLabels, contentLabels, { limit = 2, descriptions = false } = {}) {
+export function sharedFitReasons(userVector, recommendation, tagLabels, contentLabels, { limit = 2, descriptions = false, concise = false } = {}) {
   if (!userVector || !recommendation) return [];
   return [['tagScores', tagLabels], ['contentAxisScores', contentLabels], ['artStyleScores', Object.fromEntries(Object.entries(WORK_ART_STYLES).map(([key, value]) => [key, value.label]))]]
     .flatMap(([axis, labels]) => Object.entries(recommendation[axis] ?? {}).flatMap(([key, value]) => {
@@ -79,5 +91,11 @@ export function sharedFitReasons(userVector, recommendation, tagLabels, contentL
     .filter((item, index, all) => all.findIndex(other => other.label === item.label) === index)
     .slice(0, limit).map(({ key, label, icon }) => ({ key, label, icon,
       ...(descriptions ? { category: key.startsWith('artStyleScores.') ? '작화·분위기' : key.startsWith('contentAxisScores.') ? '소재·전개' : '이야기 취향',
-        description: workFeatureReadingDescription(key, recommendation) } : {}) }));
+        description: concise ? shortReadingDescription(workFeatureReadingDescription(key, recommendation)) : workFeatureReadingDescription(key, recommendation) } : {}) }));
+}
+
+function shortReadingDescription(copy) {
+  if (!copy) return null;
+  const end=copy.indexOf('. ');
+  return end===-1?copy:copy.slice(0,end+1);
 }

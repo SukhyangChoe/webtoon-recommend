@@ -1,0 +1,1310 @@
+{
+  "fantasy.growth": {
+    "src": "/match/reader-comics/v1/fantasy-growth.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "새로운 일을 배우면 어제 막혔던 부분부터 다시 열어볼 것 같아요. 남들이 “이제 좀 익숙해졌네” 할 때, 혼자 마음속 레벨업 효과음을 듣는 캐릭터예요.",
+    "panels": [
+      "어제 여기서 막혔지…",
+      "오늘은 다시 해보자.",
+      "이제 좀 익숙해졌네?",
+      "내 안에서 레벨업 소리가…!"
+    ]
+  },
+  "fantasy.strategy": {
+    "src": "/match/reader-comics/v1/fantasy-strategy.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "처음 하는 보드게임에서 설명을 조용히 듣다가 마지막에 점수를 한꺼번에 정산할 것 같아요. 친구들이 “이 조합이 된다고?” 하면 그제야 카드 한 장을 더 꺼내는 캐릭터예요.",
+    "panels": [
+      "처음이라 설명 좀!",
+      "음… 이 카드는 여기.",
+      "이 조합이 된다고?",
+      "아, 한 장 더 있어."
+    ]
+  },
+  "fantasy.payoff": {
+    "src": "/match/reader-comics/v1/fantasy-payoff.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "단체 여행이 계속 회의만 하다 끝나려는 순간, 예약 완료 화면을 올릴 것 같아요. 단톡방에 처음으로 “퀘스트 완료”가 뜨게 만드는 캐릭터예요.",
+    "panels": [
+      "바다 갈까? 난 산도 좋아.",
+      "3일 뒤. 다음에 정하자…",
+      "예약 완료",
+      "퀘스트 완료."
+    ]
+  },
+  "fantasy.slow_chemistry": {
+    "src": "/match/reader-comics/v1/fantasy-slow_chemistry.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "처음엔 서로 이름도 헷갈리던 게임 파티가 손발이 맞아가는 건 좋아할 것 같아요. 다만 오해로 길드가 해체될 분위기라면 “잠깐, 음성 채팅부터 켜” 할 캐릭터예요.",
+    "panels": [
+      "저기… 이름이 뭐였지?",
+      "이제 손발이 맞네!",
+      "오해했어! 길드 나갈래!",
+      "잠깐, 음성 채팅부터 켜."
+    ]
+  },
+  "fantasy.mystery_clear": {
+    "src": "/match/reader-comics/v1/fantasy-mystery_clear.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "새 게임의 세계관에는 눈을 반짝이지만, 설정집이 세 권이라면 일단 접어둘 것 같아요. “그래서 오늘 내가 구하면 되는 사람이 누구야?”부터 확인하는 캐릭터예요.",
+    "panels": [
+      "새 게임 세계관 멋지다!",
+      "설정집은 세 권입니다.",
+      "세… 권?",
+      "오늘 구할 사람부터 알려줘."
+    ]
+  },
+  "fantasy.reveal": {
+    "src": "/match/reader-comics/v1/fantasy-reveal.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "친구가 “그냥 취미로 해봤어”라며 꺼낸 결과물의 완성도가 심상치 않으면 조용히 쳐다볼 것 같아요. 머릿속에서는 이미 그 친구의 숨겨진 직업 창이 열리고 있는 캐릭터예요.",
+    "panels": [
+      "그냥 취미로 해봤어.",
+      "이걸… 네가?",
+      "완성도가 심상치 않은데.",
+      "숨겨진 직업이 뭐야?"
+    ]
+  },
+  "fantasy.bond": {
+    "src": "/match/reader-comics/v1/fantasy-bond.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "협동 게임에서 좋은 아이템이 나오면 누구에게 필요한지부터 물어볼 것 같아요. 본인 장비는 아직 기본인데 파티원들은 벌써 최종 보스 복장인 캐릭터예요.",
+    "panels": [
+      "좋은 아이템 나왔다!",
+      "이거 필요한 사람?",
+      "다들 최종 보스 같네.",
+      "내 장비는 아직 기본."
+    ]
+  },
+  "fantasy.chemistry": {
+    "src": "/match/reader-comics/v1/fantasy-chemistry.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "새로운 모임에서 두 사람이 유독 호흡이 잘 맞으면 유심히 볼 것 같아요. 다른 사람들은 자기소개 중인데 혼자 둘의 동료 영입 이벤트를 보고 있는 캐릭터예요.",
+    "panels": [
+      "처음 뵙겠습니다!",
+      "어? 저도 그거 좋아해요!",
+      "둘이 호흡이 잘 맞네…",
+      "동료 영입 이벤트인가."
+    ]
+  },
+  "fantasy.world": {
+    "src": "/match/reader-comics/v1/fantasy-world.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "처음 가는 대형 마트에서도 매장 지도를 한 번 볼 것 같아요. 친구가 과자를 고르는 동안 혼자 냉동식품 구역으로 통하는 지름길을 개방해두는 캐릭터예요.",
+    "panels": [
+      "처음 온 마트네.",
+      "매장 지도부터 보자.",
+      "나 과자 고를게!",
+      "냉동실 지름길 개방 완료."
+    ]
+  },
+  "fantasy.comedy": {
+    "src": "/match/reader-comics/v1/fantasy-comedy.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "단체 과제의 파일이 날아가 다들 굳어 있을 때, 백업을 찾으며 “방금 중간 보스였네” 할 것 같아요. 상황은 수습하고 파티 분위기도 회복시키는 캐릭터예요.",
+    "panels": [
+      "과제 파일이 날아갔어!",
+      "잠깐, 백업 찾아볼게.",
+      "찾았다! 살았다!",
+      "방금 중간 보스였네."
+    ]
+  },
+  "fantasy.visual": {
+    "src": "/match/reader-comics/v1/fantasy-visual.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "새 게임의 능력치를 보기 전에 캐릭터 얼굴을 한 번 더 돌려볼 것 같아요. 친구들이 출발 버튼을 누르는데 혼자 눈썹 각도를 마지막으로 조정하는 캐릭터예요.",
+    "panels": [
+      "능력치부터 볼까?",
+      "잠깐… 얼굴 한 번만.",
+      "출발 버튼 누른다?",
+      "눈썹 각도만 마지막으로!"
+    ]
+  },
+  "fantasy.fallback": {
+    "src": "/match/reader-comics/v1/fantasy-fallback.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "처음 받은 업무 안내서를 펼치며 마음속으로 퀘스트 수락 버튼을 눌러볼 것 같아요. 평범한 출근길에도 오늘의 임무 하나쯤 붙여보고 싶은 캐릭터예요.",
+    "panels": [
+      "첫 업무 안내서입니다.",
+      "오늘 할 일이 꽤 있네.",
+      "일단 하나씩 해보자.",
+      "퀘스트 수락."
+    ]
+  },
+  "murim.growth": {
+    "src": "/match/reader-comics/v1/murim-growth-v2.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "조별과제에서 “발표 많이 해봤죠?”라는 칭찬에 웃을 것 같아요. 다만 파일명 뒤의 v17은 슬쩍 가려두는, 연습 기록이 긴 캐릭터예요.",
+    "panels": [
+      "첫 발표라 떨려…",
+      "한 번만 더 연습하자.",
+      "와, 타고났네요!",
+      "우린 v17까지 봤다."
+    ]
+  },
+  "murim.strategy": {
+    "src": "/match/reader-comics/v1/murim-strategy.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "회의 내내 듣고만 있다가 다들 “그래서 어떡하지?” 하는 순간 노트북을 돌릴 것 같아요. “일단 만들어봤는데요” 한마디에 막내의 숨겨진 경지가 공개되는 캐릭터예요.",
+    "panels": [
+      "회의를 시작하겠습니다.",
+      "음… 그렇군요.",
+      "그래서 어떡하지?",
+      "일단 만들어봤는데요."
+    ]
+  },
+  "murim.payoff": {
+    "src": "/match/reader-comics/v1/murim-payoff.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "몇 번째인지 모를 회의가 다시 원점으로 돌아가면 조용히 펜을 들 것 같아요. “그럼 지금 정할 건 이거 하나죠?”라며 안건의 혈을 짚어주는 캐릭터예요.",
+    "panels": [
+      "이 얘기 전에도 했는데…",
+      "그럼 처음부터 다시?",
+      "잠깐, 지금 정할 건…",
+      "이거 하나죠?"
+    ]
+  },
+  "murim.slow_chemistry": {
+    "src": "/match/reader-comics/v1/murim-slow_chemistry.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "친구 둘이 어색한 채로 서로 눈치만 보면 일단 밥자리를 잡을 것 같아요. 우정이 깊어지는 건 기다려도, 같은 오해로 세 번째 회식은 사양하는 캐릭터예요.",
+    "panels": [
+      "둘이 왜 눈치를 봐?",
+      "일단 같이 밥 먹자.",
+      "사실 그때 오해했어…",
+      "같은 오해로 세 번째 밥은 안 돼."
+    ]
+  },
+  "murim.mystery_clear": {
+    "src": "/match/reader-comics/v1/murim-mystery_clear.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "새 보드게임의 세계관 설명은 듣지만 문파 이름이 열 개를 넘으면 손을 들 것 같아요. “그래서 지금 우리 편은 누구예요?”라며 관계도부터 접어 정리하는 캐릭터예요.",
+    "panels": [
+      "보드게임 세계관은요…",
+      "문파가 열 개 더 있어요.",
+      "잠깐, 손 들게요.",
+      "그래서 우리 편은 누구예요?"
+    ]
+  },
+  "murim.reveal": {
+    "src": "/match/reader-comics/v1/murim-reveal.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "동네 배드민턴 모임에서 조용한 회원이 셔틀콕을 잡는 자세를 한 번 더 볼 것 같아요. 다른 사람은 이름을 묻는데 혼자 “혹시 선수 하셨어요?”가 먼저 나오는 캐릭터예요.",
+    "panels": [
+      "새 배드민턴 회원입니다.",
+      "조용한 분이네.",
+      "잠깐… 저 자세는?",
+      "혹시 선수 하셨어요?"
+    ]
+  },
+  "murim.bond": {
+    "src": "/match/reader-comics/v1/murim-bond.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "친구가 새 취미를 시작하면 못하는 첫날부터 같이 나가줄 것 같아요. 본인도 초보인데 “일단 우리 둘은 같은 문파”라며 응원석부터 만드는 캐릭터예요.",
+    "panels": [
+      "새 취미… 나 너무 못해.",
+      "첫날인데 당연하지!",
+      "너도 초보잖아?",
+      "일단 우린 같은 문파."
+    ]
+  },
+  "murim.chemistry": {
+    "src": "/match/reader-comics/v1/murim-chemistry.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "평소 서로 툭툭거리던 친구가 상대 몫의 우산을 챙기면 모른 척해줄 것 같아요. 겉으로는 휴대폰을 보지만 마음속에서는 의형제 결연식을 열고 있는 캐릭터예요.",
+    "panels": [
+      "맨날 티격태격하더니…",
+      "비 온대. 네 우산도 챙겼어.",
+      "난 못 본 척 휴대폰을…",
+      "마음속 의형제 결연식."
+    ]
+  },
+  "murim.world": {
+    "src": "/match/reader-comics/v1/murim-world.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "처음 들어간 공방에서 완성품만큼 벽에 걸린 오래된 도구를 구경할 것 같아요. 원데이 클래스에 왔는데 어느새 이 기술의 계보를 듣고 있는 캐릭터예요.",
+    "panels": [
+      "원데이 클래스 왔어요.",
+      "완성품 예쁘죠?",
+      "저 오래된 도구는요?",
+      "이 기술의 시작은 말이죠…"
+    ]
+  },
+  "murim.comedy": {
+    "src": "/match/reader-comics/v1/murim-comedy.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "친구가 운동 한 번 하고 “득근했다”고 하면 물병을 건네며 “그럼 내일 계단에서 뵙죠” 할 것 같아요. 비장한 입문식을 생활 개그로 마무리하는 캐릭터예요.",
+    "panels": [
+      "운동 한 번 했는데!",
+      "나 득근한 듯!",
+      "일단 물 한 모금 하시고.",
+      "내일 계단에서 뵙죠."
+    ]
+  },
+  "murim.visual": {
+    "src": "/match/reader-comics/v1/murim-visual.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "필기구를 고를 때 잘 써지는지도 보지만 손에 쥐었을 때의 모양도 살펴볼 것 같아요. 볼펜 하나 사러 왔는데 마음속에서는 평생 쓸 검을 고르는 캐릭터예요.",
+    "panels": [
+      "볼펜 하나 사야지.",
+      "잘 써지긴 하는데…",
+      "쥐었을 때 이 모양은?",
+      "평생 쓸 검을 고르는 중."
+    ]
+  },
+  "murim.fallback": {
+    "src": "/match/reader-comics/v1/murim-fallback.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "새 취미 모임의 첫날, 누가 오래 다녔는지 은근히 궁금할 것 같아요. 평범한 동호회 소개도 잠깐은 강호의 고수 인물록처럼 읽어보는 캐릭터예요.",
+    "panels": [
+      "취미 모임 첫날입니다.",
+      "저분은 오래 다니셨나?",
+      "저쪽 분도 범상치 않은데…",
+      "동호회인가, 고수 인물록인가."
+    ]
+  },
+  "romance.growth": {
+    "src": "/match/reader-comics/v1/romance-growth.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "친구가 예전에는 못 하던 말을 담담하게 꺼내면 괜히 뿌듯할 것 같아요. 본인은 커피를 마시는 척하지만 마음속에서는 그 친구의 성장 편집본이 재생되는 캐릭터예요.",
+    "panels": [
+      "예전엔 말 못 했는데…",
+      "이번엔 내 생각 말했어.",
+      "잘했어. 정말 잘했어.",
+      "커피 뒤에서 몰래 뿌듯."
+    ]
+  },
+  "romance.strategy": {
+    "src": "/match/reader-comics/v1/romance-strategy.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "친구들 약속을 잡을 때 “다들 편한 데로 가자”고 말하며 카페 후보를 올릴 것 같아요. 알고 보면 모두의 취향은 맞추고 본인이 원하던 케이크도 확보한 캐릭터예요.",
+    "panels": [
+      "다들 편한 데로 가자.",
+      "카페 후보 세 개 올릴게!",
+      "여기 우리 다 좋아하네?",
+      "내가 원한 케이크도 확보."
+    ]
+  },
+  "romance.payoff": {
+    "src": "/match/reader-comics/v1/romance-payoff.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "친구가 마음에 있는 말을 몇 주째 보내지 못하면 휴대폰을 옆으로 밀어줄 것 같아요. “맞춤법은 됐고 전송부터”라며 로맨스의 정체 구간을 해소하는 캐릭터예요.",
+    "panels": [
+      "이 말 보내도 될까?",
+      "맞춤법을 또 고쳤어…",
+      "몇 주째 같은 화면이네.",
+      "맞춤법은 됐고 전송부터!"
+    ]
+  },
+  "romance.slow_chemistry": {
+    "src": "/match/reader-comics/v1/romance-slow_chemistry.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "친구가 “우리 그냥 친한 사이야” 하면 고개는 끄덕일 것 같아요. 다만 머릿속에서는 지난달부터의 증거 화면이 재생되고, 오해가 생기면 당사자 통화부터 권하는 캐릭터예요.",
+    "panels": [
+      "우리 그냥 친한 사이야.",
+      "응… 그렇구나.",
+      "근데 그때 오해가…",
+      "지난달 증거는 접고, 통화부터."
+    ]
+  },
+  "romance.mystery_clear": {
+    "src": "/match/reader-comics/v1/romance-mystery_clear.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "친구의 연애 상담에서 등장인물이 자꾸 늘어나면 티슈 뒷면에 이름을 적을 것 같아요. “잠깐, 이 사람은 또 누구야?” 한 번으로 연애 서사의 난이도를 낮추는 캐릭터예요.",
+    "panels": [
+      "그 친구의 친구가 말했대.",
+      "근데 또 다른 사람이…",
+      "잠깐, 이 사람은 누구야?",
+      "티슈 뒷면에 관계도 완성."
+    ]
+  },
+  "romance.reveal": {
+    "src": "/match/reader-comics/v1/romance-reveal.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "친구가 무심하게 “그 사람 원래 그런 거 잘 챙겨”라고 하면 잠깐 멈출 것 같아요. 그 말 속의 “원래”를 마음속 형광펜으로 두 번 칠하는 캐릭터예요.",
+    "panels": [
+      "그 사람 원래 잘 챙겨.",
+      "원래…?",
+      "누구한테나? 아니면…",
+      "마음속 형광펜 두 번."
+    ]
+  },
+  "romance.bond": {
+    "src": "/match/reader-comics/v1/romance-bond.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "친구가 힘들다고 하면 거창한 답보다 늘 먹던 메뉴를 같이 주문할 것 같아요. 고민은 아직 안 끝났는데 상대 앞에는 이미 평소 빼먹던 반찬까지 놓여 있는 캐릭터예요.",
+    "panels": [
+      "요즘 좀 힘들어…",
+      "늘 먹던 거 같이 먹자.",
+      "이 반찬 내가 자주 빼먹는데.",
+      "오늘은 내가 챙겼지."
+    ]
+  },
+  "romance.chemistry": {
+    "src": "/match/reader-comics/v1/romance-chemistry.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "두 친구가 서로 같은 말을 동시에 하면 물컵을 들고 조용히 웃을 것 같아요. 다들 우연이라고 넘어가는데 혼자 다음 만남의 자리를 붙여두는 캐릭터예요.",
+    "panels": [
+      "나는 아이스…",
+      "나도 아이스!",
+      "또 동시에 말했네?",
+      "다음 만남엔 둘을 옆자리로."
+    ]
+  },
+  "romance.world": {
+    "src": "/match/reader-comics/v1/romance-world.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "자주 가는 카페에서 매번 같은 시간에 마주치는 사람들을 기억할 것 같아요. 주문을 기다리는 몇 분 동안 혼자 동네 사람들의 첫 장면을 상상하는 캐릭터예요.",
+    "panels": [
+      "저 사람 또 이 시간에 오네.",
+      "저쪽도 늘 같은 자리.",
+      "커피 기다리는 동안…",
+      "동네의 첫 장면을 상상 중."
+    ]
+  },
+  "romance.comedy": {
+    "src": "/match/reader-comics/v1/romance-comedy.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "친구의 소개팅 후기를 듣다가 어색했던 대사를 정확한 타이밍에 따라 할 것 같아요. 위로받으러 온 친구가 울다가 웃다가 결국 다음 약속까지 잡고 가는 캐릭터예요.",
+    "panels": [
+      "소개팅에서 너무 어색했어.",
+      "혹시 이렇게 말했어?",
+      "그걸 왜 똑같이 따라 해!",
+      "웃고 나니 다음 약속도 잡힘."
+    ]
+  },
+  "romance.visual": {
+    "src": "/match/reader-comics/v1/romance-visual.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "친구가 잘 나온 사진을 골라달라고 하면 표정이 자연스러운 컷을 한 번 더 볼 것 같아요. 사진은 세 장인데 혼자 셋의 분위기와 감정선을 비교하는 캐릭터예요.",
+    "panels": [
+      "잘 나온 사진 골라줘.",
+      "이 표정이 자연스럽네.",
+      "셋 다 비슷하지 않아?",
+      "내 눈엔 분위기가 다 달라."
+    ]
+  },
+  "romance.fallback": {
+    "src": "/match/reader-comics/v1/romance-fallback.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "친구가 주문도 안 물어보고 다른 친구의 음료를 시키면 살짝 웃을 것 같아요. 카페에서는 그냥 주문 한 번인데 잠깐 혼자 첫 화를 보는 캐릭터예요.",
+    "panels": [
+      "음료 주문할까?",
+      "넌 늘 먹던 거지?",
+      "묻지도 않고 챙겨주네…",
+      "잠깐, 지금 첫 화 시작했나."
+    ]
+  },
+  "ropan.growth": {
+    "src": "/match/reader-comics/v1/ropan-growth.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "새 업무를 맡고 처음엔 도움을 받다가 어느새 다른 사람의 질문에 답할 것 같아요. 지난달의 신입 명찰은 그대로인데 마음속 작위는 한 단계 올라간 캐릭터예요.",
+    "panels": [
+      "신입이라 아직 잘 몰라요.",
+      "이건 이렇게 하는 거구나.",
+      "이것 좀 알려주실래요?",
+      "명찰은 신입, 마음속 작위는 승급."
+    ]
+  },
+  "ropan.strategy": {
+    "src": "/match/reader-comics/v1/ropan-strategy.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "친구 생일파티에 초대받았을 뿐인데 다음 모임의 날짜와 장소를 정리할 것 같아요. 자리가 끝나면 본인이 원하는 숙소로 여행까지 잡혀 있는, 조용한 사교계 설계자예요.",
+    "panels": [
+      "생일파티에 놀러 왔어.",
+      "다음 모임 날짜는 어때?",
+      "그날 이 숙소도 괜찮겠다!",
+      "조용히 여행 설계 완료."
+    ]
+  },
+  "ropan.payoff": {
+    "src": "/match/reader-comics/v1/ropan-payoff.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "매번 같은 사람이 번거로운 일을 맡는 모임에서 역할표를 새로 만들 것 같아요. “이번엔 돌아가며 하자” 한마디로 익숙한 서열을 정리하는 캐릭터예요.",
+    "panels": [
+      "이 일 또 네가 맡았어?",
+      "늘 하던 사람이 하니까…",
+      "역할표를 새로 만들자.",
+      "이번엔 돌아가며 하자."
+    ]
+  },
+  "ropan.slow_chemistry": {
+    "src": "/match/reader-comics/v1/ropan-slow_chemistry.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "친구 둘이 서로를 배려하는 건 오래 지켜볼 수 있을 것 같아요. 다만 안 읽은 메시지 하나로 분위기가 꼬이면 황실 회의 대신 둘만의 통화부터 소집하는 캐릭터예요.",
+    "panels": [
+      "둘이 서로 배려하네.",
+      "메시지를 안 읽었대…",
+      "그걸로 오해가 커진다고?",
+      "황실 회의 말고 둘이 통화해."
+    ]
+  },
+  "ropan.mystery_clear": {
+    "src": "/match/reader-comics/v1/ropan-mystery_clear.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "모임 이야기에 친구의 친구가 계속 나오면 종이에 화살표를 그릴 것 같아요. “가문 설명은 잠깐만, 오늘 생일인 사람이 누구지?”라며 중요한 인물부터 찾는 캐릭터예요.",
+    "panels": [
+      "친구의 친구의 친구가…",
+      "화살표가 점점 늘어나네.",
+      "가문 설명은 잠깐만.",
+      "오늘 생일인 사람이 누구지?"
+    ]
+  },
+  "ropan.reveal": {
+    "src": "/match/reader-comics/v1/ropan-reveal.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "처음 만난 사람이 식당 직원과 익숙하게 인사하면 메뉴판을 내려놓을 것 같아요. 단골인가 했는데 사장님 가족이었다는 반전의 기척을 먼저 보는 캐릭터예요.",
+    "panels": [
+      "이 식당 처음 오세요?",
+      "직원이랑 익숙하게 인사하네.",
+      "단골이신가 했는데…",
+      "사장님 가족이었구나!"
+    ]
+  },
+  "ropan.bond": {
+    "src": "/match/reader-comics/v1/ropan-bond.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "친구가 처음 모임에 데려온 사람을 혼자 두지 않을 것 같아요. 어느새 같은 메뉴를 나눠 먹고, 낯선 손님은 저녁이 끝나기도 전에 우리 편이 된 캐릭터예요.",
+    "panels": [
+      "처음 와서 좀 어색해요.",
+      "이 메뉴 같이 먹을래요?",
+      "어, 우리 취향 비슷하네요.",
+      "낯선 손님이 어느새 우리 편."
+    ]
+  },
+  "ropan.chemistry": {
+    "src": "/match/reader-comics/v1/ropan-chemistry.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "다들 “아무 데나 앉아” 할 때 두 사람 사이에 빈자리를 남겨둘 것 같아요. 평범한 식사 자리인데 혼자 좌석 배치로 외교를 끝내는 캐릭터예요.",
+    "panels": [
+      "아무 데나 앉아!",
+      "그 두 사람 사이는 비워두자.",
+      "앗, 자연스럽게 옆자리네.",
+      "좌석 배치로 외교 완료."
+    ]
+  },
+  "ropan.world": {
+    "src": "/match/reader-comics/v1/ropan-world.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "처음 맡은 단체 여행에서 숙소 규칙과 예약 조건을 한 번 읽어볼 것 같아요. 친구들이 수영장 사진을 볼 때 혼자 취소 수수료라는 왕국의 법을 확인하는 캐릭터예요.",
+    "panels": [
+      "숙소 수영장 사진 봐!",
+      "예약 조건도 한 번 보자.",
+      "취소 수수료는 언제부터지?",
+      "혼자 왕국의 법 확인 중."
+    ]
+  },
+  "ropan.comedy": {
+    "src": "/match/reader-comics/v1/ropan-comedy.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "격식 있는 식당에서 친구가 잔뜩 긴장하면 작은 목소리로 메뉴 이름을 잘못 읽은 척할 것 같아요. 사교계 데뷔의 긴장을 웃음 한 모금으로 풀어주는 캐릭터예요.",
+    "panels": [
+      "격식 있는 식당… 긴장돼.",
+      "이 메뉴 이름이… 뭐더라?",
+      "방금 일부러 잘못 읽었지?",
+      "긴장은 웃음 한 모금으로."
+    ]
+  },
+  "ropan.visual": {
+    "src": "/match/reader-comics/v1/ropan-visual.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "친구의 초대장을 만들다가 문구보다 글꼴을 한 번 더 바꿔볼 것 같아요. 가벼운 생일 모임인데 결과물만 보면 왕실 연회 초청장인 캐릭터예요.",
+    "panels": [
+      "생일 초대장 만들까?",
+      "이 글꼴은 좀 아쉽고…",
+      "한 번만 더 바꾸자.",
+      "생일 모임인가, 왕실 연회인가."
+    ]
+  },
+  "ropan.fallback": {
+    "src": "/match/reader-comics/v1/ropan-fallback.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "친구들 모임에서 누가 누구와 친한지 알아가는 과정도 하나의 이야기처럼 볼 것 같아요. 평범한 저녁 식사가 잠깐 작은 사교계로 바뀌는 캐릭터예요.",
+    "panels": [
+      "친구들 모임에 왔어.",
+      "두 사람은 원래 친했구나.",
+      "저쪽은 오늘 처음 만났네.",
+      "평범한 저녁, 작은 사교계."
+    ]
+  },
+  "action.growth": {
+    "src": "/match/reader-comics/v1/action-growth.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "처음에는 한 개도 못 하던 동작을 성공하면 휴대폰 기록을 다시 볼 것 같아요. 남들은 운동을 마치는데 혼자 지난달의 자신과 리매치에서 이긴 캐릭터예요.",
+    "panels": [
+      "지난달엔 하나도 못 했지.",
+      "오늘은… 성공!",
+      "다들 운동 끝났대.",
+      "지난달의 나와 리매치 승리."
+    ]
+  },
+  "action.strategy": {
+    "src": "/match/reader-comics/v1/action-strategy.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "여행 중 환승이 꼬이면 말없이 지도 앱을 열 것 같아요. 다들 전광판을 볼 때 혼자 우회 노선을 찾아 “뛰지는 말고 이쪽으로” 할 캐릭터예요.",
+    "panels": [
+      "환승이 꼬였어!",
+      "전광판엔 안 나오는데…",
+      "지도에서 우회 노선 찾았다.",
+      "뛰지는 말고 이쪽으로."
+    ]
+  },
+  "action.payoff": {
+    "src": "/match/reader-comics/v1/action-payoff.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "회의가 또 “다음에 정하자”로 끝나려 하면 일정표를 띄울 것 같아요. 말로만 쌓이던 안건을 오늘 할 일 세 개로 정리해 결말을 만드는 캐릭터예요.",
+    "panels": [
+      "오늘 회의도 길었네.",
+      "그럼 다음에 정하자…",
+      "잠깐, 일정표 띄울게요.",
+      "오늘 할 일은 이 세 개예요."
+    ]
+  },
+  "action.slow_chemistry": {
+    "src": "/match/reader-comics/v1/action-slow_chemistry.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "함께 일하며 믿음이 쌓이는 건 좋지만 사소한 오해로 팀이 갈라지면 답답할 것 같아요. “잠깐, 누구 말이 빠진 거야?”라며 작전 회의부터 다시 여는 캐릭터예요.",
+    "panels": [
+      "같이 일하니 믿음이 생기네.",
+      "근데 저쪽 말은 다르던데?",
+      "이대로 팀이 갈라진다고?",
+      "잠깐, 누구 말이 빠진 거야?"
+    ]
+  },
+  "action.mystery_clear": {
+    "src": "/match/reader-comics/v1/action-mystery_clear.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "게임의 전투 규칙을 배우다가 설명이 자꾸 돌아가면 연습장부터 열 것 같아요. “일단 한 번 보여주세요” 하고 직접 움직이며 규칙을 익히는 캐릭터예요.",
+    "panels": [
+      "전투 규칙은 말이죠…",
+      "그런데 다시 설명하자면…",
+      "연습장부터 열어볼게요.",
+      "일단 한 번 보여주세요."
+    ]
+  },
+  "action.reveal": {
+    "src": "/match/reader-comics/v1/action-reveal.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "동네 운동 모임에서 늘 장비만 정리하던 사람이 시범을 보이면 자세를 고쳐 앉을 것 같아요. 장비 담당인 줄 알았는데 최종 코치였다는 장면을 좋아할 캐릭터예요.",
+    "panels": [
+      "늘 장비 정리하시던 분!",
+      "오늘 시범을 보여주신대.",
+      "자세부터 남다른데…",
+      "장비 담당이 아니라 최종 코치."
+    ]
+  },
+  "action.bond": {
+    "src": "/match/reader-comics/v1/action-bond.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "팀 게임에서 누군가 실수하면 점수판보다 다음 기회를 먼저 볼 것 같아요. “방금 건 끝났고, 다음 거 같이 가자”라며 팀의 리듬을 다시 잡는 캐릭터예요.",
+    "panels": [
+      "아… 나 때문에 놓쳤어.",
+      "방금 건 끝났고.",
+      "다음 기회가 아직 있어.",
+      "다음 거 같이 가자."
+    ]
+  },
+  "action.chemistry": {
+    "src": "/match/reader-comics/v1/action-chemistry.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "처음에는 손발이 안 맞던 친구와 이삿짐을 한 번에 옮기면 괜히 뿌듯할 것 같아요. 소파 하나 내려놓고 둘이 눈빛만 교환해도 팀 결성이 끝난 캐릭터예요.",
+    "panels": [
+      "소파를… 어느 쪽으로?",
+      "하나, 둘… 같이!",
+      "한 번에 옮겼다!",
+      "눈빛만으로 팀 결성 완료."
+    ]
+  },
+  "action.world": {
+    "src": "/match/reader-comics/v1/action-world.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "새 운동을 시작할 때 준비물과 안전 규칙을 먼저 챙겨볼 것 같아요. 아직 첫 수업 전인데 가방 안에는 출동 준비가 끝난 캐릭터예요.",
+    "panels": [
+      "새 운동 첫 수업!",
+      "준비물부터 챙기고.",
+      "안전 규칙도 확인.",
+      "가방은 벌써 출동 준비 완료."
+    ]
+  },
+  "action.comedy": {
+    "src": "/match/reader-comics/v1/action-comedy.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "팀 게임에서 위기를 넘기자마자 숨을 고르며 “방금 건 예고편이었지?” 할 것 같아요. 모두 지쳤는데 다음 판 버튼까지 웃으며 누르게 되는 캐릭터예요.",
+    "panels": [
+      "위기 넘겼다…!",
+      "다들 숨 좀 고르자.",
+      "방금 건 예고편이었지?",
+      "웃다가 다음 판 눌렀네."
+    ]
+  },
+  "action.visual": {
+    "src": "/match/reader-comics/v1/action-visual.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "스포츠 영상을 보다가 중요한 동작이 화면 밖으로 나가면 다시 돌려볼 것 같아요. 결과는 알겠는데 결정적인 한 컷의 타격감까지 보고 싶은 캐릭터예요.",
+    "panels": [
+      "결정적인 동작이다!",
+      "왜 화면 밖으로 나가!",
+      "잠깐, 다시 돌려보자.",
+      "내가 보고 싶은 건 그 한 컷."
+    ]
+  },
+  "action.fallback": {
+    "src": "/match/reader-comics/v1/action-fallback.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "분주한 아침에 버스와 지하철 시간이 딱 맞으면 잠깐 쾌감을 느낄 것 같아요. 평범한 출근길도 그 순간만큼은 편집 잘 된 한 장면인 캐릭터예요.",
+    "panels": [
+      "아침부터 바쁘네.",
+      "버스가 딱 왔다!",
+      "지하철도 바로 도착!",
+      "오늘 출근길 편집 잘됐네."
+    ]
+  },
+  "thriller_horror.growth": {
+    "src": "/match/reader-comics/v1/thriller_horror-growth.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "처음엔 어려웠던 문제를 다시 풀 때 지난번 메모를 옆에 놓을 것 같아요. 같은 함정에 두 번 들어가지 않으려는, 전편의 단서를 챙겨온 캐릭터예요.",
+    "panels": [
+      "이 문제 전에도 틀렸지.",
+      "지난번 메모가 여기 있네.",
+      "함정은 이 부분이었어.",
+      "전편의 단서 챙겨왔지."
+    ]
+  },
+  "thriller_horror.strategy": {
+    "src": "/match/reader-comics/v1/thriller_horror-strategy.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "다들 “누가 예약했더라?” 할 때 단톡방 검색을 끝낼 것 같아요. 날짜와 발언까지 함께 제출하고 조용히 화면을 끄는, 기록이 준비된 캐릭터예요.",
+    "panels": [
+      "누가 예약했더라?",
+      "잠깐, 단톡방 검색 중.",
+      "날짜와 발언 다 찾았어.",
+      "증거 제출하고 조용히 퇴장."
+    ]
+  },
+  "thriller_horror.payoff": {
+    "src": "/match/reader-comics/v1/thriller_horror-payoff.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "배달 주문이 계속 헷갈리면 사람별 메뉴를 한 줄씩 정리할 것 같아요. 용의자처럼 늘어나던 옵션들이 표 한 장으로 정리되며 사건이 종결되는 캐릭터예요.",
+    "panels": [
+      "나 매운맛에 토핑 추가!",
+      "난 덜 맵게, 그건 빼고…",
+      "사람별로 한 줄씩 적자.",
+      "주문 사건 종결."
+    ]
+  },
+  "thriller_horror.slow_chemistry": {
+    "src": "/match/reader-comics/v1/thriller_horror-slow_chemistry.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "친구들 사이의 미묘한 거리감은 지켜보되 전해 들은 말로 오해가 커지면 확인부터 할 것 같아요. “그거 누가 직접 들은 거야?” 한마디로 소문의 속도를 늦추는 캐릭터예요.",
+    "panels": [
+      "그 친구가 그랬다던데?",
+      "누가 누구한테 들었대?",
+      "오해가 커지기 전에…",
+      "그거 누가 직접 들은 거야?"
+    ]
+  },
+  "thriller_horror.mystery_clear": {
+    "src": "/match/reader-comics/v1/thriller_horror-mystery_clear.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "방탈출에서 다들 열쇠만 찾고 있을 때 단서를 나란히 놓을 것 같아요. “어려운 건 좋은데, 이건 왜 필요한지 알려줘야지”라며 불필요한 설정은 걷어내는 캐릭터예요.",
+    "panels": [
+      "열쇠가 어디 있지?",
+      "단서를 나란히 놓자.",
+      "어려운 건 좋은데…",
+      "이건 왜 필요한지 알려줘야지."
+    ]
+  },
+  "thriller_horror.reveal": {
+    "src": "/match/reader-comics/v1/thriller_horror-reveal.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "방탈출에서 남들이 자물쇠를 흔들 때 입구 안내문을 다시 읽을 것 같아요. “근데 여기 절대가 왜 두 번 나와?” 한마디에 모두의 고개를 돌리는 캐릭터예요.",
+    "panels": [
+      "자물쇠가 안 열려!",
+      "입구 안내문 다시 볼까?",
+      "여기 절대가 왜 두 번 나와?",
+      "모두의 고개가 돌아갔다."
+    ]
+  },
+  "thriller_horror.bond": {
+    "src": "/match/reader-comics/v1/thriller_horror-bond.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "긴장되는 단체 게임에서 친구가 뒤처지면 인원부터 다시 셀 것 같아요. 문이 열렸다는 환호보다 “잠깐, 우리 한 명 남았어”가 먼저 나오는 캐릭터예요.",
+    "panels": [
+      "문 열렸다! 나가자!",
+      "잠깐, 인원부터 세자.",
+      "하나, 둘… 어?",
+      "우리 한 명 남았어!"
+    ]
+  },
+  "thriller_horror.chemistry": {
+    "src": "/match/reader-comics/v1/thriller_horror-chemistry.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "함께 문제를 풀다가 서로 말이 없어도 같은 단서를 가리키면 웃을 것 같아요. 아직 이름도 덜 익숙한데 벌써 둘만의 수사 호흡이 생긴 캐릭터예요.",
+    "panels": [
+      "이 문제 같이 풀어볼까?",
+      "말없이 같은 단서를…",
+      "어? 너도 그거 봤어?",
+      "이름보다 수사 호흡이 먼저."
+    ]
+  },
+  "thriller_horror.world": {
+    "src": "/match/reader-comics/v1/thriller_horror-world.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "새 숙소의 안내문을 읽다가 유독 강조된 주의사항을 한 번 더 볼 것 같아요. 친구들은 비밀번호만 외우는데 혼자 “왜 이 문만 열지 말라는 거지?” 하고 있는 캐릭터예요.",
+    "panels": [
+      "숙소 비밀번호는 외웠어.",
+      "안내문도 읽어보자.",
+      "이 문은 열지 마세요…?",
+      "왜 이 문만 그러는 거지?"
+    ]
+  },
+  "thriller_horror.comedy": {
+    "src": "/match/reader-comics/v1/thriller_horror-comedy.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "회의실 조명이 꺼져 모두 잠깐 굳으면 휴대폰 불빛을 켤 것 같아요. “일단 엔딩 크레딧은 아니네” 한마디로 긴장부터 낮추는 캐릭터예요.",
+    "panels": [
+      "회의실 불이 꺼졌다!",
+      "……",
+      "휴대폰 불빛부터 켜자.",
+      "일단 엔딩 크레딧은 아니네."
+    ]
+  },
+  "thriller_horror.visual": {
+    "src": "/match/reader-comics/v1/thriller_horror-visual.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "영화 속 화면 구석에 같은 소품이 다시 나오면 잠깐 멈출 것 같아요. 친구는 예쁘다고 넘긴 액자를 혼자 단서 후보로 접수해두는 캐릭터예요.",
+    "panels": [
+      "저 액자 예쁘다.",
+      "잠깐, 아까도 나왔는데?",
+      "같은 소품이 또…",
+      "단서 후보로 접수."
+    ]
+  },
+  "thriller_horror.fallback": {
+    "src": "/match/reader-comics/v1/thriller_horror-fallback.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "친구가 “그냥 우연이겠지”라고 말하면 눈앞의 장면을 한 번 더 볼 것 같아요. 일상에서도 잠깐은 배경 소품에 의미를 붙여보고 싶은 캐릭터예요.",
+    "panels": [
+      "그냥 우연이겠지.",
+      "정말 그럴까…?",
+      "배경 소품이 자꾸 눈에 밟혀.",
+      "의미를 붙여보는 중."
+    ]
+  },
+  "drama_daily.growth": {
+    "src": "/match/reader-comics/v1/drama_daily-growth.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "친구가 처음으로 만든 요리 사진을 보내면 지난번 사진을 떠올릴 것 같아요. 남들은 메뉴 이름을 묻는데 혼자 “이번엔 안 탔네!”라며 작은 성장을 축하하는 캐릭터예요.",
+    "panels": [
+      "처음 만든 요리야!",
+      "지난번 사진도 있었지.",
+      "메뉴 이름은 뭐야?",
+      "이번엔 안 탔네!"
+    ]
+  },
+  "drama_daily.strategy": {
+    "src": "/match/reader-comics/v1/drama_daily-strategy.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "바쁜 날의 집안일을 정리하다 세탁기부터 돌릴 것 같아요. 집이 저절로 정리되는 줄 알았는데 모든 일의 순서가 맞물려 있던 생활 설계자예요.",
+    "panels": [
+      "집안일이 산더미네.",
+      "세탁기부터 돌리고.",
+      "돌아가는 동안 청소 끝!",
+      "집이 저절로 정리된 건 아니지."
+    ]
+  },
+  "drama_daily.payoff": {
+    "src": "/match/reader-comics/v1/drama_daily-payoff.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "친구가 계속 참고만 했던 일을 이야기하면 다음 한마디를 같이 연습해줄 것 같아요. 다음 날 “말했어”라는 메시지 하나에 혼자 소리 없이 박수를 치는 캐릭터예요.",
+    "panels": [
+      "계속 참고만 했어…",
+      "할 말 같이 연습해보자.",
+      "다음 날. 말했어.",
+      "소리 없이 박수 짝짝."
+    ]
+  },
+  "drama_daily.slow_chemistry": {
+    "src": "/match/reader-comics/v1/drama_daily-slow_chemistry.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "단골 가게 사장님과 조금씩 인사가 길어지는 건 좋아할 것 같아요. 다만 친구와의 오해는 일상 에피소드 열 편으로 늘리기 전에 커피 한 잔으로 풀고 싶은 캐릭터예요.",
+    "panels": [
+      "단골 가게 인사가 길어졌네.",
+      "천천히 친해지는 건 좋아.",
+      "근데 친구랑 오해가 생겼어.",
+      "그건 커피 한 잔으로 풀자."
+    ]
+  },
+  "drama_daily.mystery_clear": {
+    "src": "/match/reader-comics/v1/drama_daily-mystery_clear.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "친구의 긴 근황을 듣다가 이름이 헷갈리면 “그러니까 오늘 속상했던 건 이거지?” 하고 물을 것 같아요. 복잡한 인물관계를 한 사람의 하루로 다시 모아주는 캐릭터예요.",
+    "panels": [
+      "그 사람이 그랬는데…",
+      "이름이 조금 헷갈리네.",
+      "그러니까 오늘 속상했던 건…",
+      "이거지? 응, 바로 그거."
+    ]
+  },
+  "drama_daily.reveal": {
+    "src": "/match/reader-comics/v1/drama_daily-reveal.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "늘 같은 메뉴를 시키던 친구가 다른 걸 주문하면 이유가 궁금할 것 같아요. 작은 변화 하나로 오늘의 뒷이야기를 상상해보는 캐릭터예요.",
+    "panels": [
+      "늘 같은 메뉴 시켰잖아.",
+      "오늘은 다른 걸 먹네?",
+      "무슨 일이 있었을까.",
+      "작은 변화에도 뒷이야기가."
+    ]
+  },
+  "drama_daily.bond": {
+    "src": "/match/reader-comics/v1/drama_daily-bond.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "친구가 “오늘 아무것도 하기 싫다”고 하면 배달앱을 켤 것 같아요. “그럼 메뉴 고민은 내가 할게”라며 오늘의 할 일 하나를 대신 가져가는 캐릭터예요.",
+    "panels": [
+      "오늘 아무것도 하기 싫어.",
+      "알겠어. 배달앱 켤게.",
+      "메뉴 고르는 것도 귀찮아…",
+      "그럼 메뉴 고민은 내가 할게."
+    ]
+  },
+  "drama_daily.chemistry": {
+    "src": "/match/reader-comics/v1/drama_daily-chemistry.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "같이 걷던 친구가 말없이 걸음 속도를 맞춰주면 오래 기억할 것 같아요. 대사는 없었는데 혼자 마음속 명장면에 저장하는 캐릭터예요.",
+    "panels": [
+      "친구랑 나란히 걷는 중.",
+      "내가 조금 느려졌더니…",
+      "말없이 속도를 맞춰주네.",
+      "마음속 명장면 저장."
+    ]
+  },
+  "drama_daily.world": {
+    "src": "/match/reader-comics/v1/drama_daily-world.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "처음 가는 동네에서도 사람들이 쉬어가는 작은 가게를 구경할 것 같아요. 관광 코스는 아직인데 마음속 단골 카페는 벌써 생긴 캐릭터예요.",
+    "panels": [
+      "처음 온 동네네.",
+      "여긴 사람들이 쉬어가는 곳.",
+      "관광 코스는 아직인데…",
+      "마음속 단골 카페 벌써 생김."
+    ]
+  },
+  "drama_daily.comedy": {
+    "src": "/match/reader-comics/v1/drama_daily-comedy.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "설거지를 누가 할지 눈치 보는 자리에서 “접시들이 지금 우리 보고 있어” 할 것 같아요. 거창한 사건 없이도 식탁에 한 장면을 만들어내는 캐릭터예요.",
+    "panels": [
+      "설거지 누가 할까…",
+      "서로 눈치 보는 중.",
+      "접시들이 지금 우리 보고 있어.",
+      "식탁에 웃음 한 장면."
+    ]
+  },
+  "drama_daily.visual": {
+    "src": "/match/reader-comics/v1/drama_daily-visual.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "하루를 찍은 사진에서 흐릿한 햇빛이 잘 나온 컷을 다시 볼 것 같아요. 대단한 사건은 없었는데 그 사진 한 장 덕분에 괜찮은 에피소드가 된 캐릭터예요.",
+    "panels": [
+      "오늘 별일은 없었는데.",
+      "사진 속 햇빛이 좋네.",
+      "이 한 장 다시 볼까.",
+      "괜찮은 에피소드였네."
+    ]
+  },
+  "drama_daily.fallback": {
+    "src": "/match/reader-comics/v1/drama_daily-fallback.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "친구가 “오늘 별일 없었어”라고 해도 밥은 뭘 먹었는지 궁금할 것 같아요. 큰 사건이 없어도 한 사람의 하루가 한 편이 되는 캐릭터예요.",
+    "panels": [
+      "오늘 별일 없었어.",
+      "밥은 뭐 먹었는데?",
+      "그 얘기도 궁금해?",
+      "네 하루도 한 편이니까."
+    ]
+  },
+  "comedy.growth": {
+    "src": "/match/reader-comics/v1/comedy-growth.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "처음에는 어색했던 친구의 농담이 드디어 먹히면 괜히 더 웃을 것 같아요. 남들은 그냥 웃는데 혼자 신인 예능인의 성장 서사를 보고 있는 캐릭터예요.",
+    "panels": [
+      "친구의 첫 농담. ……",
+      "다음 모임에 다시 도전!",
+      "드디어 다 같이 웃었다!",
+      "신인 예능인의 성장 서사."
+    ]
+  },
+  "comedy.strategy": {
+    "src": "/match/reader-comics/v1/comedy-strategy.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "단톡방에서 다들 웃을 말을 찾을 때 조용히 앞 대화를 캡처할 것 같아요. 정확한 순간에 사진 한 장을 올리고, 반응이 터지면 다시 잠수하는 캐릭터예요.",
+    "panels": [
+      "단톡방이 한참 시끄럽네.",
+      "앞 대화 조용히 캡처.",
+      "정확한 순간, 사진 한 장.",
+      "반응 터졌으니 다시 잠수."
+    ]
+  },
+  "comedy.payoff": {
+    "src": "/match/reader-comics/v1/comedy-payoff.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "모임 이름을 정하느라 한 시간이 지나면 일단 방 이름을 바꿔버릴 것 같아요. 다들 “그걸로 하자” 하고 웃는 순간 길었던 회의도 함께 끝내는 캐릭터예요.",
+    "panels": [
+      "모임 이름 뭐로 하지?",
+      "한 시간 뒤. 아직도 고민.",
+      "방 이름 바꿨어.",
+      "그걸로 하자! 회의 끝."
+    ]
+  },
+  "comedy.slow_chemistry": {
+    "src": "/match/reader-comics/v1/comedy-slow_chemistry.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "친구들만 아는 오래된 농담이 생기는 건 좋아할 것 같아요. 다만 장난이 오해로 번지면 “지금부터는 웃음소리 끄고 설명해”라며 잠깐 진지한 편집본을 여는 캐릭터예요.",
+    "panels": [
+      "우리만 아는 오래된 농담.",
+      "어? 장난이 오해가 됐네.",
+      "잠깐만, 지금부터는…",
+      "웃음소리 끄고 설명해."
+    ]
+  },
+  "comedy.mystery_clear": {
+    "src": "/match/reader-comics/v1/comedy-mystery_clear.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "친구가 농담의 배경을 너무 길게 설명하면 웃을 준비를 한 채 기다릴 것 같아요. “잠깐, 그럼 지금 웃어야 하는 사람은 누구야?”로 새 웃음을 만드는 캐릭터예요.",
+    "panels": [
+      "이 농담의 배경은 말이지…",
+      "웃을 준비는 끝났는데…",
+      "잠깐, 지금 웃어야 하는 사람은?",
+      "설명보다 질문이 더 웃겼다."
+    ]
+  },
+  "comedy.reveal": {
+    "src": "/match/reader-comics/v1/comedy-reveal.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "멀쩡한 단체 사진을 보다가 뒤편의 친구 표정을 발견할 것 같아요. 모두 인생 사진을 고르는데 혼자 오늘의 비공식 포스터를 찾아낸 캐릭터예요.",
+    "panels": [
+      "단체 사진 잘 나왔다!",
+      "뒤에 저 표정 좀 봐.",
+      "다들 인생 사진 고르는데…",
+      "오늘의 비공식 포스터 발견."
+    ]
+  },
+  "comedy.bond": {
+    "src": "/match/reader-comics/v1/comedy-bond.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "친구가 작은 실수를 해 민망해하면 자기 실수도 하나 꺼낼 것 같아요. 위로가 시작됐는데 어느새 서로의 실패담 시즌제가 열린 캐릭터예요.",
+    "panels": [
+      "나 실수해서 너무 민망해.",
+      "괜찮아, 나는 예전에…",
+      "아니 그럼 나도 하나 더!",
+      "실패담 시즌제 시작."
+    ]
+  },
+  "comedy.chemistry": {
+    "src": "/match/reader-comics/v1/comedy-chemistry.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "친구가 말끝을 흐리면 평소 하던 말을 이어줄 것 같아요. 두 사람은 별생각 없는데 옆에서는 “너희 대본 맞췄어?”가 나오는 캐릭터예요.",
+    "panels": [
+      "내가 맨날 하는 말 있잖아…",
+      "아, 그 말! 이거지?",
+      "너희 대본 맞췄어?",
+      "우린 별생각 없었는데."
+    ]
+  },
+  "comedy.world": {
+    "src": "/match/reader-comics/v1/comedy-world.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "새 모임에서 사람들의 말버릇이 조금씩 익숙해지면 재미를 느낄 것 같아요. 아직 첫 모임인데 혼자 다음 편에 다시 나올 대사를 예감하는 캐릭터예요.",
+    "panels": [
+      "새 모임 첫날.",
+      "저분은 저 말을 자주 하네.",
+      "이분도 익숙한 말버릇이…",
+      "다음 편 대사가 벌써 들린다."
+    ]
+  },
+  "comedy.comedy": {
+    "src": "/match/reader-comics/v1/comedy-comedy.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "단톡방이 한참 시끄러울 때는 조용하다가 정확히 여섯 글자를 보낼 것 같아요. 전원이 웃는 동안 본인은 이미 휴대폰을 뒤집어놓은 캐릭터예요.",
+    "panels": [
+      "단톡방이 한참 시끄럽다.",
+      "나는 잠깐 조용히…",
+      "이거 실화냐고",
+      "다들 웃는 동안 폰 뒤집기."
+    ]
+  },
+  "comedy.visual": {
+    "src": "/match/reader-comics/v1/comedy-visual.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "친구가 보낸 사진에서 배경의 절묘한 간판을 먼저 발견할 것 같아요. 사진 보정은 부탁받았는데 원본보다 웃긴 자막 후보가 세 개 생긴 캐릭터예요.",
+    "panels": [
+      "사진 보정 좀 해줘.",
+      "배경에 저 간판 뭐야?",
+      "웃긴 자막이 떠오르는데…",
+      "보정보다 자막 후보 세 개."
+    ]
+  },
+  "comedy.fallback": {
+    "src": "/match/reader-comics/v1/comedy-fallback.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "엘리베이터에서 생긴 작은 해프닝도 친구에게 전할 때는 한 장면이 될 것 같아요. 별일 없던 하루에 은근히 다음 대사가 생기는 캐릭터예요.",
+    "panels": [
+      "엘리베이터에서 작은 해프닝.",
+      "친구한테 얘기해줘야지.",
+      "표정까지 따라 했더니…",
+      "별일 없던 하루에 다음 대사가."
+    ]
+  },
+  "sports.growth": {
+    "src": "/match/reader-comics/v1/sports-growth.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "연습 기록에서 지난주보다 조금 나아진 숫자를 발견하면 다시 확인할 것 같아요. 남들은 아직 준비 운동 중인데 혼자 시즌 최고 기록 자막을 띄우는 캐릭터예요.",
+    "panels": [
+      "지난주 연습 기록.",
+      "오늘은 숫자가 조금 올랐네.",
+      "다들 아직 준비 운동인데…",
+      "내 마음엔 시즌 최고 기록!"
+    ]
+  },
+  "sports.strategy": {
+    "src": "/match/reader-comics/v1/sports-strategy.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "단체 게임을 시작하면 누가 어느 자리에 편한지 먼저 물어볼 것 같아요. 친목 경기인 줄 알았는데 종이컵 옆에 벌써 작은 작전판이 놓인 캐릭터예요.",
+    "panels": [
+      "가볍게 단체 게임 하자.",
+      "어느 자리가 편해?",
+      "그럼 자리는 이렇게!",
+      "종이컵 옆에 작전판 등장."
+    ]
+  },
+  "sports.payoff": {
+    "src": "/match/reader-comics/v1/sports-payoff.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "모임 일정 투표가 마지막 한 표 때문에 멈추면 마감 시간을 올릴 것 같아요. “오늘 아홉 시에 확정!” 한마디로 추가 시간 없이 경기를 끝내는 캐릭터예요.",
+    "panels": [
+      "모임 투표, 한 표가 안 왔네.",
+      "계속 기다릴까…?",
+      "오늘 아홉 시에 확정!",
+      "추가 시간 없이 경기 끝."
+    ]
+  },
+  "sports.slow_chemistry": {
+    "src": "/match/reader-comics/v1/sports-slow_chemistry.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "처음에는 패스가 어긋나던 팀이 호흡을 맞춰가는 건 오래 볼 수 있을 것 같아요. 다만 말 한마디 안 해서 삐걱거리면 작전 시간부터 요청하는 캐릭터예요.",
+    "panels": [
+      "처음엔 패스가 어긋났지.",
+      "이젠 호흡이 잘 맞네.",
+      "말 안 해서 또 오해라고?",
+      "작전 시간부터 요청합니다."
+    ]
+  },
+  "sports.mystery_clear": {
+    "src": "/match/reader-comics/v1/sports-mystery_clear.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "처음 보는 종목의 규칙을 듣다가 경기장 그림을 그려달라고 할 것 같아요. 선수 이름은 나중이고 “그래서 저 선 넘으면 몇 점이야?”부터 알고 싶은 캐릭터예요.",
+    "panels": [
+      "처음 보는 종목이네.",
+      "규칙은 말이죠…",
+      "경기장 그림 좀 그려줄래?",
+      "저 선 넘으면 몇 점이야?"
+    ]
+  },
+  "sports.reveal": {
+    "src": "/match/reader-comics/v1/sports-reveal.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "운동 모임에서 맨 뒤에 서 있던 회원이 첫 공을 받으면 눈길이 갈 것 같아요. 다들 준비됐냐고 묻는 사이 혼자 범상치 않은 자세를 발견한 캐릭터예요.",
+    "panels": [
+      "맨 뒤에 계시던 분!",
+      "첫 공이 날아간다.",
+      "잠깐, 저 자세는…",
+      "준비됐냐고 묻기 전에 알았다."
+    ]
+  },
+  "sports.bond": {
+    "src": "/match/reader-comics/v1/sports-bond.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "친구가 첫 대회에 나가면 순위보다 완주하는 순간을 기다릴 것 같아요. 본인은 관중석에 있는데 목소리만큼은 이미 국가대표 응원단인 캐릭터예요.",
+    "panels": [
+      "친구의 첫 대회!",
+      "순위는 잠깐 잊고.",
+      "완주하는 순간이 온다!",
+      "관중석의 국가대표 응원단."
+    ]
+  },
+  "sports.chemistry": {
+    "src": "/match/reader-comics/v1/sports-chemistry.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "같이 뛴 지 얼마 안 된 친구와 동시에 속도를 낮추면 웃을 것 같아요. 약속한 적 없는데 둘만의 페이스가 생긴 순간을 좋아할 캐릭터예요.",
+    "panels": [
+      "같이 뛴 지 얼마 안 됐는데.",
+      "둘이 동시에 속도를 낮췄네.",
+      "약속한 것도 아닌데…",
+      "우리만의 페이스가 생겼다."
+    ]
+  },
+  "sports.world": {
+    "src": "/match/reader-comics/v1/sports-world.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "처음 경기장을 가면 좌석표와 선수 소개를 한 번 훑어볼 것 같아요. 경기 시작 전에는 손님이었는데 끝날 때쯤엔 응원 구호까지 익힌 캐릭터예요.",
+    "panels": [
+      "처음 경기장에 왔다!",
+      "좌석표부터 한 번 보고.",
+      "선수 소개도 읽었지.",
+      "끝날 땐 응원 구호까지 완성."
+    ]
+  },
+  "sports.comedy": {
+    "src": "/match/reader-comics/v1/sports-comedy.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "동네 친선 경기에서 아깝게 공을 놓치면 “방금 슬로모션으로 보면 잡았어” 할 것 같아요. 점수판은 그대로여도 팀 표정은 바로 회복시키는 캐릭터예요.",
+    "panels": [
+      "아깝게 공을 놓쳤다!",
+      "점수는 그대로지만…",
+      "슬로모션으로 보면 잡았어.",
+      "팀 표정은 바로 회복."
+    ]
+  },
+  "sports.visual": {
+    "src": "/match/reader-comics/v1/sports-visual.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "경기 하이라이트에서 결정적인 움직임이 지나가면 재생 속도를 낮출 것 같아요. 승패는 이미 알지만 그 한 동작만큼은 끝까지 보고 싶은 캐릭터예요.",
+    "panels": [
+      "하이라이트 결정적 순간!",
+      "잠깐, 재생 속도 낮추자.",
+      "승패는 이미 알지만…",
+      "그 한 동작은 끝까지 볼래."
+    ]
+  },
+  "sports.fallback": {
+    "src": "/match/reader-comics/v1/sports-fallback.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "친구들이 가벼운 게임을 시작하면 마지막 한 판에 조금 더 집중할 것 같아요. 상품은 과자 한 봉지인데 잠깐 마음속 중계석이 열리는 캐릭터예요.",
+    "panels": [
+      "가볍게 게임 한 판!",
+      "마지막 판 남았대.",
+      "상품은 과자 한 봉지.",
+      "마음속 중계석이 열렸다."
+    ]
+  },
+  "other.fallback": {
+    "src": "/match/reader-comics/v1/other-fallback.webp",
+    "width": 1024,
+    "height": 1024,
+    "sourceScene": "다음 이야기를 고르다 친구와 눈이 마주치면, 서로 다른 표지를 가리키고 웃을 것 같아요. 취향 이야기를 한 편 더 만들어가는 캐릭터예요.",
+    "panels": [
+      "다음엔 무슨 이야기 볼까?",
+      "친구도 표지를 고르는 중.",
+      "어? 우린 다른 걸 골랐네.",
+      "취향 얘기 한 편 더 하자."
+    ]
+  }
+}

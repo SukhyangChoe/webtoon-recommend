@@ -19,6 +19,7 @@
 .match-module.match-cyan .wm-story-card .wm-story-title { margin:0; color:#193640; font-size:19px; font-weight:750; line-height:1.5; letter-spacing:-.025em; }
 .match-module.match-cyan .wm-story-card .wm-story-copy { margin:0; color:#456874; font-family:inherit; font-size:15px; font-weight:400; line-height:1.75; }
 .wm-story-card .wm-story-scene { margin-top:16px; padding:14px; border-radius:12px; background:#eef9fb; }
+.wm-reader-comic { display:block; width:100%; height:auto; margin-top:16px; aspect-ratio:1; object-fit:contain; background:#fff; }
 .match-module.match-cyan .wm-story-card .wm-story-subtitle { margin:0 0 8px; padding:0 0 0 9px; border:0; border-left:3px solid #00bfdc; color:#00697f; font-size:13px; font-weight:700; line-height:1.6; letter-spacing:0; }
 .wm-story-card .wm-pair-reading-dialogue { margin:0 0 12px; padding:0; border:0; background:transparent; }
 .match-module.match-cyan .wm-story-card .wm-pair-reading-dialogue .wm-story-copy { color:#245765; font-weight:650; }

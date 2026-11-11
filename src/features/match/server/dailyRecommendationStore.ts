@@ -20,8 +20,9 @@ type EvidenceRow = { snapshot_id: string; profile_id: string; completed_at: stri
   catalog_revision: string;
   snapshot_data: Record<string, unknown>;
   recommendations: Array<{ canonicalWebtoonId: string; title: string; platform: string; createdAt: string; recommendation?: Record<string, unknown>; affectsTaste: boolean }> };
-type Selection = { items: Array<{ canonicalWebtoonId: string; title: string; platform: string; matchReason?: { version: number; summary: string; labels: string[] } }> };
-type PublicRow = { canonical_webtoon_id: string; title: string; main_genre: string; platform: string; official_url: string | null; cover_url: string | null; avoidance_tag_scores?: Record<string, number> };
+type PublicReason = { version: number; summary: string; labels: string[]; referenceWork?: {canonicalWebtoonId:string;title:string;labels:string[]} };
+type Selection = { items: Array<{ canonicalWebtoonId: string; title: string; platform: string; matchReason?: PublicReason }> };
+type PublicRow = { canonical_webtoon_id: string; title: string; main_genre: string; platform: string; official_url: string | null; cover_url: string | null; avoidance_tag_scores?: Record<string, number>; recommendation?: Record<string,unknown> | null };
 
 async function loadEvidence(database: ReturnType<typeof getMatchDatabase>, publicProfileId: string) {
   const [row] = await database<EvidenceRow[]>`
@@ -59,8 +60,9 @@ export async function getRuntimeDailyTastePicks(publicProfileId: string, { onPro
   const now = new Date();
   const window = dailyWindow(now);
   const key = persistedSelectionKey(input, row.catalog_revision, questionSeed, now);
+  const repository = dailySelectionRepository(database);
   const selected = await resolvePersistedSelection({
-    repository: dailySelectionRepository(database), profileId: row.profile_id, key, window,
+    repository, profileId: row.profile_id, key, window,
     isCurrent: async () => {
       const current = await loadEvidence(database, publicProfileId);
       return persistedSelectionKey(originalInput(current), current.catalog_revision, questionSeed) === key;
@@ -95,7 +97,7 @@ export async function getRuntimeDailyTastePicks(publicProfileId: string, { onPro
         const detail = detailsById.get(item.canonicalWebtoonId);
         return { canonicalWebtoonId: item.canonicalWebtoonId, title: item.title, platform: item.platform,
           ...(detail && detail.title === item.title && detail.platform === item.platform ? { matchReason: dailyMatchReason(input,
-            { mainGenre: detail.main_genre, recommendation: detail.recommendation }, questionSeed,
+            { canonicalWebtoonId: detail.canonical_webtoon_id, mainGenre: detail.main_genre, recommendation: detail.recommendation }, questionSeed,
             { tagLabels: tagLabelMap, contentLabels: CONTENT_AXIS_LABELS }) } : {}) };
       }) };
     },
@@ -110,6 +112,7 @@ export async function getRuntimeDailyTastePicks(publicProfileId: string, { onPro
   const ids = selected.items.map(item => item.canonicalWebtoonId);
   const rows = ids.length ? await database<PublicRow[]>`
     select w.canonical_webtoon_id, w.title, w.main_genre, w.platform, w.official_url,
+      w.raw_data->'recommendation' as recommendation,
       w.raw_data#>'{recommendation,avoidanceTagScores}' as avoidance_tag_scores,
       coalesce(d.cover_url,w.raw_data->>'coverUrl',w.raw_data#>>'{metadata,coverUrl}',w.raw_data#>>'{cover,src}') as cover_url
     from public.webtoons w left join public.webtoon_details d using(canonical_webtoon_id)
@@ -120,6 +123,17 @@ export async function getRuntimeDailyTastePicks(publicProfileId: string, { onPro
       and coalesce(w.raw_data#>>'{metadata,status}','') not in ('unavailable','discontinued')
   ` : [];
   const byId = new Map(rows.map(item => [item.canonical_webtoon_id, item]));
+  // Upgrade old explanation envelopes without rerunning selection or changing
+  // expiry. The conditional write cannot replace a newer input/day selection.
+  let upgraded = false;
+  for (const item of selected.items) {
+    const live = byId.get(item.canonicalWebtoonId);
+    if (live?.recommendation && live.title===item.title && live.platform===item.platform && (!item.matchReason || item.matchReason.version < 2)) {
+      item.matchReason = dailyMatchReason(input,{canonicalWebtoonId:live.canonical_webtoon_id,mainGenre:live.main_genre,recommendation:live.recommendation},questionSeed,{tagLabels:tagLabelMap,contentLabels:CONTENT_AXIS_LABELS});
+      upgraded = true;
+    }
+  }
+  if(upgraded)await repository.updateExplanations(row.profile_id,key,selected);
   return { ...envelope, mode: 'personalized' as const,
     items: selected.items.flatMap(item => {
       const live = byId.get(item.canonicalWebtoonId);

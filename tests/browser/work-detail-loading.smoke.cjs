@@ -32,29 +32,26 @@ const {chromium}=require('playwright');
   await page.getByRole('button',{name:'핏점수 다시 불러오기'}).waitFor();
   assert.equal(infoCalls,1);assert.equal(fitCalls,2,'transient fit failures retry only once');
   assert.equal(await page.getByRole('meter').count(),0);assert.equal(await page.getByRole('button',{name:'취향 테스트로 핏점수 확인하기'}).count(),0,'a network error is not mistaken for a missing test');
-  await page.locator('.wm-work-open').click();await page.getByRole('tab',{name:'작품 정보',exact:true}).click();
+  await page.locator('.wm-work-open').click();
   assert.ok(await page.getByText('연재중',{exact:true}).isVisible(),'basic work facts remain usable');
-  await page.getByRole('button',{name:'작품 정보 접기',exact:true}).click();
+  await page.locator('.wm-work-grab').click();
   fitMode='hold';await page.getByRole('button',{name:'핏점수 다시 불러오기'}).click();
   await page.getByText('핏점수 확인에 시간이 걸리고 있어요. 작품 정보는 먼저 볼 수 있어요.',{exact:true}).waitFor();
   assert.equal(infoCalls,1,'manual fit retry does not refetch work info');
-  await page.locator('.wm-work-open').click();await page.getByRole('tab',{name:'작품 정보',exact:true}).click();
+  await page.locator('.wm-work-open').click();
   fitMode='ok';releaseFit();
   await page.waitForFunction(()=>document.querySelector('.wm-work-summary .wm-work-fit-track')?.getAttribute('aria-valuenow')==='88');
-  assert.equal(await page.locator('.wm-work-page').getAttribute('data-stage'),'info','arriving fit does not close or reset the reading sheet');
-  const expandedFit=page.locator('.wm-work-reading-fit');
+  assert.equal(await page.locator('.wm-work-page').getAttribute('data-stage'),'reasons','arriving fit does not close or reset the reading sheet');
+  const expandedFit=page.locator('.wm-work-sheet-header .wm-work-fit-track');
   assert.ok(await expandedFit.isVisible(),'fit arriving in an expanded panel is visible');
   assert.equal(await expandedFit.getAttribute('aria-valuenow'),'88');
   for(const [width,height] of [[320,844],[390,844],[540,844],[900,844],[390,520]]){
    await page.setViewportSize({width,height});
-   for(const tab of ['궁합 · 소개','작품 정보']){
-    await page.getByRole('tab',{name:tab,exact:true}).click();
-    await page.locator('.wm-work-dialog-body').evaluate(el=>{el.scrollTop=el.scrollHeight;});
-    const bounds=await expandedFit.evaluate(el=>{const r=el.getBoundingClientRect(),title=el.previousElementSibling.getBoundingClientRect(),tabs=el.nextElementSibling.getBoundingClientRect();return {score:el.getAttribute('aria-valuenow'),inside:r.top>=title.bottom&&r.bottom<=tabs.top,visible:r.top>=0&&r.bottom<=innerHeight};});
-    assert.ok(bounds.inside&&bounds.visible&&bounds.score==='88',JSON.stringify({width,height,tab,...bounds}));
-   }
+   await page.locator('.wm-work-dialog-body').evaluate(el=>{el.scrollTop=el.scrollHeight;});
+   const bounds=await expandedFit.evaluate(el=>{const r=el.getBoundingClientRect(),head=el.closest('.wm-work-sheet-header').getBoundingClientRect();return {score:el.getAttribute('aria-valuenow'),inside:r.top>=head.top&&r.bottom<=head.bottom,visible:r.top>=0&&r.bottom<=innerHeight};});
+   assert.ok(bounds.inside&&bounds.visible&&bounds.score==='88',JSON.stringify({width,height,...bounds}));
   }
-  await page.getByRole('button',{name:'작품 정보 접기',exact:true}).click();
+  await page.locator('.wm-work-grab').click();
   assert.equal(await page.getByRole('meter').getAttribute('aria-valuenow'),'88');assert.equal(fitCalls,3);
   for(const width of [320,390,900]){
    await page.setViewportSize({width,height:844});
@@ -74,6 +71,6 @@ const {chromium}=require('playwright');
   fitMode='hold';await page.reload();await page.getByRole('heading',{name:info.title,level:1}).waitFor();
   await page.getByRole('button',{name:'이전 화면으로 돌아가기',exact:true}).click();await page.waitForURL('**/match/search');releaseFit?.();
   assert.deepEqual(errors,[]);await context.close();
-  console.log(JSON.stringify({ok:true,checks:['independent basic info and fit','fit-only retry','bounded automatic attempts','slow information messages','404 without automatic retry','basic error recovery','fit arrival preserves active tab','navigation cancellation','icon-only search at 320/390/900 widths']}));
+  console.log(JSON.stringify({ok:true,checks:['independent basic info and fit','fit-only retry','bounded automatic attempts','slow information messages','404 without automatic retry','basic error recovery','fit arrival preserves expanded reading body','navigation cancellation','icon-only search at 320/390/900 widths']}));
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

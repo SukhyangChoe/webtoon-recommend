@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 
 const paths = {
   plus: 'M12 5v14M5 12h14',
+  grip: 'M8 5h.01M16 5h.01M8 12h.01M16 12h.01M8 19h.01M16 19h.01',
   edit: 'm4 16 11-11 4 4L8 20l-5 1 1-5ZM13 7l4 4',
   warning: 'M10.3 3.8 1.8 18.5A1.7 1.7 0 0 0 3.3 21h17.4a1.7 1.7 0 0 0 1.5-2.5L13.7 3.8a2 2 0 0 0-3.4 0ZM12 9v4m0 4h.01',
   search: 'M21 21l-5-5M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0',

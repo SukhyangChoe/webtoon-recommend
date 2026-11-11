@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { dailyMatchReason } from '../../src/features/match/server/dailyRecommendation/matchReason.mjs';
+import { dailyMatchReason, publicDailyMatchReason } from '../../src/features/match/server/dailyRecommendation/matchReason.mjs';
 import { buildTasteSnapshot } from '../../src/features/match/engine/resultEngine.mjs';
 const seed=JSON.parse(fs.readFileSync(new URL('../../src/features/match/data/questionSeed.v0.4.json',import.meta.url),'utf8'));
 const labels={tagLabels:{growth:'성장',revenge:'복수'},contentLabels:{action:'액션'}};
@@ -19,4 +19,17 @@ test('disabled registrations do not become an explanation; result vector is not 
  const value=input(),before=JSON.stringify(value);value.recommendations=[{affectsTaste:false,recommendation:{tagScores:{revenge:3}}}];
  assert.deepEqual(dailyMatchReason(value,{mainGenre:'murim',recommendation:{tagScores:{revenge:3}}},seed,labels).labels,[]);
  value.recommendations=[];assert.equal(JSON.stringify(value),before);
+});
+test('the closest current registered work is selected by actual comparable vectors, never by title or list order',()=>{
+ const target={canonicalWebtoonId:'target',mainGenre:'murim',recommendation:{tagScores:{growth:3},contentAxisScores:{combat_growth:3},artStyleScores:{detailed_rendering:3}}};
+ const close={canonicalWebtoonId:'close',title:'내가 등록한 수련 이야기',recommendation:target.recommendation};
+ const far={canonicalWebtoonId:'far',title:'다른 이야기',recommendation:{tagScores:{revenge:3},contentAxisScores:{office_romance:3},artStyleScores:{rounded_cute:3}}};
+ const value=input();value.recommendations=[far,{...close,canonicalWebtoonId:'disabled',affectsTaste:false},close,{...close,canonicalWebtoonId:'target'}];
+ const result=dailyMatchReason(value,target,seed,labels);
+ assert.equal(result.version,2);assert.equal(result.referenceWork.canonicalWebtoonId,'close');assert.match(result.summary,/내가 등록한 수련 이야기/);
+ assert.doesNotMatch(result.summary,/읽었|읽은|감상한/);
+ assert.equal(dailyMatchReason({...value,recommendations:[{...close,recommendation:{tagScores:{growth:3}}}]},target,seed,labels).referenceWork,undefined,'one comparable axis is insufficient');
+ const safe=publicDailyMatchReason({...result,privateScore:.99,referenceWork:{...result.referenceWork,vector:{private:true},score:.99}});
+ assert.deepEqual(Object.keys(safe.referenceWork).sort(),['canonicalWebtoonId','labels','title']);
+ assert.doesNotMatch(JSON.stringify(safe),/privateScore|vector|\.99/);
 });

@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import {createRequire} from 'node:module';
+import { withReaderComic } from '../../src/features/match/server/readerComics.mjs';
+import { COMIC_JOBS } from '../../scripts/reader-comics/jobs.mjs';
 const require=createRequire(import.meta.url),ts=require('typescript');
 const owner='00000000-0000-4000-8000-000000000001';
 
@@ -35,16 +37,19 @@ test('result read returns owner-only navigation with no full challenge or extra 
 });
 test('result API normalizes validated viewer identity and keeps missing/invalid viewers public',async()=>{
  const seen=[];
+ const episode=COMIC_JOBS[0];
  const route=load('../../src/app/api/v1/results/[profilePublicId]/route.ts',{
   '@/features/match/server/requestBody':{},
   '@/features/match/server/apiResponse':{matchJson:(_request,body,init)=>({body,status:init?.status??200})},
-  '@/features/match/server/resultStore':{getPublicTasteResultForViewer:async(id,viewer)=>{seen.push([id,viewer]);return id==='missing'?null:{canManage:false,activeChallengeCode:null};}},
+  '@/features/match/server/resultStore':{getPublicTasteResultForViewer:async(id,viewer)=>{seen.push([id,viewer]);return id==='missing'?null:{canManage:false,activeChallengeCode:null,readerExplanation:{genreKey:episode.genre,sceneKey:episode.key,scene:episode.sourceScene}};}},
+  '@/features/match/server/readerComics.mjs':{withReaderComic},
   '@/features/match/server/apiErrors':{toMatchApiFailure:()=>({error:'FAIL',status:500})},
   '@/features/match/storage/anonymousIdentity.mjs':{isAnonymousId:value=>/^[a-f\d-]{36}$/i.test(value)},
  });
  for(const value of [owner.toUpperCase(),'not-a-uuid',null]){
   const response=await route.GET({url:'http://localhost/api/v1/results/public-result'+(value?'?anonymousId='+value:'')},{params:Promise.resolve({profilePublicId:'public-result'})});
   assert.equal(response.status,200);assert.equal(seen.at(-1)[1],value===null||value==='not-a-uuid'?null:owner);
+  assert.equal(response.body.readerExplanation.comic.src,episode.src,'existing result reads attach the matching static episode');
  }
  assert.equal((await route.GET({url:'http://localhost/api/v1/results/missing'},{params:Promise.resolve({profilePublicId:'missing'})})).status,404);
 });

@@ -50,20 +50,17 @@ const postgres=require('postgres');
    await page.setViewportSize({width:390,height:844});
    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
    await page.addStyleTag({content:'nextjs-portal{display:none!important}'});await page.screenshot({path:path.join(out,'work_fit_collapsed_actual.png')});
-   await page.locator('.wm-work-open').click();const badge=page.locator('.wm-work-reading-fit [role=meter]');await badge.waitFor();
-   assert.equal(await badge.getAttribute('aria-valuenow'),score);
-   const fonts=await badge.evaluate(el=>{const body=getComputedStyle(document.querySelector('.wm-work-section p')),label=getComputedStyle(el.querySelector('.wm-work-reading-fit-title')),number=getComputedStyle(el.querySelector('strong'));return {body:body.fontFamily,label:label.fontFamily,number:number.fontFamily,labelWeight:label.fontWeight,numberWeight:number.fontWeight,labelSize:label.fontSize,numberSize:number.fontSize,numberTracking:number.letterSpacing};});
+   await page.locator('.wm-work-open').click();const badge=page.locator('.wm-work-sheet-header .wm-work-fit');await badge.waitFor();
+   assert.equal(await badge.locator('[role=meter]').getAttribute('aria-valuenow'),score);
+   const fonts=await badge.evaluate(el=>{const body=getComputedStyle(document.querySelector('.wm-work-section p')),label=getComputedStyle(el.querySelector('.wm-fit-label-row')),number=getComputedStyle(el.querySelector('strong'));return {body:body.fontFamily,label:label.fontFamily,number:number.fontFamily,numberWeight:number.fontWeight,numberSize:number.fontSize};});
    assert.equal(fonts.label,fonts.body);assert.equal(fonts.number,fonts.body);
-   assert.equal(fonts.labelWeight,'600');assert.equal(fonts.numberWeight,'600');
-   assert.equal(fonts.labelSize,'14px');assert.equal(fonts.numberSize,'28px');
-   assert.ok(await badge.evaluate(el=>{const r=el.getBoundingClientRect(),h=el.previousElementSibling.getBoundingClientRect(),t=el.nextElementSibling.getBoundingClientRect();return r.top>=h.bottom&&r.bottom<=t.top&&r.width>h.width*.8;}),'fit is a full-width strip between title and tabs');
+   assert.equal(fonts.numberWeight,'600');assert.equal(fonts.numberSize,'25px');
+   assert.ok(await badge.evaluate(el=>{const r=el.getBoundingClientRect(),h=el.previousElementSibling.getBoundingClientRect();return r.left>=h.right&&r.width<=90;}),'fit sits compactly to the right of the title');
    assert.equal(await badge.locator('.wm-work-fit-track > span').evaluate(el=>el.style.width),`${score}%`);
-   for(const tab of ['궁합 · 소개','작품 정보']){
-    await page.getByRole('tab',{name:tab,exact:true}).click();
-    await page.locator('.wm-work-dialog-body').evaluate(el=>{el.scrollTop=el.scrollHeight;});
-    assert.ok(await badge.isVisible());assert.equal(await badge.getAttribute('aria-valuenow'),score);
+   for(const bottom of [false,true]){
+    await page.locator('.wm-work-dialog-body').evaluate((el,b)=>{el.scrollTop=b?el.scrollHeight:0;},bottom);
+    assert.ok(await badge.isVisible());assert.equal(await badge.locator('[role=meter]').getAttribute('aria-valuenow'),score);
    }
-   await page.getByRole('tab',{name:'궁합 · 소개',exact:true}).click();
    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
    await page.locator('.wm-work-dialog-body').evaluate(el=>{el.scrollTop=0;});
    await page.evaluate(()=>document.fonts.ready);await page.addStyleTag({content:'nextjs-portal{display:none!important}'});

@@ -1,8 +1,54 @@
 import { safeWorkReturnPath } from '../config/workDetailPresentation.mjs';
 
 export const WORK_RETURN_KEY = 'webtoon-match:work-return:v1';
+const MANAGER_WORK_RETURN_KEY = 'webtoonMatchManagerWorkReturn';
 const RAIL_PREFIX = 'webtoon-match:rail-pixels:v2:';
 const MAX_AGE = 30 * 60 * 1000;
+
+export function isRecommendationManagerPath(pathname) {
+  return /^\/match\/result\/[^/]+\/recommendations\/?$/.test(pathname);
+}
+
+let currentPath;
+let previousPath;
+let managerTraversal;
+let managerListener;
+
+function browserPath() {
+  const query = new URLSearchParams(location.search).toString();
+  return location.pathname + (query ? `?${query}` : '');
+}
+
+export function rememberManagerWorkReturn(href) {
+  if (!isRecommendationManagerPath(location.pathname)) return;
+  try {
+    const from = browserPath();
+    const top = window.scrollY;
+    history.replaceState({ ...history.state, [MANAGER_WORK_RETURN_KEY]: { href, top } }, '');
+    managerListener?.abort();
+    managerListener = new AbortController();
+    // Keep the listener alive while the router replaces the page components.
+    window.addEventListener('popstate', event => {
+      const saved = event.state?.[MANAGER_WORK_RETURN_KEY];
+      const leaving = currentPath === from ? previousPath : currentPath;
+      if (leaving === href && browserPath() === from && saved?.href === href && saved.top === top) {
+        managerTraversal = { path: from, top };
+      }
+    }, { capture: true, once: true, signal: managerListener.signal });
+  } catch { /* History state is optional. */ }
+}
+
+export function managerScrollForPath(path) {
+  if (currentPath !== path) {
+    previousPath = currentPath;
+    currentPath = path;
+  }
+  return managerTraversal?.path === path ? managerTraversal.top : 0;
+}
+
+export function clearManagerWorkReturn() {
+  managerTraversal = undefined;
+}
 
 export function readRailOffset(storage, key) {
   try {

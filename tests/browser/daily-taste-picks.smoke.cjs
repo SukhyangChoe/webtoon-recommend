@@ -64,10 +64,11 @@ const postgres=require('postgres');
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'preview does not overflow');
    assert.ok(await preview.evaluate(el=>document.activeElement===el),'focus returns to preview');
    await preview.click();await sheet.waitFor();assert.ok(await sheet.locator('.wm-daily-close').evaluate(el=>document.activeElement===el));
+   await page.keyboard.press('Shift+Tab');assert.ok(await sheet.getByRole('button',{name:'취향작 팝업 크기 조절'}).evaluate(el=>document.activeElement===el));
    await page.keyboard.press('Shift+Tab');assert.ok(await sheet.getByRole('button',{name:'내 결과로 돌아가기'}).evaluate(el=>document.activeElement===el),'native modal traps keyboard focus');
   }
   await page.setViewportSize({width:390,height:844});await page.keyboard.press('Escape');await sheet.waitFor({state:'hidden'});
-  const after=await preview.boundingBox();assert.equal(after.width,before.width);assert.equal(after.height,before.height,'loaded covers do not change preview height');
+  const after=await preview.boundingBox();assert.equal(after.width,before.width);assert.ok(after.height<before.height,'completed preview removes excess loading space');
   await preview.click();await sheet.waitFor();await page.mouse.click(3,3);await sheet.waitFor({state:'hidden'});
   await preview.click();await sheet.waitFor();await page.goBack();await sheet.waitFor({state:'hidden'});
   assert.equal(calls,loadedCalls,'opening and closing loaded daily picks does not request selection again');

@@ -1,5 +1,6 @@
-/* Approved result / recommendation editor UI. Other match screens keep their theme. */
-.match-module:has(.wm-screen) { background: #f3fafc; }
+:root { --brand-page-background: #f3fafc; }
+html:has(.match-home-page), body:has(.match-home-page) { background-color: var(--brand-page-background); }
+.match-module:has(:is(.wm-screen, .match-home-page)) { background: var(--brand-page-background); }
 /* Only the personal result places the home logo over the hero, not in a separate bar. */
 body:has(.wm-result-screen) > .brand-bar {
   position: absolute; inset: 0 0 auto; height: 56px; background: transparent;
@@ -129,6 +130,15 @@ body:has(.wm-manager-screen) > .brand-bar { background:#f3fafc; border-bottom:0;
 .wm-recommendation-edit { display:grid; place-items:center; flex:0 0 44px; width:44px; height:44px; padding:0; border:0; border-radius:0; background:transparent; color:#547985; cursor:pointer; }
 .wm-recommendation-edit:hover { color:#00697f; background:transparent; }
 .wm-recommendation-edit:focus-visible { outline:3px solid #007e98; outline-offset:2px; }
+.wm-recommendation-card.is-comment-missing .wm-pair-work-artwork::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border: 2px solid #d9667d;
+  border-radius: inherit;
+  pointer-events: none;
+}
 .match-module .wm-recommendation-comment-needed { display:inline-flex; align-items:center; gap:5px; min-height:44px; margin-top:10px; padding:0; border:0; background:transparent; color:#b23c51; font-size:13px; font-weight:650; line-height:1.6; cursor:pointer; }
 .wm-recommendation-comment-needed > b { display:grid; place-items:center; width:16px; height:16px; flex-shrink:0; border-radius:50%; background:#fbe7ec; color:#b23c51; font-size:12px; }
 .wm-recommendation-comment-needed > span { text-decoration:underline; text-decoration-color:#df9aa8; text-underline-offset:4px; }

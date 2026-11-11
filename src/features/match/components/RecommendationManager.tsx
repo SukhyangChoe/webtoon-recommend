@@ -11,6 +11,8 @@ import { RECOMMENDATION_SEARCH_POLICY_VERSION, isRecommendationRegistrationBlock
 import { WorkSearchDropdown, WorkSearchResultContent } from './WorkSearchResults';
 import { useWorkSearchDropdown } from './useWorkSearchDropdown';
 import { recommendationManagerHref, recommendationReturnLabel, recommendationReturnPath } from '../config/recommendationOnboarding.mjs';
+import { ensureAnonymousId } from '../storage/anonymousIdentity.mjs';
+import { useRecommendationReorder } from './useRecommendationReorder';
 
 type Webtoon = RecommendationWorkItem & { recommendationRegistrationBlocked?: boolean };
 
@@ -30,10 +32,37 @@ export function RecommendationManager({ publicProfileId, returnTo, initialSelect
   const [message, setMessage] = useState('');
   const [notice, setNotice] = useState('');
   const [editor, setEditor] = useState<{ item: Webtoon; mode: 'add' | 'edit' } | null>(null);
+  const [orderSaving,setOrderSaving] = useState(false);
+  const orderPending = useRef(false);
   const searchAnchor = useWorkSearchDropdown(searchOpen, () => setSearchOpen(false));
   const searchInput = useRef<HTMLInputElement>(null);
   const searchController = useRef<AbortController | null>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
+  const {list:collection,dragging} = useRecommendationReorder(selected,initialLoadFailed||orderSaving||Boolean(editor),applyOrder,saveOrder);
+
+  function applyOrder(ids:string[]) {
+    setSelected(previous=>ids.flatMap(id=>{const item=previous.find(work=>work.canonicalWebtoonId===id);return item?[item]:[];}));
+  }
+  async function saveOrder(ids:string[],previous:string[]) {
+    if(orderPending.current)return;
+    orderPending.current=true;setOrderSaving(true);setMessage('');setNotice('');
+    let anonymousId:string|undefined;
+    try {
+      anonymousId=ensureAnonymousId({cookieText:document.cookie,storage:window.localStorage}).anonymousId;
+      const response=await fetch(`/api/v1/results/${encodeURIComponent(publicProfileId)}/recommendation-order`,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({anonymousId,canonicalWebtoonIds:ids})});
+      const body=await response.json();
+      if(!response.ok||!Array.isArray(body.items))throw Error(body.error==='RECOMMENDATION_ORDER_CHANGED'?'다른 화면에서 목록이 바뀌었어요. 최신 목록을 확인해 주세요.':'순서를 저장하지 못했어요. 다시 시도해 주세요.');
+      setSelected(body.items);setNotice('추천작 순서를 저장했어요.');
+      window.dispatchEvent(new CustomEvent('match-recommendations-changed',{detail:{profileId:publicProfileId,count:body.items.length,membershipChanged:false}}));
+    } catch(error) {
+      applyOrder(previous);setMessage(error instanceof Error?error.message:'순서를 저장하지 못했어요.');
+      try {
+        if(!anonymousId)throw Error('OWNER_AUTH_REQUIRED');
+        const response=await fetch(`/api/v1/results/${encodeURIComponent(publicProfileId)}/recommendations`,{headers:{'x-match-anonymous-id':anonymousId},cache:'no-store'});
+        const body=await response.json();if(response.ok&&Array.isArray(body.items))setSelected(body.items);
+      } catch { /* Keep the last local list; a failed reorder never changes membership. */ }
+    } finally { orderPending.current=false;setOrderSaving(false); }
+  }
 
   useEffect(() => () => searchController.current?.abort(), []);
   useEffect(() => {
@@ -71,7 +100,7 @@ export function RecommendationManager({ publicProfileId, returnTo, initialSelect
     }
   }
   function openEditor(item: Webtoon, trigger: HTMLElement, fromSearch = false) {
-    if (initialLoadFailed) return;
+    if (initialLoadFailed || orderSaving || dragging) return;
     const existing = selected.find(work => work.canonicalWebtoonId === item.canonicalWebtoonId);
     if (!existing && (selected.length >= 10 || isRecommendationRegistrationBlocked(item))) return;
     returnFocus.current = fromSearch ? searchInput.current : trigger;
@@ -135,7 +164,13 @@ export function RecommendationManager({ publicProfileId, returnTo, initialSelect
     </header>
     </div>
     <section className="wm-manager-section wm-library-collection" aria-labelledby="wm-library-title">
-      {initialLoadFailed ? <p className="wm-load-error" role="alert">추천작을 불러오지 못했어요. 기존 목록을 보호하기 위해 수정을 잠시 막았어요. <button type="button" onClick={() => window.location.reload()}>다시 불러오기</button></p> : selected.length ? <ol className="wm-library-grid">{selected.map(item => <li key={item.canonicalWebtoonId}><button type="button" aria-label={`${item.title} 추천 한마디 ${item.recommendationComment?.trim() ? '수정' : '입력'}`} title={item.title} onClick={event => openEditor(item, event.currentTarget)}><WorkCover item={item} sizes="(max-width: 540px) 30vw, 160px" decorative /><span className="wm-library-work-title">{item.title}</span>{!item.recommendationComment?.trim() ? <span className="wm-library-comment-needed"><b aria-hidden="true">!</b> 추천 한마디<span className="wm-sr-only">를 남겨주세요</span></span> : null}</button></li>)}</ol> : <div className="wm-library-empty"><span className="wm-library-empty-icon" aria-hidden="true"><MatchIcon name="book" /></span><p>등록한 추천작이 없어요.</p></div>}
+      <span id="wm-library-order-help" className="wm-sr-only">표지를 길게 누르거나 이동 손잡이를 끌어 순서를 바꿀 수 있어요. 손잡이에서 방향키로도 이동할 수 있어요.</span>
+      {initialLoadFailed ? <p className="wm-load-error" role="alert">추천작을 불러오지 못했어요. 기존 목록을 보호하기 위해 수정을 잠시 막았어요. <button type="button" onClick={() => window.location.reload()}>다시 불러오기</button></p> : selected.length ? <ol ref={collection} className="wm-library-grid" aria-busy={orderSaving}>
+        {selected.map(item => <li key={item.canonicalWebtoonId} data-reorder-id={item.canonicalWebtoonId} className={`${!item.recommendationComment?.trim()?'is-comment-missing ':''}${dragging===item.canonicalWebtoonId?'is-reordering':''}`}>
+          <button type="button" disabled={orderSaving} aria-label={`${item.title} 추천 한마디 ${item.recommendationComment?.trim() ? '수정' : '입력'}`} title={item.title} onClick={event => openEditor(item, event.currentTarget)}><WorkCover item={item} sizes="(max-width: 540px) 30vw, 160px" decorative /><span className="wm-library-work-title">{item.title}</span>{!item.recommendationComment?.trim() ? <span className="wm-library-comment-needed"><b aria-hidden="true">!</b> 추천 한마디<span className="wm-sr-only">를 남겨주세요</span></span> : null}</button>
+          {selected.length>1?<button type="button" data-reorder-handle className="wm-library-drag-handle" disabled={orderSaving} aria-label={`${item.title} 순서 변경`} aria-describedby="wm-library-order-help"><MatchIcon name="grip" /></button>:null}
+        </li>)}
+      </ol> : <div className="wm-library-empty"><span className="wm-library-empty-icon" aria-hidden="true"><MatchIcon name="book" /></span><p>등록한 추천작이 없어요.</p></div>}
       <p className="wm-library-footnote">최대 10편까지 저장할 수 있어요.</p>
     </section>
     {message || notice ? <div className={`wm-floating-toast${message ? ' is-error' : ''}`} role={message ? 'alert' : 'status'}><span>{message || notice}</span><button type="button" aria-label="알림 닫기" onClick={() => { setMessage(''); setNotice(''); }}>×</button></div> : null}

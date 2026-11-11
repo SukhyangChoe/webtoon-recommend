@@ -3,10 +3,10 @@ import questionSeed from '../data/questionSeed.v0.4.json';
 import { getMatchDatabase } from './database';
 import { getLatestTasteSnapshotForAnonymousId } from './resultStore';
 import { calculateRecommendationFit } from '../engine/recommendationFitEngine.mjs';
-import { recommendationFitPresentation } from '../config/recommendationFitDisplay.mjs';
+import { recommendationFitDisplayScore, recommendationFitPresentation } from '../config/recommendationFitDisplay.mjs';
 import { matchedAvoidanceWarnings } from '../engine/avoidanceEngine.mjs';
 import { recommendationGenreLabel, safeWorkCoverUrl } from '../config/recommendationPresentation.mjs';
-import { rankedWorkLabels, safeOfficialWorkUrl, sharedFitReasons, WORK_POINT_ICONS, workArtStyleCards, workStatusLabel } from '../config/workDetailPresentation.mjs';
+import { rankedWorkLabels, safeOfficialWorkUrl, sharedFitReasons, WORK_POINT_ICONS, workArtStyleCards, workStatusLabel, workIsWellMade, workFitAxes } from '../config/workDetailPresentation.mjs';
 import { tagLabelMap } from '@/data/tags/tagLabels';
 import { CONTENT_AXIS_LABELS } from '@/data/contentAxis/contentAxisLabels';
 import type { WorkReadContext } from './workReadDeadline';
@@ -18,6 +18,7 @@ type DetailRow = {
   official_url: string | null; cover_url: string | null; synopsis: string | null;
   synopsis_kind: string | null; creators: Array<{ name?: string; roles?: string[] }> | null;
   imported_data: { status?: string; ageRating?: string } | null;
+  quality_data?: { qualityScore?: number; qualityBand?: number } | null;
   recommendation: Recommendation | null;
 };
 
@@ -26,12 +27,12 @@ async function readWorkRow(id: string, read?: WorkReadContext) {
   const rows = read ? await read.query<DetailRow[]>('work', `
     select w.canonical_webtoon_id,w.title,w.platform,w.main_genre,w.official_url,
       coalesce(d.cover_url,w.raw_data->>'coverUrl',w.raw_data#>>'{metadata,coverUrl}',w.raw_data#>>'{cover,src}') as cover_url,
-      d.synopsis,d.synopsis_kind,d.creators,d.imported_data,w.raw_data->'recommendation' as recommendation
+      d.synopsis,d.synopsis_kind,d.creators,d.imported_data,w.raw_data->'recommendation' as recommendation,w.raw_data->'metadata' as quality_data
     from public.webtoons w left join public.webtoon_details d using(canonical_webtoon_id)
     where w.canonical_webtoon_id=$1 and w.catalog_status='active' and public.webtoon_is_public_safe(w.raw_data) limit 1`, [id]) : await sql<DetailRow[]>`
     select w.canonical_webtoon_id,w.title,w.platform,w.main_genre,w.official_url,
       coalesce(d.cover_url,w.raw_data->>'coverUrl',w.raw_data#>>'{metadata,coverUrl}',w.raw_data#>>'{cover,src}') as cover_url,
-      d.synopsis,d.synopsis_kind,d.creators,d.imported_data,w.raw_data->'recommendation' as recommendation
+      d.synopsis,d.synopsis_kind,d.creators,d.imported_data,w.raw_data->'recommendation' as recommendation,w.raw_data->'metadata' as quality_data
     from public.webtoons w left join public.webtoon_details d using(canonical_webtoon_id)
     where w.canonical_webtoon_id=${id} and w.catalog_status='active' and public.webtoon_is_public_safe(w.raw_data) limit 1
   `;
@@ -46,6 +47,7 @@ function workInfo(row: DetailRow) {
   return {
     canonicalWebtoonId: row.canonical_webtoon_id, title: row.title, platform: row.platform,
     mainGenre: row.main_genre, mainGenreLabel: recommendationGenreLabel(row.main_genre),
+    wellMade: workIsWellMade(row.quality_data),
     coverUrl: safeWorkCoverUrl(row.cover_url), officialUrl: safeOfficialWorkUrl(row.official_url),
     introduction: intro?.slice(0, 10000) ?? null,
     introductionKind: row.synopsis ? row.synopsis_kind : 'editorial',
@@ -70,7 +72,8 @@ async function workFit(row: DetailRow, anonymousId?: string | null, read?: WorkR
     avoidanceWarnings: matchedAvoidanceWarnings(snapshot, row.recommendation, questionSeed) as Array<{ key: string; label: string }>,
     fit: comparable ? { ...presentation!, highlighted: fit.highlighted,
       profilePublicId: snapshot!.publicProfileId, nickname: snapshot!.profileDisplayName || null,
-      reasons: sharedFitReasons(snapshot!.tasteVector, row.recommendation, tagLabelMap, CONTENT_AXIS_LABELS, { limit: 5, descriptions: true }) } : null,
+      axes: workFitAxes(fit.comparableAxes, recommendationFitDisplayScore),
+      reasons: sharedFitReasons(snapshot!.tasteVector, row.recommendation, tagLabelMap, CONTENT_AXIS_LABELS, { limit: 3, descriptions: true, concise: true }) } : null,
   };
 }
 

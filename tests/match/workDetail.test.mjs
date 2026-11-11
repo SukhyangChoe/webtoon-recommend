@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { buildCatalogRows, catalogDiff, importedDetailData } from '../../scripts/webtoon-catalog-import.mjs';
-import { rankedWorkLabels, safeOfficialWorkUrl, safeWorkReturnPath, sharedFitReasons, WORK_ART_STYLES, workArtStyleCards, workDetailHref, workStatusLabel } from '../../src/features/match/config/workDetailPresentation.mjs';
+import { rankedWorkLabels, safeOfficialWorkUrl, safeWorkReturnPath, sharedFitReasons, WORK_ART_STYLES, workArtStyleCards, workDetailHref, workStatusLabel, workFitAxes, workIsWellMade } from '../../src/features/match/config/workDetailPresentation.mjs';
+import { recommendationFitDisplayScore } from '../../src/features/match/config/recommendationFitDisplay.mjs';
 import { WORK_FEATURE_READING_COPY, workFeatureReadingDescription } from '../../src/features/match/config/workFeatureReadingCopy.mjs';
 
 const work = (extra = {}) => ({canonicalWebtoonId:'work-1',title:'작품',platform:'플랫폼',mainGenre:'fantasy',recommendationEligible:false,...extra});
@@ -127,6 +128,22 @@ test('detail storage and API isolate presentation from source imports and privat
   assert.match(store,/comparableAxes.length >= 2/);
   const route=readFileSync(new URL('../../src/features/match/server/workDetailResponse.ts',import.meta.url),'utf8');
   assert.match(route,/private, no-store/);
+});
+test('axis bars use the existing display formula and distinguish a real zero from missing evidence',()=>{
+ const axes=workFitAxes([{axisKey:'typeScores',similarity:.71},{axisKey:'tagScores',similarity:0},{axisKey:'artStyleScores',similarity:.81}],recommendationFitDisplayScore);
+ assert.deepEqual(axes.map(axis=>axis.score),[84,0,null,90]);
+ assert.equal(workFitAxes([],recommendationFitDisplayScore).filter(axis=>axis.score!==null).length,0);
+});
+test('well-made requires both a numeric quality score of at least 4.5 and band five',()=>{
+ assert.equal(workIsWellMade({qualityScore:4.5,qualityBand:5}),true);
+ for(const metadata of [null,{}, {qualityScore:4.49,qualityBand:5},{qualityScore:4.8,qualityBand:4},{qualityScore:'4.8',qualityBand:5},{qualityScore:NaN,qualityBand:5}])assert.equal(workIsWellMade(metadata),false);
+});
+test('compact reading copy retains its concrete first sentence and the same match selection',()=>{
+ const user={tagScores:{growth:3,story_immersion:2}},work={tagScores:{growth:3,story_immersion:2},contentAxisScores:{martial_training:3}};
+ const full=sharedFitReasons(user,work,{growth:'성장',story_immersion:'몰입감'},{},{descriptions:true});
+ const short=sharedFitReasons(user,work,{growth:'성장',story_immersion:'몰입감'},{},{descriptions:true,concise:true});
+ assert.deepEqual(short.map(({key})=>key),full.map(({key})=>key));
+ for(let i=0;i<short.length;i++){assert.ok(full[i].description.startsWith(short[i].description));assert.ok(short[i].description.length<full[i].description.length);}
 });
 
 test('saving recommendations returns the same detail-backed cover and synopsis as loading them',()=>{

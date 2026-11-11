@@ -19,6 +19,7 @@ export type RecommendationWorkItem = {
   likeCount?: number;
   mainGenreLabel?: string;
   tasteFitHighlighted?: boolean;
+  tasteFitWorthTrying?: boolean;
 };
 
 export function WorkCover({ item, eager = false, sizes, decorative = false }: { item: Pick<RecommendationWorkItem, "title" | "coverUrl">; eager?: boolean; sizes?: string; decorative?: boolean }) {
@@ -72,10 +73,14 @@ export function RecommendationCard({ item, returnTo, onOpen, headingLevel = 4, l
   likeAction?: { liked: boolean; saving: boolean; onToggle: () => void };
   onEdit?: () => void;
 }) {
-  return <article className={`wm-recommendation-card wm-pair-work-card${item.tasteFitHighlighted ? ' is-taste-fit' : ''}`}>
+  return <article className={`wm-recommendation-card wm-pair-work-card${item.tasteFitHighlighted ? ' is-taste-fit' : ''}${onEdit&&!item.recommendationComment?.trim()?' is-comment-missing':''}`}>
     <div className="wm-pair-work-artwork">
       {onEdit ? <button type="button" className="wm-work-card-link wm-work-edit-target" onClick={onEdit} aria-label={`${item.title} 추천 한마디 수정`}><WorkCover item={item} sizes="160px" /></button> : <WorkDetailLink id={item.canonicalWebtoonId} returnTo={returnTo} onOpen={onOpen} label={`${item.title} 작품 상세 보기`} className="wm-work-card-link"><WorkCover item={item} sizes="160px" /></WorkDetailLink>}
-      {item.tasteFitHighlighted ? <span className="wm-pair-work-fit"><span aria-hidden="true">✦</span>취향 저격</span> : null}
+      {item.tasteFitHighlighted ? (
+        <span className="wm-pair-work-fit"><span aria-hidden="true">✦</span>취향 저격</span>
+      ) : item.tasteFitWorthTrying ? (
+        <span className="wm-pair-work-fit wm-pair-work-fit--worth-trying">볼 만한</span>
+      ) : null}
       <div className="wm-pair-work-copy">
         {onEdit ? <button type="button" className="wm-pair-work-title wm-work-edit-target" onClick={onEdit} aria-label={`${item.title} 추천 수정`}><RecommendationTitle title={item.title} level={headingLevel} /></button> : <WorkDetailLink id={item.canonicalWebtoonId} returnTo={returnTo} onOpen={onOpen} className="wm-pair-work-title"><RecommendationTitle title={item.title} level={headingLevel} /></WorkDetailLink>}
         <div className="wm-pair-work-meta"><small>{item.mainGenreLabel ?? recommendationGenreLabel(item.mainGenre)}</small></div>

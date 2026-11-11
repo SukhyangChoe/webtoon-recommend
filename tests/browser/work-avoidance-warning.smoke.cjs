@@ -45,15 +45,15 @@ const postgres = require('postgres');
       assert.equal(await summary.getByRole('meter').getAttribute('aria-valuenow'), '90');
       assert.ok(await summary.getByRole('note').evaluate(element => { const r = element.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth; }), 'warning wraps within the viewport');
       await page.locator('.wm-work-open').click();
-      for (const tab of ['궁합 · 소개', '작품 정보']) {
-        await page.getByRole('tab', { name: tab, exact: true }).click();
+      for (const scrollBottom of [false, true]) {
+        await page.locator('.wm-work-dialog-body').evaluate((element,bottom) => { element.scrollTop = bottom ? element.scrollHeight : 0; }, scrollBottom);
         await page.locator('.wm-work-dialog-body').evaluate(element => { element.scrollTop = 0; });
         const warning = page.locator('.wm-work-reading').getByRole('note');
         await warning.scrollIntoViewIfNeeded();
         assert.ok(await warning.isVisible());assert.match(await warning.textContent(), /핏 점수가 높아도/);
-        assert.equal(await page.locator('.wm-work-reading-fit').getAttribute('aria-valuenow'), '90');
+        assert.equal(await page.locator('.wm-work-sheet-header .wm-work-fit-track').getAttribute('aria-valuenow'), '90');
       }
-      await page.getByRole('button', { name: '작품 정보 접기', exact: true }).click();
+      await page.locator('.wm-work-grab').click();
     }
     warn = false;await page.reload();await page.getByRole('meter', { name: '핏점수', exact: true }).waitFor();
     assert.equal(await page.locator('.wm-avoidance-warning').count(), 0);
@@ -110,6 +110,6 @@ const postgres = require('postgres');
       await real.locator('.wm-work-reading').getByRole('note').waitFor();
       await actual.close();actualCapture = true;
     }
-    console.log(JSON.stringify({ ok: true, out, actualCapture, checks: ['320/390/540/900 widths and short viewport', 'collapsed and both expanded tabs', 'daily preview and list warnings', 'high fit unchanged', 'warning with insufficient positive data', 'no-warning reader', 'all browser writes blocked'] }));
+    console.log(JSON.stringify({ ok: true, out, actualCapture, checks: ['320/390/540/900 widths and short viewport', 'collapsed and integrated expanded body', 'daily preview and list warnings', 'high fit unchanged', 'warning with insufficient positive data', 'no-warning reader', 'all browser writes blocked'] }));
   } finally { await browser.close(); }
 })().catch(error => { console.error({ name: error.name, message: error.message }); process.exitCode = 1; });

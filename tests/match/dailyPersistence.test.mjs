@@ -100,7 +100,7 @@ test('bounded public match explanations persist with the three identities; raw d
  assert.deepEqual(value.items[0].matchReason,reason);
  const reread=await resolvePersistedSelection({...f.args(),run:async()=>{throw Error('must not recompute');}});
  assert.deepEqual(reread,value);assert.doesNotMatch(JSON.stringify(reread),/rawScore|rawEvidence|vector/);
- for(const matchReason of [{version:1,summary:'x'.repeat(181),labels:[]},{version:1,summary:'요약',labels:Array(3).fill('성장')},{version:2,summary:'요약',labels:[]}]){
+ for(const matchReason of [{version:1,summary:'x'.repeat(181),labels:[]},{version:1,summary:'요약',labels:Array(3).fill('성장')},{version:3,summary:'요약',labels:[]}]){
   const fresh=fixture();await assert.rejects(resolvePersistedSelection({...fresh.args(),run:async()=>({items:[{...selection.items[0],matchReason}]})}),/DAILY_ENGINE_RESPONSE_INVALID/);
  }
 });

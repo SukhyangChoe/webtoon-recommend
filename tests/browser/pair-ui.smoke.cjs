@@ -15,7 +15,7 @@ const { chromium } = require("playwright");
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.message));
     let allowLikes = true;
-    const work = (index) => ({ commentId:`00000000-0000-4000-8000-${String(index+1).padStart(12,'0')}`, canonicalWebtoonId: `work-${index}`, title: index === 0 ? "언니, 이번 생엔 내가 왕비야" : index === 2 ? "스위트홈" : `아주 긴 제목도 잘리지 않는 추천 작품 ${index}`, officialUrl: index === 3 ? null : "https://example.com/", mainGenre: "romance_ropan", mainGenreLabel: "로맨스·로판", coverUrl: index === 0 ? "/match/personas/original-v1/ropan.png" : index === 1 ? "https://example.com/broken-cover.png" : null, recommendationComment: index === 1 ? "추천 이유가 길어도 잘리지 않고 전부 보이도록 ".repeat(4).slice(0, 80) : "작화도 좋고 이야기에 오래 몰입하게 돼요.", likeCount: index, likedByViewer: false, canViewerLike: allowLikes, recommenderPublicProfileId: "ui-other", tasteFitHighlighted: index === 0 });
+    const work = (index) => ({ commentId:`00000000-0000-4000-8000-${String(index+1).padStart(12,'0')}`, canonicalWebtoonId: `work-${index}`, title: index === 0 ? "언니, 이번 생엔 내가 왕비야" : index === 2 ? "스위트홈" : `아주 긴 제목도 잘리지 않는 추천 작품 ${index}`, officialUrl: index === 3 ? null : "https://example.com/", mainGenre: "romance_ropan", mainGenreLabel: "로맨스·로판", coverUrl: index === 0 ? "/match/personas/original-v1/ropan.png" : index === 1 ? "https://example.com/broken-cover.png" : null, recommendationComment: index === 1 ? "추천 이유가 길어도 잘리지 않고 전부 보이도록 ".repeat(4).slice(0, 80) : "작화도 좋고 이야기에 오래 몰입하게 돼요.", likeCount: index, likedByViewer: false, canViewerLike: allowLikes, recommenderPublicProfileId: "ui-other", tasteFitHighlighted: index === 0, tasteFitWorthTrying: index === 1 || index === 2 });
     let failLike = false;
     let failResult = false;
     let score = 83;
@@ -44,6 +44,9 @@ const { chromium } = require("playwright");
     assert.equal(await page.locator(".wm-pair-work-card").count(), 10);
     assert.equal(await page.locator(".wm-pair-work-slide").count(), 10);
     assert.equal(await page.locator(".wm-pair-work-card.is-taste-fit").count(), 1);
+    assert.deepEqual(await page.locator('.wm-pair-work-fit--worth-trying').allTextContents(), ['볼 만한', '볼 만한']);
+    assert.equal(await page.locator('.wm-pair-work-card.is-taste-fit .wm-pair-work-fit--worth-trying').count(), 0);
+    assert.equal(await page.getByText(/상대 취향에 맞는 작품/).count(), 0);
     const sharedResult=page.getByRole('group',{name:'웹툰 취향 궁합',exact:true});
     await sharedResult.getByRole('heading',{name:'웹툰 취향 궁합',level:2,exact:true}).waitFor();
     assert.equal(await sharedResult.locator('.wm-pair-result-name').evaluate(el=>el.tagName),'H3');
@@ -103,7 +106,7 @@ const { chromium } = require("playwright");
     assert.equal(await page.getByRole("button", { name: "언니, 이번 생엔 내가 왕비야 추천 코멘트 좋아요 취소", exact: true }).getAttribute("aria-pressed"), "true", "failed like update rolls back");
     assert.equal(likes, 2);
     assert.equal(await page.locator(".wm-pair-work-card.is-taste-fit").count(), 1, "liking or scrolling never changes server-selected highlights");
-    assert.equal(await page.locator('.wm-pair-work-artwork > .wm-pair-work-fit').count(), 1, "fit label is inside the highlighted cover");
+    assert.equal(await page.locator('.wm-pair-work-artwork > .wm-pair-work-fit').count(), 3, "both badge levels stay inside covers");
     assert.equal(await page.locator('.wm-pair-work-card > .wm-pair-work-fit').count(), 0, "fit label creates no extra row before the comment");
     assert.ok(await page.locator('.wm-pair-work-like').first().evaluate(el => {
       const style = getComputedStyle(el);
@@ -192,6 +195,10 @@ const { chromium } = require("playwright");
       await page.waitForFunction(value=>innerWidth===value,width);
       await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `no overflow ${width}`);
+      assert.ok(await page.locator('.wm-pair-work-fit--worth-trying').evaluateAll(badges => badges.every(el => {
+        const badge = el.getBoundingClientRect(), cover = el.parentElement.getBoundingClientRect();
+        return badge.left >= cover.left && badge.right <= cover.right && badge.top >= cover.top && getComputedStyle(el).pointerEvents === 'none';
+      })), `worth-trying badges stay within covers at ${width}`);
       assert.ok(await sharedResult.evaluate(el=>{
         const box=el.getBoundingClientRect(),heading=el.querySelector('.wm-pair-result-heading').getBoundingClientRect();
         return [...el.querySelectorAll('.wm-pair-result-name,.wm-pair-score')].every(item=>{const r=item.getBoundingClientRect();return r.top>=heading.bottom+7&&r.left>=box.left&&r.right<=box.right&&r.bottom<=box.bottom;});

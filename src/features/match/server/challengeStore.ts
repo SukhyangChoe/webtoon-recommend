@@ -5,6 +5,7 @@ import { calculateCompatibility } from "../engine/compatibilityEngine.mjs";
 import { denseRankEntries, selectRankingWindow } from "../engine/rankingPolicy.mjs";
 import { relationshipGenreKeys, selectRelationshipPage } from "../engine/relationshipPolicy.mjs";
 import { calculateRecommendationFit } from "../engine/recommendationFitEngine.mjs";
+import { recommendationFitWorthTrying } from '../config/recommendationFitHighlight.mjs';
 import { pairTrustSentence } from "../share/pairTrustCopy.mjs";
 import { buildPairReading } from '../engine/pairReadingEngine.mjs';
 import { pairViewerRole, relationshipDestination } from '../config/relationshipDestination.mjs';
@@ -153,6 +154,7 @@ function publicRecommendations(
       canViewerLike: canViewerLike && Boolean(item.commentId && item.recommendationComment),
       mainGenreLabel: catalogGenreLabels[item.mainGenre] ?? item.mainGenre,
       tasteFitHighlighted: fit.highlighted,
+      tasteFitWorthTrying: recommendationFitWorthTrying(fit.score, fit.comparableAxes.length),
       fitTargetPublicProfileId: targetSnapshot?.publicProfileId ?? null,
     };
   });

@@ -1,14 +1,29 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { clearWorkReturn, readWorkReturn, writeRailOffset } from '../storage/workReturnStorage.mjs';
+import { clearManagerWorkReturn, clearWorkReturn, isRecommendationManagerPath, managerScrollForPath, readWorkReturn, writeRailOffset } from '../storage/workReturnStorage.mjs';
 
 /** Wait for the async recommendation list, then restore its viewport anchor and exact pixels. */
 export function WorkReturnRestoration() {
   const pathname=usePathname(),params=useSearchParams();
   const path=pathname+(params.size?`?${params}`:'');
   const routes=useRef<{current:string;previous:string|null}>({current:path,previous:null});
+  useLayoutEffect(() => {
+    const top = managerScrollForPath(path);
+    if (!isRecommendationManagerPath(pathname)) {
+      clearManagerWorkReturn();
+      return;
+    }
+    window.scrollTo({ top, behavior: 'instant' });
+    // Apply again after the browser and Next.js have handled navigation focus.
+    const frame = requestAnimationFrame(() => {
+      window.scrollTo({ top: managerScrollForPath(path), behavior: 'instant' });
+      clearManagerWorkReturn();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [path, pathname]);
+
   useEffect(()=>{
     if(routes.current.current!==path)routes.current={previous:routes.current.current,current:path};
     let storage:Storage;

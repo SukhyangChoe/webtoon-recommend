@@ -47,32 +47,31 @@ const works=Array.from({length:24},(_,i)=>({canonicalWebtoonId:'refine-work-'+i,
   const savedScroll=await page.locator('.wm-search-dropdown-scroll').evaluate(el=>el.scrollTop),beforeReads=reads;
   await last.click();await page.waitForURL('**/match/work/refine-work-23?*');await page.getByRole('button',{name:'핏 점수 안내'}).waitFor();
   async function checkFitLabel(selector){
-   const row=page.locator(selector),diamond=row.locator('svg');
-   await diamond.waitFor({state:'visible'});
+   const row=page.locator(selector);
+   assert.equal(await row.locator('svg').count(),0,'compact score no longer has a decorative icon');
    assert.ok(await row.evaluate(el=>{
-    const title=el.firstElementChild,mark=title.querySelector('svg'),path=mark.querySelector('path');
-    const label=title.getBoundingClientRect(),icon=mark.getBoundingClientRect(),shape=path.getBoundingClientRect();
-    const info=el.querySelector('.wm-fit-help > span').getBoundingClientRect(),css=getComputedStyle(path);
-    return icon.width>=16&&icon.height>=16&&shape.width>10&&shape.height>10&&css.stroke!=='none'&&Number(css.opacity)>0&&
-     icon.left>=0&&info.right<=innerWidth&&info.left-label.right>=0&&info.left-label.right<=7&&
+    const title=el.firstElementChild,label=title.getBoundingClientRect();
+    const info=el.querySelector('.wm-fit-help > span').getBoundingClientRect();
+    return el.querySelector('.wm-fit-help > span').textContent==='?'&&
+     label.left>=0&&info.right<=innerWidth&&info.left-label.right>=0&&info.left-label.right<=7&&
      Math.abs(info.top+info.height/2-label.top-label.height/2)<1;
-   }),'diamond is visibly drawn at full size; info icon aligned closely beside label');
+   }),'question mark is aligned closely beside the compact label');
   }
   for(const width of [320,390,540]){
    await page.setViewportSize({width,height:844});await page.waitForTimeout(80);
    await checkFitLabel('.wm-work-summary .wm-fit-label-row');
   }
   await page.setViewportSize({width:390,height:844});await page.waitForTimeout(80);
-  await page.locator('.wm-work-fit').screenshot({path:path.join(out,'collapsed-fit-diamond-fixture.png')});
+  await page.locator('.wm-work-summary .wm-work-fit').screenshot({path:path.join(out,'collapsed-fit-compact-fixture.png')});
   const guide=page.getByRole('dialog',{name:'핏 점수란?',exact:true});await page.getByRole('button',{name:'핏 점수 안내'}).click();await guide.waitFor();
   assert.equal(await guide.locator('li').count(),4);assert.equal(await guide.locator('p').count(),1,'only the introductory paragraph remains');
   assert.equal(await guide.locator('.wm-fit-guide-note').count(),0);
   assert.ok(await guide.getByRole('heading',{name:'핏 점수란?',exact:true}).evaluate(el=>Number(getComputedStyle(el).fontWeight)>=700),'guide title is bold');
   await page.keyboard.press('Escape');await guide.waitFor({state:'detached'});assert.equal(await page.locator('.wm-work-page').getAttribute('data-stage'),'collapsed');
-  await page.locator('.wm-work-open').click();await page.locator('.wm-work-reasons').waitFor();assert.equal(await page.locator('.wm-work-reason').count(),5);assert.equal(await page.locator('.wm-work-reason p').count(),5);
+  await page.locator('.wm-work-open').click();await page.locator('.wm-work-reasons').waitFor();assert.equal(await page.locator('.wm-work-reason').count(),3);assert.equal(await page.locator('.wm-work-reason p').count(),3);
   assert.doesNotMatch(await page.locator('.wm-work-reasons').innerText(),/내 취향과.*겹쳐|함께 찾았어요/);
   assert.ok((await page.locator('.wm-work-reasons').innerText()).includes('수련 전후'));
-  await checkFitLabel('.wm-work-reading-fit .wm-fit-label-row');
+  await checkFitLabel('.wm-work-sheet-header .wm-fit-label-row');
   assert.equal(await page.getByRole('heading',{name:'감상 포인트',exact:true}).count(),0);
   await page.getByRole('button',{name:'핏 점수 안내'}).click();await guide.waitFor();await page.keyboard.press('Escape');await guide.waitFor({state:'detached'});assert.equal(await page.locator('.wm-work-page').getAttribute('data-stage'),'reasons','closing guide does not collapse the parent sheet');
   assert.equal(await page.getByRole('meter',{name:'핏점수'}).getAttribute('aria-valuenow'),'80');
@@ -105,6 +104,6 @@ const works=Array.from({length:24},(_,i)=>({canonicalWebtoonId:'refine-work-'+i,
   assert.ok(await like.evaluate(el=>{const box=el.closest('.wm-recommendation-comment'),quote=box.querySelector('blockquote');return getComputedStyle(el).borderTopWidth==='1px'&&getComputedStyle(box).borderTopWidth==='1px'&&el.getBoundingClientRect().top>=quote.getBoundingClientRect().bottom&&el.getBoundingClientRect().bottom<box.getBoundingClientRect().bottom;}),'counterpart like button stays inside the shared comment border');
   await like.click();await page.waitForFunction(()=>document.querySelector('.wm-pair-work-like').getAttribute('aria-pressed')==='true');assert.equal(await like.locator('b').innerText(),'3');
   for(const width of [320,390,540]){await page.setViewportSize({width,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}
-  assert.deepEqual(errors,[]);console.log(JSON.stringify({ok:true,out,checks:['unified bounded dropdowns','close/X/outside/keyboard','pagination and inner-scroll restoration','fit guide four score ranges','guide Escape preserves parent sheet','five explained genuine-match cards; no appreciation block','unchanged fit score','empty personal comment is a direct editor action','all API writes mocked']}));await context.close();
+  assert.deepEqual(errors,[]);console.log(JSON.stringify({ok:true,out,checks:['unified bounded dropdowns','close/X/outside/keyboard','pagination and inner-scroll restoration','fit guide four score ranges','guide Escape preserves parent sheet','three concise genuine-match cards; no appreciation block','unchanged fit score','empty personal comment is a direct editor action','all API writes mocked']}));await context.close();
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});
